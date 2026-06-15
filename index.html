@@ -951,37 +951,91 @@ function cetakSSP(jenis){
     _bukaPopup(_renderSspHtml(t, pj, penyedia, jenis));
   });
 }
+// Peruntukan 5 lembar SSP (format F.2.0.32.01)
+var SSP_LEMBAR = [
+  'Untuk Arsip Wajib Pajak',
+  'Untuk KPP melalui Bank Persepsi/Kantor Pos',
+  'Untuk dilaporkan oleh Wajib Pajak ke KPP',
+  'Untuk Bank Persepsi/Kantor Pos & Giro',
+  'Untuk Arsip Wajib Pungut/Bendahara'
+];
+
 function _renderSspHtml(t, pj, penyedia, jenis){
   var isPph=(jenis==='pph');
-  var map=isPph?pj.mapPPh:'411211';
-  var kjs=isPph?pj.kjsPPh:'900';
-  var jumlah=isPph?pj.pph:pj.ppn;
-  var judul=isPph?('SSP '+(pj.jenisPPh||'PPh')):'SSP PPN';
+  var info={
+    map:    isPph ? pj.mapPPh : '411211',
+    kjs:    isPph ? pj.kjsPPh : '900',
+    jumlah: isPph ? pj.pph : pj.ppn,
+    uraian: (isPph ? ((pj.jenisPPh||'PPh')+(pj.tarifPPhPct?(' '+pj.tarifPPhPct+'%'):'')) : 'PPN 11%')
+            +' atas '+t.kegiatan+' (DPP '+rupiah(pj.dpp)+')'
+  };
+  var parts=String(t.tanggal||'').split('-');
+  info.tahun=parts[0]||(new Date().getFullYear());
+  info.bulan=parseInt(parts[1]||'1',10);
+
+  var pages='';
+  for(var i=0;i<SSP_LEMBAR.length;i++){
+    pages+=_sspLembar(t, pj, penyedia, info, jenis, i+1, SSP_LEMBAR[i],
+      i<SSP_LEMBAR.length-1);
+  }
   return ''
-  +'<html><head><meta charset="utf-8"><title>'+judul+' KT-'+t.no+'</title><style>'
-  +'@page{size:A4;margin:14mm} *{font-family:Arial,sans-serif} body{font-size:12px;color:#000}'
-  +'h2{text-align:center;margin:0 0 2px} .sub{text-align:center;font-size:11px;margin-bottom:12px}'
-  +'table{width:100%;border-collapse:collapse} td{border:1px solid #000;padding:6px}'
-  +'.k{background:#eee;width:32%;font-weight:bold} .amt{font-weight:bold}'
+  +'<html><head><meta charset="utf-8"><title>SSP '+(isPph?'PPh':'PPN')+' KT-'+t.no+'</title><style>'
+  +'@page{size:A4 portrait;margin:12mm} *{font-family:Arial,sans-serif;box-sizing:border-box}'
+  +'body{font-size:11px;color:#000;margin:0}'
+  +'.ssp{page-break-after:always} .ssp.last{page-break-after:auto}'
+  +'.shead{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}'
+  +'.shead .ka{font-size:10px;line-height:1.3} .shead .kb{text-align:right;font-size:10px}'
+  +'.judul{text-align:center;font-weight:bold;font-size:14px;margin:6px 0 2px}'
+  +'.sub{text-align:center;font-size:10px;margin-bottom:8px}'
+  +'.b{border:1px solid #000;border-collapse:collapse;width:100%}'
+  +'.b td{border:1px solid #000;padding:5px 7px;vertical-align:top}'
+  +'.lbl{font-weight:bold} .npwp{letter-spacing:2px;font-weight:bold;font-size:13px}'
+  +'.kode{display:flex;gap:16px} .kode b{font-size:14px;letter-spacing:2px}'
+  +'.masa{display:flex;flex-wrap:wrap;gap:2px;margin-top:3px}'
+  +'.masa span{border:1px solid #000;width:30px;text-align:center;padding:1px 0;font-size:9px}'
+  +'.masa span.on{background:#000;color:#fff;font-weight:bold}'
+  +'.jml{font-size:15px;font-weight:bold} .terb{font-style:italic}'
+  +'.ttd{display:flex;justify-content:space-between;margin-top:6px;font-size:10px}'
+  +'.ttd .col{width:48%} .ttd .nm{margin-top:40px;font-weight:bold;text-decoration:underline}'
   +'.noprint{margin-bottom:8px;text-align:right}@media print{.noprint{display:none}}'
   +'</style></head><body>'
-  +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button></div>'
-  +'<h2>SURAT SETORAN PAJAK (SSP)</h2><div class="sub">'+judul+' — F.2.0.32.01</div>'
-  +'<table>'
-  +'<tr><td class="k">Nama WP (Rekanan)</td><td>'+esc(penyedia.nama||'')+'</td></tr>'
-  +'<tr><td class="k">NPWP Rekanan</td><td>'+esc(penyedia.npwp||'(tidak ber-NPWP)')+'</td></tr>'
-  +'<tr><td class="k">Alamat</td><td>'+esc(penyedia.alamat||'')+'</td></tr>'
-  +'<tr><td class="k">Kode MAP / KJS</td><td>'+esc(map)+' / '+esc(kjs)+'</td></tr>'
-  +'<tr><td class="k">Uraian Pembayaran</td><td>'+esc(t.kegiatan)+'</td></tr>'
-  +'<tr><td class="k">Dasar Pengenaan (DPP)</td><td>'+rupiah(pj.dpp)+'</td></tr>'
-  +'<tr><td class="k">Jumlah Setoran</td><td class="amt">'+rupiah(jumlah)+'</td></tr>'
-  +'<tr><td class="k">Terbilang</td><td><i>'+_terbilang(jumlah)+'</i></td></tr>'
-  +'</table>'
-  +'<div style="margin-top:14px;font-size:11px">Penyetor: Bendahara Pengeluaran '+esc(INST.namaWP)
-  +' — NPWP '+esc(INST.npwpWP)+'</div>'
-  +'<div style="text-align:right;margin-top:24px;font-size:11px">'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)
-  +'<br>Bendahara Pengeluaran,<br><br><br><b>'+esc(INST.bendahara)+'</b><br>NIP. '+esc(INST.nipBendahara)+'</div>'
+  +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF (5 lembar)</button></div>'
+  +pages
   +'</body></html>';
+}
+
+function _sspLembar(t, pj, penyedia, info, jenis, lembarNo, untuk, notLast){
+  var masa='';
+  var bln=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+  for(var m=1;m<=12;m++) masa+='<span class="'+(m===info.bulan?'on':'')+'">'+bln[m-1]+'</span>';
+
+  return ''
+  +'<div class="ssp'+(notLast?'':' last')+'">'
+  +'<div class="shead">'
+  +'<div class="ka"><b>KEMENTERIAN KEUANGAN R.I.</b><br>DIREKTORAT JENDERAL PAJAK</div>'
+  +'<div class="kb">F.2.0.32.01<br><b>Lembar ke-'+lembarNo+'</b><br>'+esc(untuk)+'</div>'
+  +'</div>'
+  +'<div class="judul">SURAT SETORAN PAJAK (SSP)</div>'
+  +'<div class="sub">'+(jenis==='pph'?'Pajak Penghasilan ('+(pj.jenisPPh||'PPh')+')':'Pajak Pertambahan Nilai (PPN)')+'</div>'
+  +'<table class="b">'
+  +'<tr><td style="width:22%"><span class="lbl">NPWP</span></td>'
+  +'<td><span class="npwp">'+esc(penyedia.npwp||'00.000.000.0-000.000')+'</span>'
+  +(penyedia.npwp?'':' <i>(rekanan non-NPWP)</i>')+'</td></tr>'
+  +'<tr><td><span class="lbl">Nama WP</span></td><td>'+esc(penyedia.nama||'')+'</td></tr>'
+  +'<tr><td><span class="lbl">Alamat</span></td><td>'+esc(penyedia.alamat||'')+'</td></tr>'
+  +'<tr><td><span class="lbl">Kode Akun Pajak / Jenis Setoran</span></td>'
+  +'<td><div class="kode"><span>MAP: <b>'+esc(info.map)+'</b></span><span>KJS: <b>'+esc(info.kjs)+'</b></span></div></td></tr>'
+  +'<tr><td><span class="lbl">Uraian Pembayaran</span></td><td>'+esc(info.uraian)+'</td></tr>'
+  +'<tr><td><span class="lbl">Masa Pajak</span></td><td><div class="masa">'+masa+'</div></td></tr>'
+  +'<tr><td><span class="lbl">Tahun Pajak</span></td><td><b>'+esc(info.tahun)+'</b></td></tr>'
+  +'<tr><td><span class="lbl">Jumlah Pembayaran</span></td><td class="jml">'+rupiah(info.jumlah)+'</td></tr>'
+  +'<tr><td><span class="lbl">Terbilang</span></td><td class="terb">'+_terbilangTitle(info.jumlah)+'</td></tr>'
+  +'</table>'
+  +'<div class="ttd">'
+  +'<div class="col">Diterima oleh:<br>Bank Persepsi / Kantor Pos & Giro<br><br><br>Tanggal &amp; Cap</div>'
+  +'<div class="col" style="text-align:center">'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)+'<br>Penyetor,<br>Bendahara Pengeluaran,'
+  +'<div class="nm">'+esc(INST.bendahara)+'</div>NIP. '+esc(INST.nipBendahara)+'</div>'
+  +'</div></div>';
 }
 
 /* ============== Util popup ============== */
