@@ -889,8 +889,8 @@ function _renderKuitansiHtml(t, pj, penerima){
   +'.terb{background:#dcdcdc;display:block;padding:3px 6px;font-style:italic}'
   +'.rinci{width:100%;border-collapse:collapse;margin-top:6px}'
   +'.rinci td{border-bottom:1px solid #000;padding:4px 2px} .rinci td.r{text-align:right;width:130px} .rinci tr.b td{font-weight:bold}'
-  +'.sig{width:100%;border-collapse:collapse;font-size:11px} .sig td{width:50%;padding:6px 12px;vertical-align:top}'
-  +'.sig td.rcol{padding-left:0} .sig .nm{margin-top:46px}'
+  +'.sig{width:100%;border-collapse:collapse;font-size:11px} .sig td{padding:6px 12px;vertical-align:top}'
+  +'.sig td.lcol{width:60%} .sig td.rcol{width:40%;padding-left:0} .sig .nm{margin-top:46px}'
   +'.hrf{border:0;border-top:1px solid #000;margin:0}'
   +'.foot{padding:8px 12px 4px;font-size:11px}'
   +'@media print{.noprint{display:none}}'
@@ -924,14 +924,14 @@ function _renderKuitansiHtml(t, pj, penerima){
   +'</table></td></tr>'
   +'</table></div>'
 
-  +'<table class="sig"><tr><td></td>'
+  +'<table class="sig"><tr><td class="lcol"></td>'
   +'<td class="rcol">'+esc(INST.kota)+' ,&nbsp; '+_tglPanjang(t.tanggal)+'<br>Yang menerima,'
   +'<div class="nm">'+esc(penerima.nama||'(…………………………)')+'</div></td></tr></table>'
 
   +'<hr class="hrf">'
   +'<div class="foot">Setuju dan lunas dibayar Tgl '+_tglPanjang(t.tanggal)+'</div>'
   +'<table class="sig"><tr>'
-  +'<td>Pejabat Pembuat Komitmen<div class="nm">'+esc(INST.ppk)+'</div>NIP. '+esc(INST.nipPpk)+'</td>'
+  +'<td class="lcol">Pejabat Pembuat Komitmen<div class="nm">'+esc(INST.ppk)+'</div>NIP. '+esc(INST.nipPpk)+'</td>'
   +'<td class="rcol">Bendahara Pengeluaran<div class="nm">'+esc(INST.bendahara)+'</div>NIP. '+esc(INST.nipBendahara)+'</td>'
   +'</tr></table>'
   +'</div></body></html>';
