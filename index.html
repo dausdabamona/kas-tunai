@@ -332,10 +332,12 @@ var PAJAK_REF = [
     jenisPPh:'PPh Pasal 23', tarifPPh:0.02, ppn:0.11, mapPPh:'411124', kjsPPh:'104', minPPh:0, minPPN:1000000, catatan:'' },
   { label:'Sewa Gedung / Ruangan', kw:['sewa gedung','sewa ruangan','sewa aula','sewa tempat','sewa hotel','sewa kamar'],
     jenisPPh:'PPh Final 4(2)', tarifPPh:0.10, ppn:0.11, mapPPh:'411128', kjsPPh:'403', minPPh:0, minPPN:1000000, catatan:'Sewa tanah/bangunan' },
-  { label:'Konstruksi PT / Menengah', kw:['konstruksi pt','kontraktor besar','konstruksi menengah'],
-    jenisPPh:'PPh Final 4(2)', tarifPPh:0.03, ppn:0.11, mapPPh:'411128', kjsPPh:'409', minPPh:0, minPPN:1000000, catatan:'Pelaksana konstruksi kualifikasi menengah/besar' },
-  { label:'Konstruksi / Renovasi CV Kecil (<1M)', kw:['konstruksi','renovasi','pembangunan','bangun','rehab'],
-    jenisPPh:'PPh Final 4(2)', tarifPPh:0.02, ppn:0.11, mapPPh:'411128', kjsPPh:'409', minPPh:0, minPPN:1000000, catatan:'Pelaksana konstruksi kualifikasi kecil' },
+  { label:'Perencanaan / Pengawasan Konstruksi', kw:['perencanaan konstruksi','pengawasan konstruksi','konsultan perencana','konsultan pengawas','manajemen konstruksi','supervisi konstruksi','konsultan konstruksi'],
+    jenisPPh:'PPh Final 4(2)', tarifPPh:0.035, ppn:0.11, mapPPh:'411128', kjsPPh:'409', minPPh:0, minPPN:1000000, catatan:'Perencana/pengawas konstruksi bersertifikat (PP 9/2022) - tanpa sertifikat 6%' },
+  { label:'Konstruksi (Pelaksana Menengah/Besar)', kw:['konstruksi pt','kontraktor besar','konstruksi menengah','kualifikasi menengah','kualifikasi besar'],
+    jenisPPh:'PPh Final 4(2)', tarifPPh:0.0265, ppn:0.11, mapPPh:'411128', kjsPPh:'409', minPPh:0, minPPN:1000000, catatan:'Pelaksana konstruksi kualifikasi menengah/besar (PP 9/2022)' },
+  { label:'Konstruksi / Renovasi (Pelaksana Kecil)', kw:['konstruksi','renovasi','pembangunan','bangun','rehab','pemasangan'],
+    jenisPPh:'PPh Final 4(2)', tarifPPh:0.0175, ppn:0.11, mapPPh:'411128', kjsPPh:'409', minPPh:0, minPPN:1000000, catatan:'Pelaksana konstruksi kualifikasi kecil (PP 9/2022) - tanpa sertifikat 4%' },
   { label:'Jasa Servis / Perbaikan / Instalasi', kw:['servis','service','perbaikan','instalasi','reparasi','perawatan ac'],
     jenisPPh:'PPh Pasal 23', tarifPPh:0.02, ppn:0.11, mapPPh:'411124', kjsPPh:'104', minPPh:0, minPPN:1000000, catatan:'' },
   { label:'Jasa Pemeliharaan / Kebersihan', kw:['pemeliharaan','kebersihan','cleaning','perawatan','jasa kebersihan'],
@@ -392,7 +394,9 @@ function hitungPajak(kegiatan, nominal, termasukPPN, adaNpwp){
   var dpp=(kenaPPN && termasukPPN) ? Math.round(nominal/1.11) : nominal;
 
   var tarif=ref.tarifPPh||0;
-  if(!adaNpwp && tarif>0) tarif=tarif*2;
+  // Tarif 100% lebih tinggi untuk non-NPWP hanya berlaku pada PPh 22 & PPh 23
+  var npwpX2=(ref.jenisPPh==='PPh Pasal 22' || ref.jenisPPh==='PPh Pasal 23');
+  if(!adaNpwp && tarif>0 && npwpX2) tarif=tarif*2;
 
   var pph=0;
   if(ref.jenisPPh && tarif>0 && (!ref.minPPh || nominal>=ref.minPPh)) pph=Math.round(tarif*dpp);
