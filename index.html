@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kas Tunai - Poltek KP Sorong</title>
+<style>
+  :root{
+    --c-primary:#1565c0; --c-bg:#f4f6f9; --c-card:#fff; --c-line:#e2e6ec;
+    --c-text:#1f2937; --c-muted:#6b7280; --c-ok:#16a34a; --c-warn:#ea580c;
+    --c-err:#dc2626; --radius:12px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:-apple-system,Roboto,"Segoe UI",sans-serif;
+    background:var(--c-bg);color:var(--c-text);font-size:15px;line-height:1.4}
+  header{position:sticky;top:0;z-index:20;background:var(--c-primary);color:#fff;
+    padding:12px 14px;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+  header h1{margin:0;font-size:17px;font-weight:600}
+  header .sub{font-size:12px;opacity:.85;margin-top:2px}
+
+  .tabs{display:flex;background:var(--c-card);border-bottom:1px solid var(--c-line);
+    position:sticky;top:54px;z-index:15}
+  .tabs button{flex:1;border:0;background:none;padding:12px 6px;font-size:14px;
+    color:var(--c-muted);font-weight:600;border-bottom:3px solid transparent}
+  .tabs button.active{color:var(--c-primary);border-bottom-color:var(--c-primary)}
+
+  .wrap{padding:12px;max-width:760px;margin:0 auto}
+
+  .filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:4px}
+  .filters button{flex:0 0 auto;border:1px solid var(--c-line);background:#fff;
+    border-radius:20px;padding:7px 14px;font-size:13px;color:var(--c-text);font-weight:600}
+  .filters button.active{background:var(--c-primary);color:#fff;border-color:var(--c-primary)}
+
+  .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--c-muted);
+    margin:2px 0 12px}
+  .legend span{display:inline-flex;align-items:center;gap:4px}
+  .dot{width:12px;height:12px;border-radius:3px;border:1px solid var(--c-line)}
+
+  .card{background:var(--c-card);border:1px solid var(--c-line);border-radius:var(--radius);
+    padding:12px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .status-spby{background:#fdf5ff} .status-lengkap{background:#f0faf4}
+  .status-nota-ok{background:#f0f6ff} .status-foto-ok{background:#fffbf0}
+  .status-belum{background:#fff}
+
+  .card .row1{display:flex;justify-content:space-between;gap:8px}
+  .card .keg{font-weight:600;font-size:15px}
+  .card .tgl{font-size:12px;color:var(--c-muted)}
+  .card .amt{font-weight:700;white-space:nowrap}
+  .amt.kredit{color:var(--c-err)} .amt.debet{color:var(--c-ok)}
+  .card .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:12px}
+  .chip{background:#eef2f7;border-radius:20px;padding:3px 9px;color:var(--c-muted)}
+  .chip.ok{background:#dcfce7;color:#166534} .chip.no{background:#fee2e2;color:#991b1b}
+  .card .acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .card .acts button{flex:1;min-width:90px;border:1px solid var(--c-line);background:#fff;
+    border-radius:8px;padding:8px;font-size:13px;font-weight:600;color:var(--c-primary)}
+
+  .fab{position:fixed;right:18px;bottom:20px;width:56px;height:56px;border-radius:50%;
+    background:var(--c-primary);color:#fff;border:0;font-size:28px;z-index:30;
+    box-shadow:0 4px 12px rgba(0,0,0,.25)}
+
+  .empty{text-align:center;color:var(--c-muted);padding:40px 10px;font-size:14px}
+
+  /* Rekap */
+  .rekap-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .rekap-grid .card{margin:0;text-align:center}
+  .rekap-grid .lbl{font-size:12px;color:var(--c-muted)}
+  .rekap-grid .val{font-size:18px;font-weight:700;margin-top:4px}
+
+  /* Modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;display:none;
+    align-items:flex-end;justify-content:center}
+  .modal.show{display:flex}
+  .sheet{background:#fff;width:100%;max-width:760px;border-radius:16px 16px 0 0;
+    padding:16px;max-height:90vh;overflow:auto}
+  .sheet h2{margin:0 0 12px;font-size:16px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:13px;color:var(--c-muted);margin-bottom:4px}
+  .field input,.field textarea,.field select{width:100%;border:1px solid var(--c-line);
+    border-radius:8px;padding:10px;font-size:15px;font-family:inherit}
+  .btn{width:100%;border:0;border-radius:10px;padding:13px;font-size:15px;font-weight:700;
+    background:var(--c-primary);color:#fff;margin-top:4px}
+  .btn.ghost{background:#eef2f7;color:var(--c-text)}
+  .row2{display:flex;gap:10px} .row2>*{flex:1}
+
+  /* Toast & loading */
+  #toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:60;
+    padding:11px 18px;border-radius:24px;color:#fff;font-size:14px;font-weight:600;
+    display:none;max-width:90%;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+  #toast.success{background:var(--c-ok)} #toast.error{background:var(--c-err)}
+  #toast.info{background:#374151}
+  #loading{position:fixed;inset:0;background:rgba(255,255,255,.7);z-index:70;
+    display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+  .spinner{width:38px;height:38px;border:4px solid #cdd5e0;border-top-color:var(--c-primary);
+    border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #loading .msg{font-size:14px;color:var(--c-text);font-weight:600}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Kas Tunai</h1>
+  <div class="sub">Politeknik KP Sorong &middot; <span id="userLabel"></span></div>
+</header>
+
+<div class="tabs">
+  <button id="tabTransaksi" class="active" onclick="switchTab('transaksi')">Transaksi</button>
+  <button id="tabLaporan" onclick="switchTab('laporan')">Laporan</button>
+</div>
+
+<!-- ================= TAB TRANSAKSI ================= -->
+<div id="viewTransaksi" class="wrap">
+  <div class="filters" id="filterBar">
+    <button data-f="all">Semua</button>
+    <button data-f="belum">Belum SPJ</button>
+    <button data-f="sudah">Sudah SPJ</button>
+    <button data-f="belumlunas">Belum Lunas</button>
+    <button data-f="belumfoto" class="active">Belum Foto</button>
+    <button data-f="spby">SPBY</button>
+  </div>
+  <div class="legend">
+    <span><i class="dot" style="background:#fdf5ff"></i>SPBY</span>
+    <span><i class="dot" style="background:#f0faf4"></i>Lengkap</span>
+    <span><i class="dot" style="background:#f0f6ff"></i>Nota OK</span>
+    <span><i class="dot" style="background:#fffbf0"></i>Foto OK</span>
+    <span><i class="dot" style="background:#fff"></i>Belum</span>
+  </div>
+  <div id="listTransaksi"></div>
+</div>
+
+<!-- ================= TAB LAPORAN ================= -->
+<div id="viewLaporan" class="wrap hidden">
+  <div class="rekap-grid" id="rekapGrid"></div>
+  <button class="btn ghost" style="margin-top:14px" onclick="loadRekap()">Muat Ulang Rekap</button>
+  <button class="btn" style="margin-top:8px" onclick="toast('Cetak SPJ/SSP PDF: lengkapi modul cetak','info')">
+    Cetak Laporan SPJ / SSP
+  </button>
+</div>
+
+<button class="fab" onclick="openModalTransaksi()">+</button>
+
+<!-- ================= MODAL TRANSAKSI ================= -->
+<div class="modal" id="modalTransaksi">
+  <div class="sheet">
+    <h2>Tambah Transaksi</h2>
+    <div class="field"><label>Tanggal</label><input type="date" id="txTanggal"></div>
+    <div class="field"><label>Kegiatan</label><input type="text" id="txKegiatan" placeholder="Nama kegiatan"></div>
+    <div class="field"><label>Penanggung Jawab</label><input type="text" id="txPenjab"></div>
+    <div class="row2">
+      <div class="field"><label>Debet (masuk)</label><input type="number" id="txDebet" value="0"></div>
+      <div class="field"><label>Kredit (keluar)</label><input type="number" id="txKredit" value="0"></div>
+    </div>
+    <div class="field"><label>Keterangan</label><textarea id="txKeterangan" rows="2"></textarea></div>
+    <button class="btn" onclick="submitTransaksi()">Simpan</button>
+    <button class="btn ghost" onclick="closeModal('modalTransaksi')">Batal</button>
+  </div>
+</div>
+
+<!-- ================= MODAL NOTA ================= -->
+<div class="modal" id="modalNota">
+  <div class="sheet">
+    <h2>Nota Transaksi <span id="notaTxLabel"></span></h2>
+    <div id="notaList"></div>
+    <hr>
+    <h2 style="font-size:14px">Tambah Nota</h2>
+    <div class="field"><label>Nama Penyedia</label><input type="text" id="ntPenyedia"></div>
+    <div class="row2">
+      <div class="field"><label>No Nota</label><input type="text" id="ntNoNota"></div>
+      <div class="field"><label>Nilai</label><input type="number" id="ntNilai" value="0"></div>
+    </div>
+    <div class="field"><label>Tgl Nota</label><input type="date" id="ntTgl"></div>
+    <div class="field"><label>Foto nota (opsional)</label><input type="file" id="ntFile" accept="image/*" capture="environment"></div>
+    <button class="btn" onclick="submitNota()">Tambah Nota</button>
+    <button class="btn ghost" onclick="closeModal('modalNota')">Tutup</button>
+  </div>
+</div>
+
+<!-- ================= MODAL PENGEMBALIAN ================= -->
+<div class="modal" id="modalKembali">
+  <div class="sheet">
+    <h2>Pengembalian <span id="kbTxLabel"></span></h2>
+    <div id="kbList"></div>
+    <hr>
+    <div class="row2">
+      <div class="field"><label>Tanggal</label><input type="date" id="kbTgl"></div>
+      <div class="field"><label>Nilai</label><input type="number" id="kbNilai" value="0"></div>
+    </div>
+    <div class="field"><label>Keterangan</label><input type="text" id="kbKet"></div>
+    <button class="btn" onclick="submitPengembalian()">Tambah</button>
+    <button class="btn ghost" onclick="closeModal('modalKembali')">Tutup</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="loading"><div class="spinner"></div><div class="msg" id="loadingMsg">Memuat...</div></div>
+
+<script>
+/* ============== Global state ============== */
+var SALDO_AWAL_JS = <?= appData.saldoAwal ?>;
+var CURRENT_USER  = '<?= appData.user ?>';
+var NAMA_USER     = '<?= appData.namaUser ?>';
+var ROLE_USER     = '<?= appData.roleUser ?>';
+var IS_ADMIN      = <?= appData.isAdmin ? 'true' : 'false' ?>;
+
+var allTransaksi  = [];
+var currentFilter = 'belumfoto';
+var fotoJmlMap    = {};      // {noTransaksi: jumlahFotoNota}
+var _notaTarget   = null;    // noTransaksi yang sedang dikelola notanya
+var _kbTarget     = null;    // noTransaksi yang sedang dikelola pengembaliannya
+var _allPenyedia  = null;
+
+/* PAJAK_REF & INST: struktur disiapkan, lengkapi dengan 19 kategori bendahara. */
+var PAJAK_REF = [];
+var INST = { namaWP:'', npwpWP:'', alamatWP:'', bendahara:'', kota:'Sorong' };
+
+/* ============== Util UI ============== */
+function toast(msg, type){
+  var t=document.getElementById('toast');
+  t.textContent=msg; t.className=(type||'info'); t.style.display='block';
+  clearTimeout(t._tm); t._tm=setTimeout(function(){t.style.display='none';},2800);
+}
+function showLoading(on,msg){
+  document.getElementById('loadingMsg').textContent=msg||'Memuat...';
+  document.getElementById('loading').style.display=on?'flex':'none';
+}
+function openModal(id){document.getElementById(id).classList.add('show');}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+function rupiah(n){
+  n=parseFloat(n)||0;
+  return 'Rp '+n.toLocaleString('id-ID');
+}
+function fail(e){showLoading(false);toast('Gagal: '+(e&&e.message?e.message:e),'error');}
+
+/* ============== Tab ============== */
+function switchTab(tab){
+  document.getElementById('viewTransaksi').classList.toggle('hidden',tab!=='transaksi');
+  document.getElementById('viewLaporan').classList.toggle('hidden',tab!=='laporan');
+  document.getElementById('tabTransaksi').classList.toggle('active',tab==='transaksi');
+  document.getElementById('tabLaporan').classList.toggle('active',tab==='laporan');
+  if(tab==='laporan') loadRekap();
+}
+
+/* ============== Load transaksi ============== */
+function loadAll(){
+  showLoading(true,'Memuat transaksi...');
+  google.script.run
+    .withSuccessHandler(function(d){
+      allTransaksi=(d&&d.transaksi)||[];
+      fotoJmlMap=(d&&d.fotoMap)||{};
+      showLoading(false);
+      renderList();
+    })
+    .withFailureHandler(fail)
+    .serverGetDashboard();
+}
+
+/* ============== Status & filter ============== */
+function fotoCount(t){return fotoJmlMap[String(t.no)]||0;}
+function isNotaLunas(t){return t.kredit>0 && t.notaTotal>=t.kredit;}
+
+function statusOf(t){
+  var fnJml=fotoCount(t), lunas=isNotaLunas(t);
+  if(t.noSpby) return 'spby';
+  if(lunas && fnJml>0) return 'lengkap';
+  if(lunas && fnJml===0) return 'nota-ok';
+  if(fnJml>0) return 'foto-ok';
+  return 'belum';
+}
+function passFilter(t){
+  switch(currentFilter){
+    case 'all': return true;
+    case 'belum': return t.statusSpj!=='Lunas';
+    case 'sudah': return t.statusSpj==='Lunas';
+    case 'belumlunas': return t.kredit>0 && !isNotaLunas(t);
+    case 'belumfoto': return t.kredit>0 && fotoCount(t)===0;
+    case 'spby': return !!t.noSpby;
+    default: return true;
+  }
+}
+
+function renderList(){
+  var box=document.getElementById('listTransaksi');
+  var rows=allTransaksi.filter(passFilter);
+  if(!rows.length){box.innerHTML='<div class="empty">Tidak ada transaksi pada filter ini.</div>';return;}
+  var html='';
+  for(var i=0;i<rows.length;i++){
+    var t=rows[i];
+    var st=statusOf(t);
+    var fnJml=fotoCount(t);
+    var amtCls=t.kredit>0?'kredit':'debet';
+    var amt=t.kredit>0?('-'+rupiah(t.kredit)):('+'+rupiah(t.debet));
+    var notaChip=(t.kredit>0)
+      ?('<span class="chip '+(t.notaTotal>=t.kredit?'ok':'no')+'">Nota '+rupiah(t.notaTotal)+'</span>')
+      :'';
+    var fotoChip=(t.kredit>0)
+      ?('<span class="chip '+(fnJml>0?'ok':'no')+'">Foto '+fnJml+'</span>')
+      :'';
+    var spbyChip=t.noSpby?('<span class="chip ok">SPBY '+t.noSpby+'</span>'):'';
+    html+=''
+      +'<div class="card status-'+st+'">'
+      +  '<div class="row1">'
+      +    '<div><div class="keg">'+esc(t.kegiatan||'(tanpa kegiatan)')+'</div>'
+      +    '<div class="tgl">'+esc(t.tanggal)+' &middot; No '+t.no+'</div></div>'
+      +    '<div class="amt '+amtCls+'">'+amt+'</div>'
+      +  '</div>'
+      +  '<div class="meta">'+notaChip+fotoChip+spbyChip
+      +    '<span class="chip">Saldo '+rupiah(t.saldo)+'</span>'
+      +  '</div>';
+    if(t.kredit>0){
+      html+='<div class="acts">'
+        +'<button onclick="openModalNota('+t.no+')">Nota</button>'
+        +'<button onclick="openModalKembali('+t.no+')">Kembalian</button>'
+        +'<button onclick="promptSpby('+t.no+','+t.rowIndex+')">SPBY</button>'
+        +'</div>';
+    }
+    html+='</div>';
+  }
+  box.innerHTML=html;
+}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* ============== Tambah transaksi ============== */
+function openModalTransaksi(){
+  document.getElementById('txTanggal').value=todayISO();
+  document.getElementById('txKegiatan').value='';
+  document.getElementById('txPenjab').value=NAMA_USER||'';
+  document.getElementById('txDebet').value=0;
+  document.getElementById('txKredit').value=0;
+  document.getElementById('txKeterangan').value='';
+  openModal('modalTransaksi');
+}
+function submitTransaksi(){
+  var data={
+    tanggal:document.getElementById('txTanggal').value,
+    kegiatan:document.getElementById('txKegiatan').value.trim(),
+    penjab:document.getElementById('txPenjab').value.trim(),
+    debet:parseFloat(document.getElementById('txDebet').value)||0,
+    kredit:parseFloat(document.getElementById('txKredit').value)||0,
+    keterangan:document.getElementById('txKeterangan').value.trim()
+  };
+  if(!data.kegiatan){toast('Kegiatan wajib diisi','error');return;}
+  showLoading(true,'Menyimpan...');
+  google.script.run
+    .withSuccessHandler(function(){showLoading(false);closeModal('modalTransaksi');
+      toast('Transaksi tersimpan','success');loadAll();})
+    .withFailureHandler(fail)
+    .serverTambahTransaksi(data);
+}
+
+/* ============== Nota ============== */
+function openModalNota(no){
+  _notaTarget=no;
+  document.getElementById('notaTxLabel').textContent='No '+no;
+  document.getElementById('ntPenyedia').value='';
+  document.getElementById('ntNoNota').value='';
+  document.getElementById('ntNilai').value=0;
+  document.getElementById('ntTgl').value=todayISO();
+  document.getElementById('ntFile').value='';
+  document.getElementById('notaList').innerHTML='<div class="empty">Memuat...</div>';
+  openModal('modalNota');
+  google.script.run
+    .withSuccessHandler(renderNotaList)
+    .withFailureHandler(fail)
+    .serverGetMultiNota(no);
+}
+function renderNotaList(list){
+  var box=document.getElementById('notaList');
+  if(!list||!list.length){box.innerHTML='<div class="empty">Belum ada nota.</div>';return;}
+  var h='';
+  for(var i=0;i<list.length;i++){
+    var n=list[i];
+    h+='<div class="card" style="margin-bottom:8px">'
+      +'<div class="row1"><div class="keg" style="font-size:14px">'+esc(n.namaPenyedia||'-')+'</div>'
+      +'<div class="amt">'+rupiah(n.nilai)+'</div></div>'
+      +'<div class="tgl">No '+esc(n.noNota||'-')+' &middot; '+esc(n.tglNota||'-')+'</div>'
+      +'<div class="acts"><button onclick="hapusNota('+_notaTarget+','+n.urutan+",'"+(n.fileId||'')+"')\">Hapus</button></div>"
+      +'</div>';
+  }
+  box.innerHTML=h;
+}
+function submitNota(){
+  var nilai=parseFloat(document.getElementById('ntNilai').value)||0;
+  var notaData={
+    namaPenyedia:document.getElementById('ntPenyedia').value.trim(),
+    noNota:document.getElementById('ntNoNota').value.trim(),
+    nilai:nilai,
+    tglNota:document.getElementById('ntTgl').value
+  };
+  if(nilai<=0){toast('Nilai nota harus > 0','error');return;}
+  var fileEl=document.getElementById('ntFile');
+  if(fileEl.files&&fileEl.files[0]){
+    compressImage(fileEl.files[0],function(f){notaData.file=f;sendNota(notaData);});
+  }else{
+    sendNota(notaData);
+  }
+}
+function sendNota(notaData){
+  showLoading(true,'Menyimpan nota...');
+  google.script.run
+    .withSuccessHandler(function(){showLoading(false);toast('Nota ditambahkan','success');
+      openModalNota(_notaTarget);loadAll();})
+    .withFailureHandler(fail)
+    .serverTambahNota(_notaTarget,notaData);
+}
+function hapusNota(no,urutan,fileId){
+  if(!confirm('Hapus nota ini?'))return;
+  showLoading(true,'Menghapus...');
+  google.script.run
+    .withSuccessHandler(function(){showLoading(false);toast('Nota dihapus','success');
+      openModalNota(no);loadAll();})
+    .withFailureHandler(fail)
+    .serverHapusNotaItem(no,urutan,fileId);
+}
+
+/* ============== Pengembalian ============== */
+function openModalKembali(no){
+  _kbTarget=no;
+  document.getElementById('kbTxLabel').textContent='No '+no;
+  document.getElementById('kbTgl').value=todayISO();
+  document.getElementById('kbNilai').value=0;
+  document.getElementById('kbKet').value='';
+  document.getElementById('kbList').innerHTML='<div class="empty">Memuat...</div>';
+  openModal('modalKembali');
+  google.script.run.withSuccessHandler(renderKbList).withFailureHandler(fail)
+    .serverGetPengembalian(no);
+}
+function renderKbList(list){
+  var box=document.getElementById('kbList');
+  if(!list||!list.length){box.innerHTML='<div class="empty">Belum ada pengembalian.</div>';return;}
+  var h='';
+  for(var i=0;i<list.length;i++){
+    var k=list[i];
+    h+='<div class="card" style="margin-bottom:8px"><div class="row1">'
+      +'<div class="tgl">'+esc(k.tanggal)+' &middot; '+esc(k.keterangan||'')+'</div>'
+      +'<div class="amt">'+rupiah(k.nilai)+'</div></div>'
+      +'<div class="acts"><button onclick="hapusKb('+_kbTarget+','+k.urutan+')">Hapus</button></div></div>';
+  }
+  box.innerHTML=h;
+}
+function submitPengembalian(){
+  var nilai=parseFloat(document.getElementById('kbNilai').value)||0;
+  if(nilai<=0){toast('Nilai harus > 0','error');return;}
+  var data={tanggal:document.getElementById('kbTgl').value,nilai:nilai,
+    keterangan:document.getElementById('kbKet').value.trim()};
+  showLoading(true,'Menyimpan...');
+  google.script.run.withSuccessHandler(function(){showLoading(false);
+    toast('Pengembalian ditambahkan','success');openModalKembali(_kbTarget);loadAll();})
+    .withFailureHandler(fail).serverTambahPengembalian(_kbTarget,data);
+}
+function hapusKb(no,urutan){
+  if(!confirm('Hapus pengembalian ini?'))return;
+  showLoading(true,'Menghapus...');
+  google.script.run.withSuccessHandler(function(){showLoading(false);
+    toast('Dihapus','success');openModalKembali(no);loadAll();})
+    .withFailureHandler(fail).serverHapusPengembalian(no,urutan);
+}
+
+/* ============== SPBY ============== */
+function promptSpby(no,rowIndex){
+  var noSpby=prompt('Nomor SPBY untuk transaksi No '+no+':');
+  if(noSpby===null)return;
+  var tgl=prompt('Tanggal SPBY (YYYY-MM-DD):',todayISO());
+  if(tgl===null)return;
+  showLoading(true,'Menyimpan SPBY...');
+  google.script.run.withSuccessHandler(function(){showLoading(false);
+    toast('SPBY tersimpan','success');loadAll();})
+    .withFailureHandler(fail).serverSimpanSpby(rowIndex,noSpby.trim(),tgl.trim());
+}
+
+/* ============== Rekap ============== */
+function loadRekap(){
+  showLoading(true,'Memuat rekap...');
+  google.script.run.withSuccessHandler(function(r){
+    showLoading(false);
+    document.getElementById('rekapGrid').innerHTML=''
+      +card('Saldo Awal',rupiah(r.saldoAwal))
+      +card('Total Debet',rupiah(r.totalDebet))
+      +card('Total Kredit',rupiah(r.totalKredit))
+      +card('Saldo Akhir',rupiah(r.saldoAkhir))
+      +card('Jml Transaksi',r.jmlTransaksi);
+  }).withFailureHandler(fail).serverGetRekap();
+  function card(l,v){return '<div class="card"><div class="lbl">'+l+'</div><div class="val">'+v+'</div></div>';}
+}
+
+/* ============== Foto: kompresi Canvas (max 1280px, q 0.7) ============== */
+function compressImage(file,cb){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      var max=1280,w=img.width,h=img.height;
+      if(w>h&&w>max){h=Math.round(h*max/w);w=max;}
+      else if(h>=w&&h>max){w=Math.round(w*max/h);h=max;}
+      var cv=document.createElement('canvas');cv.width=w;cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      var dataUrl=cv.toDataURL('image/jpeg',0.7);
+      cb({base64:dataUrl,mimeType:'image/jpeg',namaFile:(file.name||'foto')+'.jpg'});
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ============== Helpers ============== */
+function todayISO(){
+  var d=new Date(),m=('0'+(d.getMonth()+1)).slice(-2),day=('0'+d.getDate()).slice(-2);
+  return d.getFullYear()+'-'+m+'-'+day;
+}
+
+/* ============== Init ============== */
+(function init(){
+  document.getElementById('userLabel').textContent=CURRENT_USER||'tamu';
+  var btns=document.querySelectorAll('#filterBar button');
+  for(var i=0;i<btns.length;i++){
+    btns[i].addEventListener('click',function(){
+      currentFilter=this.getAttribute('data-f');
+      for(var j=0;j<btns.length;j++)btns[j].classList.remove('active');
+      this.classList.add('active');
+      renderList();
+    });
+  }
+  loadAll();
+})();
+</script>
+</body>
+</html>
