@@ -265,13 +265,16 @@ var _allPenyedia  = null;
 
 /* ============== Data institusi (hardcoded) ============== */
 var INST = {
+  kementerian: 'KEMENTERIAN KELAUTAN DAN PERIKANAN',
   namaWP   : 'Politeknik Kelautan dan Perikanan Sorong',
   npwpWP   : '00.172.581.1-951.000',
   alamatWP : 'Jl. Kapitan Pattimura Kel. Malaingkedi Distrik Sorong Utara, Kota Sorong',
   bendahara: 'Abdul Rauf Muhammad Saleh',
   nipBendahara: '198309122007011001',
-  kota     : 'Sorong'
+  kota     : 'Sorong',
+  logoUrl  : ''   // isi URL logo (KKP/Politeknik) untuk muncul di kop; kosong = tanpa logo
 };
+var MATERAI_MIN = 5000000; // pembayaran >= nilai ini wajib bermaterai Rp 10.000
 
 /* ============== Referensi pajak (19 kategori bendahara) ==============
  * tarifPPh & ppn dalam desimal. minPPh/minPPN = ambang batas (di bawahnya
@@ -807,48 +810,75 @@ function _renderKuitansiHtml(t, notas, pj, penyedia){
   if(notas.length){
     for(var i=0;i<notas.length;i++){
       rincian+='<tr><td>'+(i+1)+'. '+esc(notas[i].namaPenyedia||notas[i].noNota||'Nota')+'</td>'
-        +'<td style="text-align:right">'+rupiah(notas[i].nilai)+'</td></tr>';
+        +'<td class="r">'+rupiah(notas[i].nilai)+'</td></tr>';
     }
   } else {
-    rincian='<tr><td>Pembayaran '+esc(t.kegiatan)+'</td><td style="text-align:right">'+rupiah(t.kredit)+'</td></tr>';
+    rincian='<tr><td>Pembayaran '+esc(t.kegiatan)+'</td><td class="r">'+rupiah(t.kredit)+'</td></tr>';
   }
   var noKuitansi='KT-'+t.no+'/'+(new Date().getFullYear());
+  var spbyRow=t.noSpby?('<tr><td>No. SPBY</td><td>: '+esc(t.noSpby)+'</td></tr>'):'';
+  var mak=t.mak||t.kodeRekening||'';
+  var makRow='<tr><td>Kode Rekening / MAK</td><td>: '+(mak?esc(mak):'<span style="color:#888">..............................</span>')+'</td></tr>';
+  var logo=INST.logoUrl?('<img src="'+INST.logoUrl+'" style="height:64px;width:auto">'):'';
+  var materai=(pj.nominal>=MATERAI_MIN)
+    ? '<div class="materai">M E T E R A I<br>Rp 10.000</div>' : '';
+
   return ''
   +'<html><head><meta charset="utf-8"><title>Kuitansi '+noKuitansi+'</title><style>'
-  +'@page{size:A5 landscape;margin:10mm} *{font-family:Arial,sans-serif}'
-  +'body{font-size:12px;color:#000} .box{border:2px solid #000;padding:14px}'
-  +'h1{font-size:20px;margin:0;letter-spacing:2px} table{width:100%;border-collapse:collapse}'
-  +'td{padding:2px 0;vertical-align:top} .hdr{display:flex;justify-content:space-between;align-items:flex-start}'
-  +'.inst{font-size:11px;color:#333} .line{border-top:1px solid #000;margin:8px 0}'
-  +'.ttd{display:flex;justify-content:space-between;margin-top:24px;font-size:11px}'
-  +'.amt{font-weight:bold} .terbilang{font-style:italic;background:#f3f3f3;padding:4px 8px;display:inline-block}'
+  +'@page{size:A4 portrait;margin:15mm} *{font-family:Arial,sans-serif}'
+  +'body{font-size:13px;color:#000} '
+  +'.kop{display:flex;align-items:center;gap:14px;border-bottom:3px double #000;padding-bottom:8px}'
+  +'.kop .logo{flex:0 0 auto} .kop .txt{flex:1;text-align:center;line-height:1.3}'
+  +'.kop .k1{font-size:13px;font-weight:bold;letter-spacing:.5px} '
+  +'.kop .k2{font-size:16px;font-weight:bold;letter-spacing:.5px} .kop .k3{font-size:11px}'
+  +'.title{display:flex;justify-content:space-between;align-items:flex-end;margin:18px 0 6px}'
+  +'h1{font-size:22px;margin:0;letter-spacing:3px} .nokt{text-align:right;font-size:12px}'
+  +'.box{border:1px solid #000;padding:16px;border-radius:4px}'
+  +'table{width:100%;border-collapse:collapse} td{padding:3px 0;vertical-align:top} td.r{text-align:right}'
+  +'.line{border-top:1px solid #aaa;margin:10px 0} .amt{font-weight:bold}'
+  +'.terbilang{font-style:italic;background:#f3f3f3;padding:5px 10px;display:inline-block;border-radius:3px}'
+  +'.ttd{display:flex;justify-content:space-between;margin-top:30px;font-size:12px}'
+  +'.ttd .col{width:46%} .ttd .col.kanan{text-align:center}'
+  +'.materai{border:1px dashed #888;color:#666;font-size:9px;text-align:center;'
+  +'  width:90px;height:48px;line-height:1.4;padding-top:8px;margin:6px auto 4px}'
+  +'.sign{margin-top:50px;font-weight:bold;text-decoration:underline}'
   +'@media print{.noprint{display:none}}'
   +'</style></head><body>'
-  +'<div class="noprint" style="text-align:right;margin-bottom:8px">'
+  +'<div class="noprint" style="text-align:right;margin-bottom:10px">'
   +'<button onclick="window.print()">Cetak / Simpan PDF</button></div>'
+
+  +'<div class="kop">'+(logo?('<div class="logo">'+logo+'</div>'):'')
+  +'<div class="txt"><div class="k1">'+esc(INST.kementerian)+'</div>'
+  +'<div class="k2">'+esc(INST.namaWP).toUpperCase()+'</div>'
+  +'<div class="k3">'+esc(INST.alamatWP)+'</div></div></div>'
+
+  +'<div class="title"><h1>KUITANSI</h1>'
+  +'<div class="nokt">No. : '+noKuitansi+(t.noSpby?('<br>No. SPBY : '+esc(t.noSpby)):'')+'</div></div>'
+
   +'<div class="box">'
-  +'<div class="hdr"><div><h1>KUITANSI</h1><div class="inst">'+esc(INST.namaWP)+'<br>'+esc(INST.alamatWP)+'</div></div>'
-  +'<div style="text-align:right">No: '+noKuitansi+'</div></div>'
-  +'<div class="line"></div>'
   +'<table>'
-  +'<tr><td style="width:38%">Sudah terima dari</td><td>: Bendahara Pengeluaran '+esc(INST.namaWP)+'</td></tr>'
+  +'<tr><td style="width:34%">Sudah terima dari</td><td>: Bendahara Pengeluaran '+esc(INST.namaWP)+'</td></tr>'
   +'<tr><td>Uang sejumlah</td><td class="amt">: '+rupiah(pj.nominal)+'</td></tr>'
   +'<tr><td>Terbilang</td><td>: <span class="terbilang">'+_terbilang(pj.nominal)+'</span></td></tr>'
   +'<tr><td>Untuk pembayaran</td><td>: '+esc(t.kegiatan)+'</td></tr>'
+  +makRow+spbyRow
   +'<tr><td>Tanggal</td><td>: '+_tglPanjang(t.tanggal)+'</td></tr>'
   +'</table>'
   +'<div class="line"></div>'
   +'<table><tr><td colspan="2"><b>Rincian Nota:</b></td></tr>'+rincian
-  +'<tr><td><b>Total Nota</b></td><td style="text-align:right"><b>'+rupiah(pj.nominal)+'</b></td></tr></table>'
+  +'<tr><td><b>Total Nota</b></td><td class="r"><b>'+rupiah(pj.nominal)+'</b></td></tr></table>'
   +'<div class="line"></div>'
   +'<table><tr><td colspan="2"><b>Potongan Pajak:</b></td></tr>'
-  +'<tr><td>'+(pj.jenisPPh||'PPh')+(pj.tarifPPhPct?(' ('+pj.tarifPPhPct+'%)'):'')+'</td><td style="text-align:right">'+rupiah(pj.pph)+'</td></tr>'
-  +'<tr><td>PPN'+(pj.kenaPPN?' (11%)':'')+'</td><td style="text-align:right">'+rupiah(pj.ppn)+'</td></tr>'
-  +'<tr><td><b>Diterima (setelah pajak)</b></td><td style="text-align:right"><b>'+rupiah(pj.nettoRekanan)+'</b></td></tr></table>'
+  +'<tr><td>'+(pj.jenisPPh||'PPh')+(pj.tarifPPhPct?(' ('+pj.tarifPPhPct+'%)'):'')+'</td><td class="r">'+rupiah(pj.pph)+'</td></tr>'
+  +'<tr><td>PPN'+(pj.kenaPPN?' (11%)':'')+'</td><td class="r">'+rupiah(pj.ppn)+'</td></tr>'
+  +'<tr><td><b>Diterima (setelah pajak)</b></td><td class="r"><b>'+rupiah(pj.nettoRekanan)+'</b></td></tr></table>'
+
   +'<div class="ttd">'
-  +'<div>'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)+'<br>Bendahara Pengeluaran,<br><br><br>'
-  +'<b>'+esc(INST.bendahara)+'</b><br>NIP. '+esc(INST.nipBendahara)+'</div>'
-  +'<div style="text-align:right">Yang Menerima,<br><br><br><br><b>'+esc(penyedia.nama||'')+'</b></div>'
+  +'<div class="col">'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)+'<br>Bendahara Pengeluaran,'
+  +'<div class="sign">'+esc(INST.bendahara)+'</div>NIP. '+esc(INST.nipBendahara)+'</div>'
+  +'<div class="col kanan">Yang Menerima,'+materai
+  +'<div class="sign" style="margin-top:'+(materai?'6px':'50px')+'">'+esc(penyedia.nama||'(…………)')+'</div>'
+  +(penyedia.npwp?('NPWP. '+esc(penyedia.npwp)):'')+'</div>'
   +'</div></div></body></html>';
 }
 
