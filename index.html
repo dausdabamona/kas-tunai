@@ -788,40 +788,22 @@ function recalcPajak(){
   function baris(l,v){return '<div class="row1" style="margin:3px 0"><span class="tgl">'+l+'</span><span>'+v+'</span></div>';}
 }
 
-/* ============== Kuitansi ============== */
+/* ============== Kuitansi (serah-terima uang Bendahara -> PUM/Penjab) ============== */
 function bukaPdfKuitansi(noTransaksi){
   var t=_cariTransaksi(noTransaksi);
   if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
-  butuhPenyedia(noTransaksi, 'kuitansi', function(penyedia){
-    showLoading(true,'Menyiapkan kuitansi...');
-    google.script.run
-      .withSuccessHandler(function(res){
-        showLoading(false);
-        var notas=(res&&res.notas)||[];
-        var pj=hitungPajak(t.kegiatan, t.kredit, true, !!(penyedia.npwp));
-        _bukaPopup(_renderKuitansiHtml(t, notas, pj, penyedia));
-      })
-      .withFailureHandler(fail)
-      .serverGetNotaDanFoto(noTransaksi);
-  });
+  _bukaPopup(_renderKuitansiHtml(t));
 }
-function _renderKuitansiHtml(t, notas, pj, penyedia){
-  var rincian='';
-  if(notas.length){
-    for(var i=0;i<notas.length;i++){
-      rincian+='<tr><td>'+(i+1)+'. '+esc(notas[i].namaPenyedia||notas[i].noNota||'Nota')+'</td>'
-        +'<td class="r">'+rupiah(notas[i].nilai)+'</td></tr>';
-    }
-  } else {
-    rincian='<tr><td>Pembayaran '+esc(t.kegiatan)+'</td><td class="r">'+rupiah(t.kredit)+'</td></tr>';
-  }
+function _renderKuitansiHtml(t){
+  var jumlah=(t.uangDiserahkan && t.uangDiserahkan>0) ? t.uangDiserahkan : t.kredit;
   var noKuitansi='KT-'+t.no+'/'+(new Date().getFullYear());
   var spbyRow=t.noSpby?('<tr><td>No. SPBY</td><td>: '+esc(t.noSpby)+'</td></tr>'):'';
   var mak=t.mak||t.kodeRekening||'';
   var makRow='<tr><td>Kode Rekening / MAK</td><td>: '+(mak?esc(mak):'<span style="color:#888">..............................</span>')+'</td></tr>';
   var logo=INST.logoUrl?('<img src="'+INST.logoUrl+'" style="height:64px;width:auto">'):'';
-  var materai=(pj.nominal>=MATERAI_MIN)
+  var materai=(jumlah>=MATERAI_MIN)
     ? '<div class="materai">M E T E R A I<br>Rp 10.000</div>' : '';
+  var penerima=esc(t.penjab||'(…………………………)');
 
   return ''
   +'<html><head><meta charset="utf-8"><title>Kuitansi '+noKuitansi+'</title><style>'
@@ -834,11 +816,11 @@ function _renderKuitansiHtml(t, notas, pj, penyedia){
   +'.title{display:flex;justify-content:space-between;align-items:flex-end;margin:18px 0 6px}'
   +'h1{font-size:22px;margin:0;letter-spacing:3px} .nokt{text-align:right;font-size:12px}'
   +'.box{border:1px solid #000;padding:16px;border-radius:4px}'
-  +'table{width:100%;border-collapse:collapse} td{padding:3px 0;vertical-align:top} td.r{text-align:right}'
-  +'.line{border-top:1px solid #aaa;margin:10px 0} .amt{font-weight:bold}'
+  +'table{width:100%;border-collapse:collapse} td{padding:4px 0;vertical-align:top}'
+  +'.amt{font-weight:bold;font-size:15px} '
   +'.terbilang{font-style:italic;background:#f3f3f3;padding:5px 10px;display:inline-block;border-radius:3px}'
-  +'.ttd{display:flex;justify-content:space-between;margin-top:30px;font-size:12px}'
-  +'.ttd .col{width:46%} .ttd .col.kanan{text-align:center}'
+  +'.ttd{display:flex;justify-content:space-between;margin-top:34px;font-size:12px}'
+  +'.ttd .col{width:46%;text-align:center}'
   +'.materai{border:1px dashed #888;color:#666;font-size:9px;text-align:center;'
   +'  width:90px;height:48px;line-height:1.4;padding-top:8px;margin:6px auto 4px}'
   +'.sign{margin-top:50px;font-weight:bold;text-decoration:underline}'
@@ -858,27 +840,18 @@ function _renderKuitansiHtml(t, notas, pj, penyedia){
   +'<div class="box">'
   +'<table>'
   +'<tr><td style="width:34%">Sudah terima dari</td><td>: Bendahara Pengeluaran '+esc(INST.namaWP)+'</td></tr>'
-  +'<tr><td>Uang sejumlah</td><td class="amt">: '+rupiah(pj.nominal)+'</td></tr>'
-  +'<tr><td>Terbilang</td><td>: <span class="terbilang">'+_terbilang(pj.nominal)+'</span></td></tr>'
-  +'<tr><td>Untuk pembayaran</td><td>: '+esc(t.kegiatan)+'</td></tr>'
+  +'<tr><td>Uang sejumlah</td><td class="amt">: '+rupiah(jumlah)+'</td></tr>'
+  +'<tr><td>Terbilang</td><td>: <span class="terbilang">'+_terbilang(jumlah)+'</span></td></tr>'
+  +'<tr><td>Untuk keperluan</td><td>: '+esc(t.kegiatan)+'</td></tr>'
   +makRow+spbyRow
   +'<tr><td>Tanggal</td><td>: '+_tglPanjang(t.tanggal)+'</td></tr>'
   +'</table>'
-  +'<div class="line"></div>'
-  +'<table><tr><td colspan="2"><b>Rincian Nota:</b></td></tr>'+rincian
-  +'<tr><td><b>Total Nota</b></td><td class="r"><b>'+rupiah(pj.nominal)+'</b></td></tr></table>'
-  +'<div class="line"></div>'
-  +'<table><tr><td colspan="2"><b>Potongan Pajak:</b></td></tr>'
-  +'<tr><td>'+(pj.jenisPPh||'PPh')+(pj.tarifPPhPct?(' ('+pj.tarifPPhPct+'%)'):'')+'</td><td class="r">'+rupiah(pj.pph)+'</td></tr>'
-  +'<tr><td>PPN'+(pj.kenaPPN?' (11%)':'')+'</td><td class="r">'+rupiah(pj.ppn)+'</td></tr>'
-  +'<tr><td><b>Diterima (setelah pajak)</b></td><td class="r"><b>'+rupiah(pj.nettoRekanan)+'</b></td></tr></table>'
 
   +'<div class="ttd">'
-  +'<div class="col">'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)+'<br>Bendahara Pengeluaran,'
+  +'<div class="col">Yang Menyerahkan,<br>Bendahara Pengeluaran,'
   +'<div class="sign">'+esc(INST.bendahara)+'</div>NIP. '+esc(INST.nipBendahara)+'</div>'
-  +'<div class="col kanan">Yang Menerima,'+materai
-  +'<div class="sign" style="margin-top:'+(materai?'6px':'50px')+'">'+esc(penyedia.nama||'(…………)')+'</div>'
-  +(penyedia.npwp?('NPWP. '+esc(penyedia.npwp)):'')+'</div>'
+  +'<div class="col">'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)+'<br>Yang Menerima,<br>Pemegang Uang Muka / Penanggung Jawab,'+materai
+  +'<div class="sign" style="margin-top:'+(materai?'6px':'50px')+'">'+penerima+'</div></div>'
   +'</div></div></body></html>';
 }
 
