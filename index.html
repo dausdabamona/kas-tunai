@@ -204,12 +204,19 @@
     <div id="notaList"></div>
     <hr>
     <h2 style="font-size:14px">Tambah Nota</h2>
-    <div class="field"><label>Nama Penyedia</label><input type="text" id="ntPenyedia"></div>
-    <div class="row2">
-      <div class="field"><label>No Nota</label><input type="text" id="ntNoNota"></div>
-      <div class="field"><label>Nilai</label><input type="number" id="ntNilai" value="0"></div>
+    <div class="field"><label>Nama Penyedia</label>
+      <input type="text" id="ntPenyedia" list="ntPenyediaList" oninput="onNotaPenyediaInput()" autocomplete="off">
+      <datalist id="ntPenyediaList"></datalist>
     </div>
-    <div class="field"><label>Tgl Nota</label><input type="date" id="ntTgl"></div>
+    <div class="row2">
+      <div class="field"><label>NPWP Penyedia</label><input type="text" id="ntNpwp" placeholder="kosongkan bila non-NPWP"></div>
+      <div class="field"><label>No Nota</label><input type="text" id="ntNoNota"></div>
+    </div>
+    <div class="field"><label>Alamat Penyedia</label><input type="text" id="ntAlamat"></div>
+    <div class="row2">
+      <div class="field"><label>Nilai</label><input type="number" id="ntNilai" value="0"></div>
+      <div class="field"><label>Tgl Nota</label><input type="date" id="ntTgl"></div>
+    </div>
     <div class="field"><label>Foto nota (opsional)</label><input type="file" id="ntFile" accept="image/*" capture="environment"></div>
     <button class="btn" onclick="submitNota()">Tambah Nota</button>
     <button class="btn ghost" onclick="closeModal('modalNota')">Tutup</button>
@@ -252,21 +259,6 @@
       <button class="btn" onclick="cetakSSP('ppn')">&#128424; SSP PPN</button>
     </div>
     <button class="btn ghost" onclick="closeModal('modalPajak')">Tutup</button>
-  </div>
-</div>
-
-<!-- ================= MODAL PENYEDIA (Kuitansi / SSP) ================= -->
-<div class="modal" id="modalPenyedia">
-  <div class="sheet">
-    <h2>Data Penyedia / Rekanan</h2>
-    <div class="field"><label>Nama Penyedia</label>
-      <input type="text" id="pvNama" list="pvDatalist" oninput="onPenyediaInput()" autocomplete="off">
-      <datalist id="pvDatalist"></datalist>
-    </div>
-    <div class="field"><label>NPWP (kosongkan bila tidak ber-NPWP)</label><input type="text" id="pvNpwp"></div>
-    <div class="field"><label>Alamat</label><textarea id="pvAlamat" rows="2"></textarea></div>
-    <button class="btn" onclick="simpanPenyediaLaluLanjut()">Simpan &amp; Lanjut</button>
-    <button class="btn ghost" onclick="closeModal('modalPenyedia')">Batal</button>
   </div>
 </div>
 
@@ -372,9 +364,7 @@ var PAJAK_REF = [
 var PAJAK_DEFAULT = { label:'Lain-lain (tanpa pajak otomatis)', kw:[], jenisPPh:'', tarifPPh:0, ppn:0,
   mapPPh:'', kjsPPh:'', minPPh:0, minPPN:0, catatan:'Tidak terklasifikasi - periksa manual' };
 
-var _sspCache    = {};   // {noTransaksi: {nama, npwp, alamat}}
-var _sspTarget   = null; // noTransaksi yang sedang diproses
-var _sspMode     = null; // 'kuitansi' | 'ssp'
+var _sspTarget   = null; // noTransaksi yang sedang dihitung pajaknya (modal pajak)
 var _allPenyedia = null; // cache master penyedia
 
 /** Cocokkan nama kegiatan ke salah satu kategori PAJAK_REF. */
@@ -619,16 +609,37 @@ function openModalNota(no){
   _notaTarget=no;
   document.getElementById('notaTxLabel').textContent='No '+no;
   document.getElementById('ntPenyedia').value='';
+  document.getElementById('ntNpwp').value='';
+  document.getElementById('ntAlamat').value='';
   document.getElementById('ntNoNota').value='';
   document.getElementById('ntNilai').value=0;
   document.getElementById('ntTgl').value=todayISO();
   document.getElementById('ntFile').value='';
   document.getElementById('notaList').innerHTML='<div class="empty">Memuat...</div>';
   openModal('modalNota');
+  _muatPenyedia(_isiDatalistNota);
   google.script.run
     .withSuccessHandler(renderNotaList)
     .withFailureHandler(fail)
     .serverGetMultiNota(no);
+}
+function _isiDatalistNota(){
+  var dl=document.getElementById('ntPenyediaList'); dl.innerHTML='';
+  if(!_allPenyedia) return;
+  for(var i=0;i<_allPenyedia.length;i++){
+    var o=document.createElement('option'); o.value=_allPenyedia[i].nama; dl.appendChild(o);
+  }
+}
+function onNotaPenyediaInput(){
+  var v=document.getElementById('ntPenyedia').value;
+  if(!_allPenyedia) return;
+  for(var i=0;i<_allPenyedia.length;i++){
+    if(_allPenyedia[i].nama===v){
+      document.getElementById('ntNpwp').value=_allPenyedia[i].npwp||'';
+      document.getElementById('ntAlamat').value=_allPenyedia[i].alamat||'';
+      return;
+    }
+  }
 }
 function renderNotaList(list){
   var box=document.getElementById('notaList');
@@ -639,7 +650,8 @@ function renderNotaList(list){
     h+='<div class="card" style="margin-bottom:8px">'
       +'<div class="row1"><div class="keg" style="font-size:14px">'+esc(n.namaPenyedia||'-')+'</div>'
       +'<div class="amt">'+rupiah(n.nilai)+'</div></div>'
-      +'<div class="tgl">No '+esc(n.noNota||'-')+' &middot; '+esc(n.tglNota||'-')+'</div>'
+      +'<div class="tgl">'+(n.npwp?('NPWP '+esc(n.npwp)+' &middot; '):'')+'No '+esc(n.noNota||'-')+' &middot; '+esc(n.tglNota||'-')+'</div>'
+      +(n.alamat?'<div class="tgl">'+esc(n.alamat)+'</div>':'')
       +'<div class="acts"><button onclick="hapusNota('+_notaTarget+','+n.urutan+",'"+(n.fileId||'')+"')\">Hapus</button></div>"
       +'</div>';
   }
@@ -649,6 +661,8 @@ function submitNota(){
   var nilai=parseFloat(document.getElementById('ntNilai').value)||0;
   var notaData={
     namaPenyedia:document.getElementById('ntPenyedia').value.trim(),
+    npwp:document.getElementById('ntNpwp').value.trim(),
+    alamat:document.getElementById('ntAlamat').value.trim(),
     noNota:document.getElementById('ntNoNota').value.trim(),
     nilai:nilai,
     tglNota:document.getElementById('ntTgl').value
@@ -664,8 +678,15 @@ function submitNota(){
 function sendNota(notaData){
   showLoading(true,'Menyimpan nota...');
   google.script.run
-    .withSuccessHandler(function(){showLoading(false);toast('Nota ditambahkan','success');
-      openModalNota(_notaTarget);loadAll();})
+    .withSuccessHandler(function(){
+      showLoading(false);toast('Nota ditambahkan','success');
+      // simpan penyedia ke master untuk autocomplete berikutnya
+      if(notaData.namaPenyedia){
+        _allPenyedia=null;
+        google.script.run.serverSimpanPenyedia({nama:notaData.namaPenyedia,npwp:notaData.npwp,alamat:notaData.alamat});
+      }
+      openModalNota(_notaTarget);loadAll();
+    })
     .withFailureHandler(fail)
     .serverTambahNota(_notaTarget,notaData);
 }
@@ -818,42 +839,6 @@ function _muatPenyedia(cb){
     .withFailureHandler(function(){_allPenyedia=[]; if(cb)cb(_allPenyedia);})
     .serverGetAllPenyedia();
 }
-function onPenyediaInput(){
-  var v=document.getElementById('pvNama').value;
-  var dl=document.getElementById('pvDatalist');
-  dl.innerHTML='';
-  if(!_allPenyedia) return;
-  for(var i=0;i<_allPenyedia.length;i++){
-    var p=_allPenyedia[i];
-    var o=document.createElement('option'); o.value=p.nama; dl.appendChild(o);
-    if(p.nama===v){ document.getElementById('pvNpwp').value=p.npwp||'';
-      document.getElementById('pvAlamat').value=p.alamat||''; }
-  }
-}
-
-/* ============== Modal Penyedia (gerbang Kuitansi/SSP) ============== */
-function butuhPenyedia(noTransaksi, mode, lanjut){
-  _sspTarget=noTransaksi; _sspMode=mode; _sspLanjut=lanjut;
-  if(_sspCache[noTransaksi]){ lanjut(_sspCache[noTransaksi]); return; }
-  document.getElementById('pvNama').value='';
-  document.getElementById('pvNpwp').value='';
-  document.getElementById('pvAlamat').value='';
-  _muatPenyedia(function(){ onPenyediaInput(); });
-  openModal('modalPenyedia');
-}
-var _sspLanjut=null;
-function simpanPenyediaLaluLanjut(){
-  var nama=document.getElementById('pvNama').value.trim();
-  if(!nama){ toast('Nama penyedia wajib diisi','error'); return; }
-  var data={ nama:nama, npwp:document.getElementById('pvNpwp').value.trim(),
-    alamat:document.getElementById('pvAlamat').value.trim() };
-  _sspCache[_sspTarget]=data;
-  _allPenyedia=null; // refresh cache lain kali
-  google.script.run.serverSimpanPenyedia(data); // simpan async, tak menunggu
-  closeModal('modalPenyedia');
-  if(_sspLanjut) _sspLanjut(data);
-}
-
 /* ============== Kalkulator Pajak ============== */
 function openModalPajak(noTransaksi){
   var t=_cariTransaksi(noTransaksi);
@@ -885,14 +870,12 @@ function recalcPajak(){
   function baris(l,v){return '<div class="row1" style="margin:3px 0"><span class="tgl">'+l+'</span><span>'+v+'</span></div>';}
 }
 
-/* ============== Kuitansi Bukti Pembayaran (format resmi Poltek KP Sorong) ============== */
+/* ============== Kuitansi Bukti Pembayaran (Bendahara -> PUM) ============== */
 function bukaPdfKuitansi(noTransaksi){
   var t=_cariTransaksi(noTransaksi);
   if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
-  butuhPenyedia(noTransaksi, 'kuitansi', function(penerima){
-    var pj=hitungPajak(t.kegiatan, t.kredit, true, !!(penerima.npwp));
-    _bukaPopup(_renderKuitansiHtml(t, pj, penerima));
-  });
+  var pj=hitungPajak(t.kegiatan, t.kredit, true, true);
+  _bukaPopup(_renderKuitansiHtml(t, pj, { nama: t.penjab||'' })); // penerima = PUM/Penanggung Jawab
 }
 function _renderKuitansiHtml(t, pj, penerima){
   var jumlah=pj.nominal;
@@ -950,7 +933,7 @@ function _renderKuitansiHtml(t, pj, penerima){
   +'<div class="judul">KUITANSI BUKTI PEMBAYARAN</div>'
 
   +'<div class="iwrap"><table class="info">'
-  +'<tr><td class="l">Telah terima dari</td><td class="s">:</td><td>Pejabat Pembuat Komitmen '+esc(INST.namaWP)+'</td></tr>'
+  +'<tr><td class="l">Telah terima dari</td><td class="s">:</td><td>Bendahara Pengeluaran '+esc(INST.namaWP)+'</td></tr>'
   +'<tr><td class="l">Uang sejumlah</td><td class="s">:</td><td><span class="us">'+_angka2(jumlah)+'</span></td></tr>'
   +'<tr><td class="l">Terbilang</td><td class="s">:</td><td><span class="terb">'+_terbilangTitle(jumlah)+'</span></td></tr>'
   +'<tr><td class="l">Untuk Pembayaran</td><td class="s">:</td><td>'+esc(t.kegiatan)

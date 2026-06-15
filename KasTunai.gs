@@ -102,6 +102,7 @@ var KasTunai = (function () {
       return {
         rowIndex: x.rowIndex,
         noTransaksi: r[n.NO_TRANSAKSI], urutan: r[n.URUTAN], namaPenyedia: r[n.NAMA_PENYEDIA],
+        npwp: r[n.NPWP_PENYEDIA], alamat: r[n.ALAMAT_PENYEDIA],
         noNota: r[n.NO_NOTA], tglNota: Util.fmtDate(r[n.TGL_NOTA]), nilai: Util.num(r[n.NILAI]),
         keterangan: r[n.KETERANGAN], fileId: r[n.FILE_ID], namaFile: r[n.NAMA_FILE], urlFile: r[n.URL_FILE]
       };
@@ -113,8 +114,8 @@ var KasTunai = (function () {
     var file = (notaData.file && notaData.file.base64) ? DriveHelper.upload(notaData.file) : null;
 
     SheetRepo.appendRow(CONFIG.SHEETS.MULTI_NOTA, [
-      transactionId, urutan, notaData.namaPenyedia || '', notaData.noNota || '',
-      notaData.tglNota ? new Date(notaData.tglNota) : '', Util.num(notaData.nilai),
+      transactionId, urutan, notaData.namaPenyedia || '', notaData.npwp || '', notaData.alamat || '',
+      notaData.noNota || '', notaData.tglNota ? new Date(notaData.tglNota) : '', Util.num(notaData.nilai),
       notaData.keterangan || '',
       file ? file.fileId : '', file ? file.namaFile : '', file ? file.url : '',
       new Date(), FLAG_ACTIVE, '', ''
