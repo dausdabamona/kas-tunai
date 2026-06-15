@@ -193,6 +193,44 @@
   </div>
 </div>
 
+<!-- ================= MODAL KALKULATOR PAJAK ================= -->
+<div class="modal" id="modalPajak">
+  <div class="sheet">
+    <h2>&#9881; Hitung Pajak <span id="pjTxLabel"></span></h2>
+    <div class="card status-belum" style="margin:0 0 12px">
+      <div class="keg" id="pjKategori" style="font-size:14px"></div>
+      <div class="tgl" id="pjNominal"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:14px">
+      <input type="checkbox" id="pjTermasukPPN" checked onchange="recalcPajak()"> Nilai sudah termasuk PPN
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:14px">
+      <input type="checkbox" id="pjAdaNpwp" checked onchange="recalcPajak()"> Rekanan ber-NPWP
+    </label>
+    <div id="pjRincian" class="card" style="margin:0 0 12px"></div>
+    <div class="row2">
+      <button class="btn" onclick="cetakSSP('pph')">&#128424; SSP PPh</button>
+      <button class="btn" onclick="cetakSSP('ppn')">&#128424; SSP PPN</button>
+    </div>
+    <button class="btn ghost" onclick="closeModal('modalPajak')">Tutup</button>
+  </div>
+</div>
+
+<!-- ================= MODAL PENYEDIA (Kuitansi / SSP) ================= -->
+<div class="modal" id="modalPenyedia">
+  <div class="sheet">
+    <h2>Data Penyedia / Rekanan</h2>
+    <div class="field"><label>Nama Penyedia</label>
+      <input type="text" id="pvNama" list="pvDatalist" oninput="onPenyediaInput()" autocomplete="off">
+      <datalist id="pvDatalist"></datalist>
+    </div>
+    <div class="field"><label>NPWP (kosongkan bila tidak ber-NPWP)</label><input type="text" id="pvNpwp"></div>
+    <div class="field"><label>Alamat</label><textarea id="pvAlamat" rows="2"></textarea></div>
+    <button class="btn" onclick="simpanPenyediaLaluLanjut()">Simpan &amp; Lanjut</button>
+    <button class="btn ghost" onclick="closeModal('modalPenyedia')">Batal</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 <div id="loading"><div class="spinner"></div><div class="msg" id="loadingMsg">Memuat...</div></div>
 
@@ -211,9 +249,109 @@ var _notaTarget   = null;    // noTransaksi yang sedang dikelola notanya
 var _kbTarget     = null;    // noTransaksi yang sedang dikelola pengembaliannya
 var _allPenyedia  = null;
 
-/* PAJAK_REF & INST: struktur disiapkan, lengkapi dengan 19 kategori bendahara. */
-var PAJAK_REF = [];
-var INST = { namaWP:'', npwpWP:'', alamatWP:'', bendahara:'', kota:'Sorong' };
+/* ============== Data institusi (hardcoded) ============== */
+var INST = {
+  namaWP   : 'Politeknik Kelautan dan Perikanan Sorong',
+  npwpWP   : '00.172.581.1-951.000',
+  alamatWP : 'Jl. Kapitan Pattimura Kel. Malaingkedi Distrik Sorong Utara, Kota Sorong',
+  bendahara: 'Abdul Rauf Muhammad Saleh',
+  nipBendahara: '198309122007011001',
+  kota     : 'Sorong'
+};
+
+/* ============== Referensi pajak (19 kategori bendahara) ==============
+ * tarifPPh & ppn dalam desimal. minPPh/minPPN = ambang batas (di bawahnya
+ * tidak dipungut). Klasifikasi via pencocokan kata kunci pada nama kegiatan.
+ * Urutan penting: entri lebih spesifik diletakkan lebih dulu.
+ */
+var PAJAK_REF = [
+  { label:'BBM / Bahan Bakar', kw:['bbm','bahan bakar','pertamina','solar','bensin','pertalite','dexlite'],
+    jenisPPh:'', tarifPPh:0, ppn:0, mapPPh:'', kjsPPh:'', minPPh:0, minPPN:0, catatan:'Tidak dipungut pajak' },
+  { label:'Air Minum / PDAM', kw:['air minum','pdam','galon','aqua','air mineral'],
+    jenisPPh:'', tarifPPh:0, ppn:0, mapPPh:'', kjsPPh:'', minPPh:0, minPPN:0, catatan:'Tidak dipungut pajak' },
+  { label:'Makan Minum / Jamuan / Katering', kw:['makan','minum','jamuan','katering','catering','konsumsi','snack','nasi','rumah makan','jasa boga'],
+    jenisPPh:'PPh Pasal 23', tarifPPh:0.02, ppn:0, mapPPh:'411124', kjsPPh:'104', minPPh:0, minPPN:0, catatan:'Makan minum bukan BKP, tidak kena PPN' },
+  { label:'Sewa Kapal', kw:['sewa kapal','sewa perahu','charter kapal','sewa speedboat'],
+    jenisPPh:'PPh Pasal 23', tarifPPh:0.02, ppn:0.11, mapPPh:'411124', kjsPPh:'104', minPPh:0, minPPN:1000000, catatan:'' },
+  { label:'Sewa Kendaraan Darat', kw:['sewa kendaraan','sewa mobil','sewa bus','rental','sewa motor'],
+    jenisPPh:'PPh Pasal 23', tarifPPh:0.02, ppn:0.11, mapPPh:'411124', kjsPPh:'104', minPPh:0, minPPN:1000000, catatan:'' },
+  { label:'Sewa Gedung / Ruangan', kw:['sewa gedung','sewa ruangan','sewa aula','sewa tempat','sewa hotel','sewa kamar'],
+    jenisPPh:'PPh Final 4(2)', tarifPPh:0.10, ppn:0.11, mapPPh:'411128', kjsPPh:'403', minPPh:0, minPPN:1000000, catatan:'Sewa tanah/bangunan' },
+  { label:'Konstruksi PT / Menengah', kw:['konstruksi pt','kontraktor besar','konstruksi menengah'],
+    jenisPPh:'PPh Final 4(2)', tarifPPh:0.03, ppn:0.11, mapPPh:'411128', kjsPPh:'409', minPPh:0, minPPN:1000000, catatan:'Pelaksana konstruksi kualifikasi menengah/besar' },
+  { label:'Konstruksi / Renovasi CV Kecil (<1M)', kw:['konstruksi','renovasi','pembangunan','bangun','rehab'],
+    jenisPPh:'PPh Final 4(2)', tarifPPh:0.02, ppn:0.11, mapPPh:'411128', kjsPPh:'409', minPPh:0, minPPN:1000000, catatan:'Pelaksana konstruksi kualifikasi kecil' },
+  { label:'Jasa Servis / Perbaikan / Instalasi', kw:['servis','service','perbaikan','instalasi','reparasi','perawatan ac'],
+    jenisPPh:'PPh Pasal 23', tarifPPh:0.02, ppn:0.11, mapPPh:'411124', kjsPPh:'104', minPPh:0, minPPN:1000000, catatan:'' },
+  { label:'Jasa Pemeliharaan / Kebersihan', kw:['pemeliharaan','kebersihan','cleaning','perawatan','jasa kebersihan'],
+    jenisPPh:'PPh Pasal 23', tarifPPh:0.02, ppn:0.11, mapPPh:'411124', kjsPPh:'104', minPPh:0, minPPN:1000000, catatan:'' },
+  { label:'ATK / Alat Tulis', kw:['atk','alat tulis','kertas','tinta','pulpen','map','spidol','amplop'],
+    jenisPPh:'PPh Pasal 22', tarifPPh:0.015, ppn:0.11, mapPPh:'411122', kjsPPh:'910', minPPh:2000000, minPPN:1000000, catatan:'PPh 22 hanya bila >= Rp 2 juta' },
+  { label:'Peralatan / Barang Modal / Elektronik', kw:['peralatan','elektronik','komputer','laptop','printer','mesin','barang modal','proyektor','kamera','ac '],
+    jenisPPh:'PPh Pasal 22', tarifPPh:0.015, ppn:0.11, mapPPh:'411122', kjsPPh:'910', minPPh:2000000, minPPN:1000000, catatan:'PPh 22 hanya bila >= Rp 2 juta' },
+  { label:'Keperluan Kantor / Rumah Tangga', kw:['keperluan kantor','rumah tangga','perlengkapan','alat kebersihan','barang habis pakai'],
+    jenisPPh:'PPh Pasal 22', tarifPPh:0.015, ppn:0.11, mapPPh:'411122', kjsPPh:'910', minPPh:2000000, minPPN:1000000, catatan:'PPh 22 hanya bila >= Rp 2 juta' },
+  { label:'Obat / Kesehatan', kw:['obat','kesehatan','medis','apotek','apotik','p3k','vitamin','masker'],
+    jenisPPh:'', tarifPPh:0, ppn:0, mapPPh:'', kjsPPh:'', minPPh:0, minPPN:0, catatan:'Tidak dipungut pajak' },
+  { label:'Transport / Perjalanan Dinas', kw:['transport','perjalanan dinas','tiket','perjadin','taksi','ojek','grab','gojek','penginapan'],
+    jenisPPh:'', tarifPPh:0, ppn:0, mapPPh:'', kjsPPh:'', minPPh:0, minPPN:0, catatan:'Tidak dipungut pajak' },
+  { label:'Listrik / PLN / Komunikasi', kw:['listrik','pln','telepon','pulsa','internet','komunikasi','token','wifi','indihome'],
+    jenisPPh:'', tarifPPh:0, ppn:0, mapPPh:'', kjsPPh:'', minPPh:0, minPPN:0, catatan:'Tidak dipungut pajak' },
+  { label:'Pakan / Bibit Perikanan', kw:['pakan','bibit','benih','ikan','perikanan','pelet','udang','pupuk'],
+    jenisPPh:'', tarifPPh:0, ppn:0, mapPPh:'', kjsPPh:'', minPPh:0, minPPN:0, catatan:'Tidak dipungut pajak' },
+  { label:'Pendidikan / Pelatihan', kw:['pendidikan','pelatihan','diklat','seminar','workshop','bimtek','sosialisasi'],
+    jenisPPh:'', tarifPPh:0, ppn:0, mapPPh:'', kjsPPh:'', minPPh:0, minPPN:0, catatan:'Tidak dipungut pajak' },
+  { label:'Honor Narasumber', kw:['honor','narasumber','honorarium','fee','moderator'],
+    jenisPPh:'PPh Pasal 21', tarifPPh:0, ppn:0, mapPPh:'411121', kjsPPh:'100', minPPh:0, minPPN:0, catatan:'Tarif sesuai tabel PPh 21 - hitung manual' }
+];
+var PAJAK_DEFAULT = { label:'Lain-lain (tanpa pajak otomatis)', kw:[], jenisPPh:'', tarifPPh:0, ppn:0,
+  mapPPh:'', kjsPPh:'', minPPh:0, minPPN:0, catatan:'Tidak terklasifikasi - periksa manual' };
+
+var _sspCache    = {};   // {noTransaksi: {nama, npwp, alamat}}
+var _sspTarget   = null; // noTransaksi yang sedang diproses
+var _sspMode     = null; // 'kuitansi' | 'ssp'
+var _allPenyedia = null; // cache master penyedia
+
+/** Cocokkan nama kegiatan ke salah satu kategori PAJAK_REF. */
+function _klasifikasiPajak(kegiatan){
+  var s=String(kegiatan||'').toLowerCase();
+  for(var i=0;i<PAJAK_REF.length;i++){
+    var kw=PAJAK_REF[i].kw;
+    for(var j=0;j<kw.length;j++){ if(s.indexOf(kw[j])!==-1) return PAJAK_REF[i]; }
+  }
+  return PAJAK_DEFAULT;
+}
+
+/**
+ * Hitung pajak bendahara untuk satu transaksi.
+ * @param termasukPPN default true  -> DPP = nilai / 1,11 (bila kena PPN)
+ * @param adaNpwp     default true  -> bila false, tarif PPh x2
+ */
+function hitungPajak(kegiatan, nominal, termasukPPN, adaNpwp){
+  if(termasukPPN===undefined) termasukPPN=true;
+  if(adaNpwp===undefined) adaNpwp=true;
+  nominal=parseFloat(nominal)||0;
+  var ref=_klasifikasiPajak(kegiatan);
+  var kenaPPN=ref.ppn>0;
+
+  var dpp=(kenaPPN && termasukPPN) ? Math.round(nominal/1.11) : nominal;
+
+  var tarif=ref.tarifPPh||0;
+  if(!adaNpwp && tarif>0) tarif=tarif*2;
+
+  var pph=0;
+  if(ref.jenisPPh && tarif>0 && (!ref.minPPh || nominal>=ref.minPPh)) pph=Math.round(tarif*dpp);
+
+  var ppn=0;
+  if(kenaPPN && (!ref.minPPN || nominal>=ref.minPPN)) ppn=Math.round(ref.ppn*dpp);
+
+  return {
+    ref:ref, label:ref.label, jenisPPh:ref.jenisPPh, mapPPh:ref.mapPPh, kjsPPh:ref.kjsPPh,
+    dpp:dpp, tarifPPhPct:+(tarif*100).toFixed(2), pph:pph, ppn:ppn,
+    totalPajak:pph+ppn, nettoRekanan:nominal-pph-ppn, catatan:ref.catatan,
+    nonNpwp:!adaNpwp, kenaPPN:kenaPPN, nominal:nominal, termasukPPN:termasukPPN
+  };
+}
 
 /* ============== Util UI ============== */
 function toast(msg, type){
@@ -298,6 +436,8 @@ function renderList(){
       ?('<span class="chip '+(fnJml>0?'ok':'no')+'">Foto '+fnJml+'</span>')
       :'';
     var spbyChip=t.noSpby?('<span class="chip ok">SPBY '+t.noSpby+'</span>'):'';
+    var pj=t.kredit>0?hitungPajak(t.kegiatan,t.kredit):null;
+    var pajakChip=(pj&&pj.jenisPPh)?('<span class="chip">'+esc(pj.jenisPPh)+' '+rupiah(pj.totalPajak)+'</span>'):'';
     html+=''
       +'<div class="card status-'+st+'">'
       +  '<div class="row1">'
@@ -305,13 +445,15 @@ function renderList(){
       +    '<div class="tgl">'+esc(t.tanggal)+' &middot; No '+t.no+'</div></div>'
       +    '<div class="amt '+amtCls+'">'+amt+'</div>'
       +  '</div>'
-      +  '<div class="meta">'+notaChip+fotoChip+spbyChip
+      +  '<div class="meta">'+notaChip+fotoChip+spbyChip+pajakChip
       +    '<span class="chip">Saldo '+rupiah(t.saldo)+'</span>'
       +  '</div>';
     if(t.kredit>0){
       html+='<div class="acts">'
         +'<button onclick="openModalNota('+t.no+')">Nota</button>'
         +'<button onclick="openModalKembali('+t.no+')">Kembalian</button>'
+        +'<button onclick="bukaPdfKuitansi('+t.no+')">&#129534; Kuitansi</button>'
+        +'<button onclick="openModalPajak('+t.no+')">&#9881; Pajak</button>'
         +'<button onclick="promptSpby('+t.no+','+t.rowIndex+')">SPBY</button>'
         +'</div>';
     }
@@ -508,6 +650,234 @@ function compressImage(file,cb){
 function todayISO(){
   var d=new Date(),m=('0'+(d.getMonth()+1)).slice(-2),day=('0'+d.getDate()).slice(-2);
   return d.getFullYear()+'-'+m+'-'+day;
+}
+
+/* ============== Format & terbilang ============== */
+function _fmtRp(n){return rupiah(n);}
+function _tglPanjang(d){
+  var bln=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus',
+    'September','Oktober','November','Desember'];
+  var dt=(d instanceof Date)?d:new Date(d);
+  if(isNaN(dt.getTime())) return String(d||'');
+  return dt.getDate()+' '+bln[dt.getMonth()]+' '+dt.getFullYear();
+}
+function _terbilang(n){
+  n=Math.floor(Math.abs(parseFloat(n)||0));
+  var satuan=['','satu','dua','tiga','empat','lima','enam','tujuh','delapan','sembilan',
+    'sepuluh','sebelas'];
+  function konv(x){
+    if(x<12) return satuan[x];
+    if(x<20) return konv(x-10)+' belas';
+    if(x<100) return konv(Math.floor(x/10))+' puluh'+(x%10?' '+konv(x%10):'');
+    if(x<200) return 'seratus'+(x-100?' '+konv(x-100):'');
+    if(x<1000) return konv(Math.floor(x/100))+' ratus'+(x%100?' '+konv(x%100):'');
+    if(x<2000) return 'seribu'+(x-1000?' '+konv(x-1000):'');
+    if(x<1000000) return konv(Math.floor(x/1000))+' ribu'+(x%1000?' '+konv(x%1000):'');
+    if(x<1000000000) return konv(Math.floor(x/1000000))+' juta'+(x%1000000?' '+konv(x%1000000):'');
+    if(x<1000000000000) return konv(Math.floor(x/1000000000))+' miliar'+(x%1000000000?' '+konv(x%1000000000):'');
+    return konv(Math.floor(x/1000000000000))+' triliun'+(x%1000000000000?' '+konv(x%1000000000000):'');
+  }
+  if(n===0) return 'nol rupiah';
+  var s=konv(n).replace(/\s+/g,' ').trim();
+  return s.charAt(0).toUpperCase()+s.slice(1)+' rupiah';
+}
+
+/* ============== Master Penyedia (cache + autocomplete) ============== */
+function _muatPenyedia(cb){
+  if(_allPenyedia){ if(cb)cb(_allPenyedia); return; }
+  google.script.run
+    .withSuccessHandler(function(list){_allPenyedia=list||[]; if(cb)cb(_allPenyedia);})
+    .withFailureHandler(function(){_allPenyedia=[]; if(cb)cb(_allPenyedia);})
+    .serverGetAllPenyedia();
+}
+function onPenyediaInput(){
+  var v=document.getElementById('pvNama').value;
+  var dl=document.getElementById('pvDatalist');
+  dl.innerHTML='';
+  if(!_allPenyedia) return;
+  for(var i=0;i<_allPenyedia.length;i++){
+    var p=_allPenyedia[i];
+    var o=document.createElement('option'); o.value=p.nama; dl.appendChild(o);
+    if(p.nama===v){ document.getElementById('pvNpwp').value=p.npwp||'';
+      document.getElementById('pvAlamat').value=p.alamat||''; }
+  }
+}
+
+/* ============== Modal Penyedia (gerbang Kuitansi/SSP) ============== */
+function butuhPenyedia(noTransaksi, mode, lanjut){
+  _sspTarget=noTransaksi; _sspMode=mode; _sspLanjut=lanjut;
+  if(_sspCache[noTransaksi]){ lanjut(_sspCache[noTransaksi]); return; }
+  document.getElementById('pvNama').value='';
+  document.getElementById('pvNpwp').value='';
+  document.getElementById('pvAlamat').value='';
+  _muatPenyedia(function(){ onPenyediaInput(); });
+  openModal('modalPenyedia');
+}
+var _sspLanjut=null;
+function simpanPenyediaLaluLanjut(){
+  var nama=document.getElementById('pvNama').value.trim();
+  if(!nama){ toast('Nama penyedia wajib diisi','error'); return; }
+  var data={ nama:nama, npwp:document.getElementById('pvNpwp').value.trim(),
+    alamat:document.getElementById('pvAlamat').value.trim() };
+  _sspCache[_sspTarget]=data;
+  _allPenyedia=null; // refresh cache lain kali
+  google.script.run.serverSimpanPenyedia(data); // simpan async, tak menunggu
+  closeModal('modalPenyedia');
+  if(_sspLanjut) _sspLanjut(data);
+}
+
+/* ============== Kalkulator Pajak ============== */
+function openModalPajak(noTransaksi){
+  var t=_cariTransaksi(noTransaksi);
+  if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
+  _sspTarget=noTransaksi;
+  document.getElementById('pjTxLabel').textContent='No '+t.no;
+  document.getElementById('pjNominal').textContent='Nilai transaksi: '+rupiah(t.kredit);
+  document.getElementById('pjTermasukPPN').checked=true;
+  document.getElementById('pjAdaNpwp').checked=true;
+  recalcPajak();
+  openModal('modalPajak');
+}
+function recalcPajak(){
+  var t=_cariTransaksi(_sspTarget); if(!t) return;
+  var pj=hitungPajak(t.kegiatan, t.kredit,
+    document.getElementById('pjTermasukPPN').checked,
+    document.getElementById('pjAdaNpwp').checked);
+  document.getElementById('pjKategori').textContent=pj.label+(pj.jenisPPh?(' — '+pj.jenisPPh):'');
+  var npwpNote=pj.nonNpwp?' <span class="chip no">non-NPWP x2</span>':'';
+  document.getElementById('pjRincian').innerHTML=''
+    +baris('DPP', rupiah(pj.dpp)+(pj.kenaPPN&&pj.termasukPPN?' (÷ 1,11)':''))
+    +baris('PPh'+(pj.tarifPPhPct?(' ('+pj.tarifPPhPct+'%)'):''), rupiah(pj.pph)+npwpNote)
+    +baris('PPN'+(pj.kenaPPN?' (11%)':''), rupiah(pj.ppn))
+    +'<hr style="margin:6px 0">'
+    +baris('<b>Total potongan</b>', '<b>'+rupiah(pj.totalPajak)+'</b>')
+    +baris('Dibayar ke rekanan', rupiah(pj.nettoRekanan))
+    +(pj.jenisPPh?baris('MAP / KJS', pj.mapPPh+' / '+pj.kjsPPh):'')
+    +(pj.catatan?'<div class="tgl" style="margin-top:6px">'+esc(pj.catatan)+'</div>':'');
+  function baris(l,v){return '<div class="row1" style="margin:3px 0"><span class="tgl">'+l+'</span><span>'+v+'</span></div>';}
+}
+
+/* ============== Kuitansi ============== */
+function bukaPdfKuitansi(noTransaksi){
+  var t=_cariTransaksi(noTransaksi);
+  if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
+  butuhPenyedia(noTransaksi, 'kuitansi', function(penyedia){
+    showLoading(true,'Menyiapkan kuitansi...');
+    google.script.run
+      .withSuccessHandler(function(res){
+        showLoading(false);
+        var notas=(res&&res.notas)||[];
+        var pj=hitungPajak(t.kegiatan, t.kredit, true, !!(penyedia.npwp));
+        _bukaPopup(_renderKuitansiHtml(t, notas, pj, penyedia));
+      })
+      .withFailureHandler(fail)
+      .serverGetNotaDanFoto(noTransaksi);
+  });
+}
+function _renderKuitansiHtml(t, notas, pj, penyedia){
+  var rincian='';
+  if(notas.length){
+    for(var i=0;i<notas.length;i++){
+      rincian+='<tr><td>'+(i+1)+'. '+esc(notas[i].namaPenyedia||notas[i].noNota||'Nota')+'</td>'
+        +'<td style="text-align:right">'+rupiah(notas[i].nilai)+'</td></tr>';
+    }
+  } else {
+    rincian='<tr><td>Pembayaran '+esc(t.kegiatan)+'</td><td style="text-align:right">'+rupiah(t.kredit)+'</td></tr>';
+  }
+  var noKuitansi='KT-'+t.no+'/'+(new Date().getFullYear());
+  return ''
+  +'<html><head><meta charset="utf-8"><title>Kuitansi '+noKuitansi+'</title><style>'
+  +'@page{size:A5 landscape;margin:10mm} *{font-family:Arial,sans-serif}'
+  +'body{font-size:12px;color:#000} .box{border:2px solid #000;padding:14px}'
+  +'h1{font-size:20px;margin:0;letter-spacing:2px} table{width:100%;border-collapse:collapse}'
+  +'td{padding:2px 0;vertical-align:top} .hdr{display:flex;justify-content:space-between;align-items:flex-start}'
+  +'.inst{font-size:11px;color:#333} .line{border-top:1px solid #000;margin:8px 0}'
+  +'.ttd{display:flex;justify-content:space-between;margin-top:24px;font-size:11px}'
+  +'.amt{font-weight:bold} .terbilang{font-style:italic;background:#f3f3f3;padding:4px 8px;display:inline-block}'
+  +'@media print{.noprint{display:none}}'
+  +'</style></head><body>'
+  +'<div class="noprint" style="text-align:right;margin-bottom:8px">'
+  +'<button onclick="window.print()">Cetak / Simpan PDF</button></div>'
+  +'<div class="box">'
+  +'<div class="hdr"><div><h1>KUITANSI</h1><div class="inst">'+esc(INST.namaWP)+'<br>'+esc(INST.alamatWP)+'</div></div>'
+  +'<div style="text-align:right">No: '+noKuitansi+'</div></div>'
+  +'<div class="line"></div>'
+  +'<table>'
+  +'<tr><td style="width:38%">Sudah terima dari</td><td>: Bendahara Pengeluaran '+esc(INST.namaWP)+'</td></tr>'
+  +'<tr><td>Uang sejumlah</td><td class="amt">: '+rupiah(pj.nominal)+'</td></tr>'
+  +'<tr><td>Terbilang</td><td>: <span class="terbilang">'+_terbilang(pj.nominal)+'</span></td></tr>'
+  +'<tr><td>Untuk pembayaran</td><td>: '+esc(t.kegiatan)+'</td></tr>'
+  +'<tr><td>Tanggal</td><td>: '+_tglPanjang(t.tanggal)+'</td></tr>'
+  +'</table>'
+  +'<div class="line"></div>'
+  +'<table><tr><td colspan="2"><b>Rincian Nota:</b></td></tr>'+rincian
+  +'<tr><td><b>Total Nota</b></td><td style="text-align:right"><b>'+rupiah(pj.nominal)+'</b></td></tr></table>'
+  +'<div class="line"></div>'
+  +'<table><tr><td colspan="2"><b>Potongan Pajak:</b></td></tr>'
+  +'<tr><td>'+(pj.jenisPPh||'PPh')+(pj.tarifPPhPct?(' ('+pj.tarifPPhPct+'%)'):'')+'</td><td style="text-align:right">'+rupiah(pj.pph)+'</td></tr>'
+  +'<tr><td>PPN'+(pj.kenaPPN?' (11%)':'')+'</td><td style="text-align:right">'+rupiah(pj.ppn)+'</td></tr>'
+  +'<tr><td><b>Diterima (setelah pajak)</b></td><td style="text-align:right"><b>'+rupiah(pj.nettoRekanan)+'</b></td></tr></table>'
+  +'<div class="ttd">'
+  +'<div>'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)+'<br>Bendahara Pengeluaran,<br><br><br>'
+  +'<b>'+esc(INST.bendahara)+'</b><br>NIP. '+esc(INST.nipBendahara)+'</div>'
+  +'<div style="text-align:right">Yang Menerima,<br><br><br><br><b>'+esc(penyedia.nama||'')+'</b></div>'
+  +'</div></div></body></html>';
+}
+
+/* ============== SSP (dasar) ============== */
+function cetakSSP(jenis){
+  var t=_cariTransaksi(_sspTarget); if(!t) return;
+  var pj=hitungPajak(t.kegiatan, t.kredit,
+    document.getElementById('pjTermasukPPN').checked,
+    document.getElementById('pjAdaNpwp').checked);
+  if(jenis==='pph' && !pj.pph){ toast('Tidak ada PPh untuk transaksi ini','info'); return; }
+  if(jenis==='ppn' && !pj.ppn){ toast('Tidak ada PPN untuk transaksi ini','info'); return; }
+  butuhPenyedia(_sspTarget, 'ssp', function(penyedia){
+    _bukaPopup(_renderSspHtml(t, pj, penyedia, jenis));
+  });
+}
+function _renderSspHtml(t, pj, penyedia, jenis){
+  var isPph=(jenis==='pph');
+  var map=isPph?pj.mapPPh:'411211';
+  var kjs=isPph?pj.kjsPPh:'900';
+  var jumlah=isPph?pj.pph:pj.ppn;
+  var judul=isPph?('SSP '+(pj.jenisPPh||'PPh')):'SSP PPN';
+  return ''
+  +'<html><head><meta charset="utf-8"><title>'+judul+' KT-'+t.no+'</title><style>'
+  +'@page{size:A4;margin:14mm} *{font-family:Arial,sans-serif} body{font-size:12px;color:#000}'
+  +'h2{text-align:center;margin:0 0 2px} .sub{text-align:center;font-size:11px;margin-bottom:12px}'
+  +'table{width:100%;border-collapse:collapse} td{border:1px solid #000;padding:6px}'
+  +'.k{background:#eee;width:32%;font-weight:bold} .amt{font-weight:bold}'
+  +'.noprint{margin-bottom:8px;text-align:right}@media print{.noprint{display:none}}'
+  +'</style></head><body>'
+  +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button></div>'
+  +'<h2>SURAT SETORAN PAJAK (SSP)</h2><div class="sub">'+judul+' — F.2.0.32.01</div>'
+  +'<table>'
+  +'<tr><td class="k">Nama WP (Rekanan)</td><td>'+esc(penyedia.nama||'')+'</td></tr>'
+  +'<tr><td class="k">NPWP Rekanan</td><td>'+esc(penyedia.npwp||'(tidak ber-NPWP)')+'</td></tr>'
+  +'<tr><td class="k">Alamat</td><td>'+esc(penyedia.alamat||'')+'</td></tr>'
+  +'<tr><td class="k">Kode MAP / KJS</td><td>'+esc(map)+' / '+esc(kjs)+'</td></tr>'
+  +'<tr><td class="k">Uraian Pembayaran</td><td>'+esc(t.kegiatan)+'</td></tr>'
+  +'<tr><td class="k">Dasar Pengenaan (DPP)</td><td>'+rupiah(pj.dpp)+'</td></tr>'
+  +'<tr><td class="k">Jumlah Setoran</td><td class="amt">'+rupiah(jumlah)+'</td></tr>'
+  +'<tr><td class="k">Terbilang</td><td><i>'+_terbilang(jumlah)+'</i></td></tr>'
+  +'</table>'
+  +'<div style="margin-top:14px;font-size:11px">Penyetor: Bendahara Pengeluaran '+esc(INST.namaWP)
+  +' — NPWP '+esc(INST.npwpWP)+'</div>'
+  +'<div style="text-align:right;margin-top:24px;font-size:11px">'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)
+  +'<br>Bendahara Pengeluaran,<br><br><br><b>'+esc(INST.bendahara)+'</b><br>NIP. '+esc(INST.nipBendahara)+'</div>'
+  +'</body></html>';
+}
+
+/* ============== Util popup ============== */
+function _cariTransaksi(no){
+  for(var i=0;i<allTransaksi.length;i++){ if(String(allTransaksi[i].no)===String(no)) return allTransaksi[i]; }
+  return null;
+}
+function _bukaPopup(html){
+  var w=window.open('','_blank');
+  if(!w){ toast('Popup diblokir browser. Izinkan popup lalu coba lagi.','error'); return; }
+  w.document.open(); w.document.write(html); w.document.close();
 }
 
 /* ============== Init ============== */
