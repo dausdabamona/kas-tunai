@@ -507,9 +507,14 @@ function _cardHtml(t){
   var pj=t.kredit>0?hitungPajak(t.kegiatan,t.kredit):null;
   var pajakChip='';
   if(pj){
-    pajakChip = pj.totalPajak>0
-      ? '<span class="chip pajak">Pajak '+rupiah(pj.totalPajak)+(pj.jenisPPh?(' · '+esc(pj.jenisPPh)):'')+'</span>'
-      : '<span class="chip">Pajak Rp 0</span>';
+    if(pj.totalPajak>0){
+      var pp=[];
+      if(pj.pph>0) pp.push('PPh '+rupiah(pj.pph));
+      if(pj.ppn>0) pp.push('PPN '+rupiah(pj.ppn));
+      pajakChip='<span class="chip pajak">'+pp.join(' · ')+'</span>';
+    } else {
+      pajakChip='<span class="chip">Pajak Rp 0</span>';
+    }
   }
   var html=''
     +'<div class="card status-'+st+'">'
