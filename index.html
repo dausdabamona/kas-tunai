@@ -307,7 +307,9 @@ var INST = {
   kota     : 'Sorong',
   // Logo KKP resmi (dimuat browser saat cetak). Ganti dengan URL Drive/base64
   // milik instansi bila ingin lebih stabil/offline.
-  logoUrl  : 'https://commons.wikimedia.org/wiki/Special:FilePath/Logo_Kementerian_Kelautan_dan_Perikanan.jpg?width=200'
+  logoUrl  : 'https://commons.wikimedia.org/wiki/Special:FilePath/Logo_Kementerian_Kelautan_dan_Perikanan.jpg?width=200',
+  // Logo Kementerian Keuangan (untuk header SSP)
+  logoPajak: 'https://commons.wikimedia.org/wiki/Special:FilePath/Seal_of_the_Ministry_of_Finance_of_the_Republic_of_Indonesia.svg?width=120'
 };
 var MATERAI_MIN = 5000000; // pembayaran >= nilai ini wajib bermaterai Rp 10.000
 
@@ -1040,7 +1042,7 @@ function _sspLembar(t, info, lembarNo, untuk, notLast){
   var bln=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
   var hd='', mk='';
   for(var m=1;m<=12;m++){ hd+='<td>'+bln[m-1]+'</td>'; mk+='<td class="mk">'+(m===info.bulan?'X':'')+'</td>'; }
-  var logo=INST.logoUrl?('<img src="'+INST.logoUrl+'">'):'<div class="ph"></div>';
+  var logo=INST.logoPajak?('<img src="'+INST.logoPajak+'">'):'<div class="ph"></div>';
 
   return ''
   +'<div class="ssp'+(notLast?'':' last')+'">'
