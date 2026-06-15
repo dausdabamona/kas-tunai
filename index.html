@@ -171,21 +171,28 @@
   </button>
 </div>
 
-<button class="fab" onclick="openModalTransaksi()">+</button>
+<button class="fab" onclick="openModal('modalPilihTx')">+</button>
+
+<!-- ================= MODAL PILIH JENIS TRANSAKSI ================= -->
+<div class="modal" id="modalPilihTx">
+  <div class="sheet">
+    <h2>Tambah Transaksi</h2>
+    <button class="btn" style="background:var(--c-ok)" onclick="openModalTransaksi('masuk')">&#11015; Transaksi Masuk (Debet)</button>
+    <button class="btn" style="background:var(--c-err);margin-top:8px" onclick="openModalTransaksi('keluar')">&#11014; Transaksi Keluar (Kredit)</button>
+    <button class="btn ghost" style="margin-top:8px" onclick="closeModal('modalPilihTx')">Batal</button>
+  </div>
+</div>
 
 <!-- ================= MODAL TRANSAKSI ================= -->
 <div class="modal" id="modalTransaksi">
   <div class="sheet">
-    <h2>Tambah Transaksi</h2>
+    <h2 id="txTitle">Tambah Transaksi</h2>
     <div class="field"><label>Tanggal</label><input type="date" id="txTanggal"></div>
-    <div class="field"><label>Kegiatan</label><input type="text" id="txKegiatan" placeholder="Nama kegiatan"></div>
-    <div class="field"><label>Penanggung Jawab</label><input type="text" id="txPenjab"></div>
-    <div class="row2">
-      <div class="field"><label>Debet (masuk)</label><input type="number" id="txDebet" value="0"></div>
-      <div class="field"><label>Kredit (keluar)</label><input type="number" id="txKredit" value="0"></div>
-    </div>
+    <div class="field"><label>Kegiatan / Uraian</label><input type="text" id="txKegiatan" placeholder="Nama kegiatan"></div>
+    <div class="field"><label id="txPenjabLbl">Penanggung Jawab</label><input type="text" id="txPenjab"></div>
+    <div class="field"><label id="txNilaiLbl">Nilai</label><input type="number" id="txNilai" value="0" inputmode="numeric"></div>
     <div class="field"><label>Keterangan</label><textarea id="txKeterangan" rows="2"></textarea></div>
-    <button class="btn" onclick="submitTransaksi()">Simpan</button>
+    <button class="btn" id="txSimpan" onclick="submitTransaksi()">Simpan</button>
     <button class="btn ghost" onclick="closeModal('modalTransaksi')">Batal</button>
   </div>
 </div>
@@ -277,6 +284,7 @@ var IS_ADMIN      = <?= appData.isAdmin ? 'true' : 'false' ?>;
 var allTransaksi  = [];
 var currentFilter = 'belumfoto';
 var currentArah   = 'semua';   // 'semua' | 'masuk' | 'keluar'
+var _txMode       = 'keluar';  // mode form transaksi: 'masuk' | 'keluar'
 var fotoJmlMap    = {};      // {noTransaksi: jumlahFotoNota}
 var _notaTarget   = null;    // noTransaksi yang sedang dikelola notanya
 var _kbTarget     = null;    // noTransaksi yang sedang dikelola pengembaliannya
@@ -571,25 +579,33 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 
 /* ============== Tambah transaksi ============== */
-function openModalTransaksi(){
+function openModalTransaksi(mode){
+  _txMode=(mode==='masuk')?'masuk':'keluar';
+  closeModal('modalPilihTx');
+  var masuk=(_txMode==='masuk');
+  document.getElementById('txTitle').textContent=masuk?'⬇ Transaksi Masuk (Uang Diterima)':'⬆ Transaksi Keluar (Pengeluaran)';
+  document.getElementById('txNilaiLbl').textContent=masuk?'Nilai Masuk / Debet (Rp)':'Nilai Keluar / Kredit (Rp)';
+  document.getElementById('txPenjabLbl').textContent=masuk?'Sumber Dana / Penyetor':'Penanggung Jawab (PUM)';
+  document.getElementById('txSimpan').style.background=masuk?'var(--c-ok)':'var(--c-err)';
   document.getElementById('txTanggal').value=todayISO();
   document.getElementById('txKegiatan').value='';
-  document.getElementById('txPenjab').value=NAMA_USER||'';
-  document.getElementById('txDebet').value=0;
-  document.getElementById('txKredit').value=0;
+  document.getElementById('txPenjab').value=masuk?'':(NAMA_USER||'');
+  document.getElementById('txNilai').value=0;
   document.getElementById('txKeterangan').value='';
   openModal('modalTransaksi');
 }
 function submitTransaksi(){
+  var nilai=parseFloat(document.getElementById('txNilai').value)||0;
   var data={
     tanggal:document.getElementById('txTanggal').value,
     kegiatan:document.getElementById('txKegiatan').value.trim(),
     penjab:document.getElementById('txPenjab').value.trim(),
-    debet:parseFloat(document.getElementById('txDebet').value)||0,
-    kredit:parseFloat(document.getElementById('txKredit').value)||0,
+    debet:_txMode==='masuk'?nilai:0,
+    kredit:_txMode==='keluar'?nilai:0,
     keterangan:document.getElementById('txKeterangan').value.trim()
   };
-  if(!data.kegiatan){toast('Kegiatan wajib diisi','error');return;}
+  if(!data.kegiatan){toast('Kegiatan/uraian wajib diisi','error');return;}
+  if(nilai<=0){toast('Nilai harus lebih dari 0','error');return;}
   showLoading(true,'Menyimpan...');
   google.script.run
     .withSuccessHandler(function(){showLoading(false);closeModal('modalTransaksi');
