@@ -73,6 +73,7 @@
   .card .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:12px}
   .chip{background:#eef2f7;border-radius:20px;padding:3px 9px;color:var(--c-muted)}
   .chip.ok{background:#dcfce7;color:#166534} .chip.no{background:#fee2e2;color:#991b1b}
+  .chip.pajak{background:#fef3c7;color:#92400e}
   .card .acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
   .card .acts button{flex:1;min-width:90px;border:1px solid var(--c-line);background:#fff;
     border-radius:8px;padding:8px;font-size:13px;font-weight:600;color:var(--c-primary)}
@@ -504,7 +505,12 @@ function _cardHtml(t){
     :'';
   var spbyChip=t.noSpby?('<span class="chip ok">SPBY '+t.noSpby+'</span>'):'';
   var pj=t.kredit>0?hitungPajak(t.kegiatan,t.kredit):null;
-  var pajakChip=(pj&&pj.jenisPPh)?('<span class="chip">'+esc(pj.jenisPPh)+' '+rupiah(pj.totalPajak)+'</span>'):'';
+  var pajakChip='';
+  if(pj){
+    pajakChip = pj.totalPajak>0
+      ? '<span class="chip pajak">Pajak '+rupiah(pj.totalPajak)+(pj.jenisPPh?(' · '+esc(pj.jenisPPh)):'')+'</span>'
+      : '<span class="chip">Pajak Rp 0</span>';
+  }
   var html=''
     +'<div class="card status-'+st+'">'
     +  '<div class="row1">'
