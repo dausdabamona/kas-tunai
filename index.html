@@ -37,6 +37,18 @@
   .saldo-bar .sb-val.neg{color:var(--c-err)}
   .saldo-bar .sb-main .sb-val.neg{color:#ffd1d1}
 
+  .arah-bar{display:flex;gap:0;margin-bottom:10px;border:1px solid var(--c-line);
+    border-radius:10px;overflow:hidden}
+  .arah-bar button{flex:1;border:0;background:#fff;padding:10px;font-size:14px;font-weight:600;
+    color:var(--c-muted);border-right:1px solid var(--c-line)}
+  .arah-bar button:last-child{border-right:0}
+  .arah-bar button.active{background:var(--c-primary);color:#fff}
+
+  .sec-head{display:flex;justify-content:space-between;align-items:center;margin:6px 2px 8px;
+    font-size:13px;font-weight:700;color:var(--c-text);border-bottom:2px solid var(--c-line);
+    padding-bottom:4px}
+  .sec-head .debet{color:var(--c-ok)} .sec-head .kredit{color:var(--c-err)}
+
   .filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:4px}
   .filters button{flex:0 0 auto;border:1px solid var(--c-line);background:#fff;
     border-radius:20px;padding:7px 14px;font-size:13px;color:var(--c-text);font-weight:600}
@@ -125,6 +137,11 @@
   <div class="saldo-bar">
     <div class="sb-item"><span class="sb-lbl">Saldo Awal</span><span class="sb-val" id="sbAwal">-</span></div>
     <div class="sb-item sb-main"><span class="sb-lbl">Saldo Saat Ini</span><span class="sb-val" id="sbAkhir">-</span></div>
+  </div>
+  <div class="arah-bar" id="arahBar">
+    <button data-a="semua" class="active">Semua</button>
+    <button data-a="masuk">&#11015; Masuk</button>
+    <button data-a="keluar">&#11014; Keluar</button>
   </div>
   <div class="filters" id="filterBar">
     <button data-f="all">Semua</button>
@@ -258,6 +275,7 @@ var IS_ADMIN      = <?= appData.isAdmin ? 'true' : 'false' ?>;
 
 var allTransaksi  = [];
 var currentFilter = 'belumfoto';
+var currentArah   = 'semua';   // 'semua' | 'masuk' | 'keluar'
 var fotoJmlMap    = {};      // {noTransaksi: jumlahFotoNota}
 var _notaTarget   = null;    // noTransaksi yang sedang dikelola notanya
 var _kbTarget     = null;    // noTransaksi yang sedang dikelola pengembaliannya
@@ -266,13 +284,25 @@ var _allPenyedia  = null;
 /* ============== Data institusi (hardcoded) ============== */
 var INST = {
   kementerian: 'KEMENTERIAN KELAUTAN DAN PERIKANAN',
+  kop: [
+    'KEMENTERIAN KELAUTAN DAN PERIKANAN',
+    'BADAN PENYULUHAN DAN PENGEMBANGAN SUMBER DAYA MANUSIA KELAUTAN DAN PERIKANAN',
+    'POLITEKNIK KELAUTAN DAN PERIKANAN SORONG'
+  ],
+  alamatKop: [
+    'JALAN KAPITAN PATTIMURA, TANJUNG KASUARI - SUPRAU',
+    'KOTAK POS 118 KOTA SORONG, PAPUA BARAT DAYA 98411',
+    'LAMAN www.polikpsorong.ac.id SUREL polteksorong@kkp.go.id'
+  ],
   namaWP   : 'Politeknik Kelautan dan Perikanan Sorong',
   npwpWP   : '00.172.581.1-951.000',
   alamatWP : 'Jl. Kapitan Pattimura Kel. Malaingkedi Distrik Sorong Utara, Kota Sorong',
-  bendahara: 'Abdul Rauf Muhammad Saleh',
-  nipBendahara: '198309122007011001',
+  ppk         : 'Firdaus Dabamona, S.T',
+  nipPpk      : '19820103 200701 002',
+  bendahara   : 'Abdul Rauf M. Saleh',
+  nipBendahara: '19830912 200701 1 001',
   kota     : 'Sorong',
-  logoUrl  : ''   // isi URL logo (KKP/Politeknik) untuk muncul di kop; kosong = tanpa logo
+  logoUrl  : ''   // isi URL logo KKP untuk muncul di kop; kosong = placeholder
 };
 var MATERAI_MIN = 5000000; // pembayaran >= nilai ini wajib bermaterai Rp 10.000
 
@@ -448,49 +478,72 @@ function updateSaldoBar(){
   el.className='sb-val'+(akhir<0?' neg':'');
 }
 
+function setArah(a){
+  currentArah=a;
+  var abtns=document.querySelectorAll('#arahBar button');
+  for(var i=0;i<abtns.length;i++) abtns[i].classList.toggle('active', abtns[i].getAttribute('data-a')===a);
+}
+
+function _cardHtml(t){
+  var st=statusOf(t);
+  var fnJml=fotoCount(t);
+  var amtCls=t.kredit>0?'kredit':'debet';
+  var amt=t.kredit>0?('-'+rupiah(t.kredit)):('+'+rupiah(t.debet));
+  var notaChip=(t.kredit>0)
+    ?('<span class="chip '+(t.notaTotal>=t.kredit?'ok':'no')+'">Nota '+rupiah(t.notaTotal)+'</span>')
+    :'';
+  var fotoChip=(t.kredit>0)
+    ?('<span class="chip '+(fnJml>0?'ok':'no')+'">Foto '+fnJml+'</span>')
+    :'';
+  var spbyChip=t.noSpby?('<span class="chip ok">SPBY '+t.noSpby+'</span>'):'';
+  var pj=t.kredit>0?hitungPajak(t.kegiatan,t.kredit):null;
+  var pajakChip=(pj&&pj.jenisPPh)?('<span class="chip">'+esc(pj.jenisPPh)+' '+rupiah(pj.totalPajak)+'</span>'):'';
+  var html=''
+    +'<div class="card status-'+st+'">'
+    +  '<div class="row1">'
+    +    '<div><div class="keg">'+esc(t.kegiatan||'(tanpa kegiatan)')+'</div>'
+    +    '<div class="tgl">'+esc(t.tanggal)+' &middot; No '+t.no+'</div></div>'
+    +    '<div class="amt '+amtCls+'">'+amt+'</div>'
+    +  '</div>'
+    +  '<div class="meta">'+notaChip+fotoChip+spbyChip+pajakChip
+    +    '<span class="chip">Saldo '+rupiah(t.saldo)+'</span>'
+    +  '</div>';
+  if(t.kredit>0){
+    html+='<div class="acts">'
+      +'<button onclick="openModalNota('+t.no+')">Nota</button>'
+      +'<button onclick="openModalKembali('+t.no+')">Kembalian</button>'
+      +'<button onclick="bukaPdfKuitansi('+t.no+')">&#129534; Kuitansi</button>'
+      +'<button onclick="openModalPajak('+t.no+')">&#9881; Pajak</button>'
+      +'<button onclick="promptSpby('+t.no+','+t.rowIndex+')">SPBY</button>'
+      +'</div>';
+  }
+  return html+'</div>';
+}
+
+function _sectionHtml(judul, icon, rows, isMasuk){
+  if(!rows.length) return '';
+  var total=0;
+  for(var i=0;i<rows.length;i++) total+=isMasuk?rows[i].debet:rows[i].kredit;
+  var h='<div class="sec-head"><span>'+icon+' '+judul+' ('+rows.length+')</span>'
+    +'<span class="'+(isMasuk?'debet':'kredit')+'">'+(isMasuk?'+':'-')+rupiah(total)+'</span></div>';
+  for(var j=0;j<rows.length;j++) h+=_cardHtml(rows[j]);
+  return h;
+}
+
 function renderList(){
   updateSaldoBar();
   var box=document.getElementById('listTransaksi');
-  var rows=allTransaksi.filter(passFilter);
-  if(!rows.length){box.innerHTML='<div class="empty">Tidak ada transaksi pada filter ini.</div>';return;}
+  // Masuk = debet (tak terpengaruh filter SPJ); Keluar = kredit (kena filter status)
+  var masuk=allTransaksi.filter(function(t){return t.debet>0;});
+  var keluar=allTransaksi.filter(function(t){return t.kredit>0;}).filter(passFilter);
+
   var html='';
-  for(var i=0;i<rows.length;i++){
-    var t=rows[i];
-    var st=statusOf(t);
-    var fnJml=fotoCount(t);
-    var amtCls=t.kredit>0?'kredit':'debet';
-    var amt=t.kredit>0?('-'+rupiah(t.kredit)):('+'+rupiah(t.debet));
-    var notaChip=(t.kredit>0)
-      ?('<span class="chip '+(t.notaTotal>=t.kredit?'ok':'no')+'">Nota '+rupiah(t.notaTotal)+'</span>')
-      :'';
-    var fotoChip=(t.kredit>0)
-      ?('<span class="chip '+(fnJml>0?'ok':'no')+'">Foto '+fnJml+'</span>')
-      :'';
-    var spbyChip=t.noSpby?('<span class="chip ok">SPBY '+t.noSpby+'</span>'):'';
-    var pj=t.kredit>0?hitungPajak(t.kegiatan,t.kredit):null;
-    var pajakChip=(pj&&pj.jenisPPh)?('<span class="chip">'+esc(pj.jenisPPh)+' '+rupiah(pj.totalPajak)+'</span>'):'';
-    html+=''
-      +'<div class="card status-'+st+'">'
-      +  '<div class="row1">'
-      +    '<div><div class="keg">'+esc(t.kegiatan||'(tanpa kegiatan)')+'</div>'
-      +    '<div class="tgl">'+esc(t.tanggal)+' &middot; No '+t.no+'</div></div>'
-      +    '<div class="amt '+amtCls+'">'+amt+'</div>'
-      +  '</div>'
-      +  '<div class="meta">'+notaChip+fotoChip+spbyChip+pajakChip
-      +    '<span class="chip">Saldo '+rupiah(t.saldo)+'</span>'
-      +  '</div>';
-    if(t.kredit>0){
-      html+='<div class="acts">'
-        +'<button onclick="openModalNota('+t.no+')">Nota</button>'
-        +'<button onclick="openModalKembali('+t.no+')">Kembalian</button>'
-        +'<button onclick="bukaPdfKuitansi('+t.no+')">&#129534; Kuitansi</button>'
-        +'<button onclick="openModalPajak('+t.no+')">&#9881; Pajak</button>'
-        +'<button onclick="promptSpby('+t.no+','+t.rowIndex+')">SPBY</button>'
-        +'</div>';
-    }
-    html+='</div>';
-  }
-  box.innerHTML=html;
+  if(currentArah==='masuk')      html=_sectionHtml('Transaksi Masuk','&#11015;',masuk,true);
+  else if(currentArah==='keluar')html=_sectionHtml('Transaksi Keluar','&#11014;',keluar,false);
+  else html=_sectionHtml('Transaksi Masuk','&#11015;',masuk,true)
+          + _sectionHtml('Transaksi Keluar','&#11014;',keluar,false);
+
+  box.innerHTML=html||'<div class="empty">Tidak ada transaksi pada pilihan ini.</div>';
 }
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
@@ -712,6 +765,12 @@ function _terbilang(n){
   var s=konv(n).replace(/\s+/g,' ').trim();
   return s.charAt(0).toUpperCase()+s.slice(1)+' rupiah';
 }
+function _terbilangTitle(n){ // Title Case: "Dua Juta Lima Ratus Ribu Rupiah"
+  return _terbilang(n).replace(/\S+/g,function(w){return w.charAt(0).toUpperCase()+w.slice(1);});
+}
+function _rp0(n){ return 'Rp'+(Math.round(parseFloat(n)||0)).toLocaleString('id-ID'); }
+function _angka2(n){ return (parseFloat(n)||0).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function _romawi(m){ return ['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][m]||''; }
 
 /* ============== Master Penyedia (cache + autocomplete) ============== */
 function _muatPenyedia(cb){
@@ -788,71 +847,95 @@ function recalcPajak(){
   function baris(l,v){return '<div class="row1" style="margin:3px 0"><span class="tgl">'+l+'</span><span>'+v+'</span></div>';}
 }
 
-/* ============== Kuitansi (serah-terima uang Bendahara -> PUM/Penjab) ============== */
+/* ============== Kuitansi Bukti Pembayaran (format resmi Poltek KP Sorong) ============== */
 function bukaPdfKuitansi(noTransaksi){
   var t=_cariTransaksi(noTransaksi);
   if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
-  _bukaPopup(_renderKuitansiHtml(t));
+  butuhPenyedia(noTransaksi, 'kuitansi', function(penerima){
+    var pj=hitungPajak(t.kegiatan, t.kredit, true, !!(penerima.npwp));
+    _bukaPopup(_renderKuitansiHtml(t, pj, penerima));
+  });
 }
-function _renderKuitansiHtml(t){
-  var jumlah=(t.uangDiserahkan && t.uangDiserahkan>0) ? t.uangDiserahkan : t.kredit;
-  var noKuitansi='KT-'+t.no+'/'+(new Date().getFullYear());
-  var spbyRow=t.noSpby?('<tr><td>No. SPBY</td><td>: '+esc(t.noSpby)+'</td></tr>'):'';
-  var mak=t.mak||t.kodeRekening||'';
-  var makRow='<tr><td>Kode Rekening / MAK</td><td>: '+(mak?esc(mak):'<span style="color:#888">..............................</span>')+'</td></tr>';
-  var logo=INST.logoUrl?('<img src="'+INST.logoUrl+'" style="height:64px;width:auto">'):'';
-  var materai=(jumlah>=MATERAI_MIN)
-    ? '<div class="materai">M E T E R A I<br>Rp 10.000</div>' : '';
-  var penerima=esc(t.penjab||'(…………………………)');
+function _renderKuitansiHtml(t, pj, penerima){
+  var jumlah=pj.nominal;
+  var parts=String(t.tanggal||'').split('-');
+  var thn=parts[0]||(new Date().getFullYear());
+  var bln=parseInt(parts[1]||'1',10);
+  var noKwt='KWT-'+t.no+'/'+_romawi(bln)+'/'+thn;
+  var logoEl=INST.logoUrl
+    ? '<img src="'+INST.logoUrl+'">'
+    : '<div class="ph">LOGO<br>KKP</div>';
 
   return ''
-  +'<html><head><meta charset="utf-8"><title>Kuitansi '+noKuitansi+'</title><style>'
-  +'@page{size:A4 portrait;margin:15mm} *{font-family:Arial,sans-serif}'
-  +'body{font-size:13px;color:#000} '
-  +'.kop{display:flex;align-items:center;gap:14px;border-bottom:3px double #000;padding-bottom:8px}'
-  +'.kop .logo{flex:0 0 auto} .kop .txt{flex:1;text-align:center;line-height:1.3}'
-  +'.kop .k1{font-size:13px;font-weight:bold;letter-spacing:.5px} '
-  +'.kop .k2{font-size:16px;font-weight:bold;letter-spacing:.5px} .kop .k3{font-size:11px}'
-  +'.title{display:flex;justify-content:space-between;align-items:flex-end;margin:18px 0 6px}'
-  +'h1{font-size:22px;margin:0;letter-spacing:3px} .nokt{text-align:right;font-size:12px}'
-  +'.box{border:1px solid #000;padding:16px;border-radius:4px}'
-  +'table{width:100%;border-collapse:collapse} td{padding:4px 0;vertical-align:top}'
-  +'.amt{font-weight:bold;font-size:15px} '
-  +'.terbilang{font-style:italic;background:#f3f3f3;padding:5px 10px;display:inline-block;border-radius:3px}'
-  +'.ttd{display:flex;justify-content:space-between;margin-top:34px;font-size:12px}'
-  +'.ttd .col{width:46%;text-align:center}'
-  +'.materai{border:1px dashed #888;color:#666;font-size:9px;text-align:center;'
-  +'  width:90px;height:48px;line-height:1.4;padding-top:8px;margin:6px auto 4px}'
-  +'.sign{margin-top:50px;font-weight:bold;text-decoration:underline}'
+  +'<html><head><meta charset="utf-8"><title>Kuitansi '+noKwt+'</title><style>'
+  +'@page{size:A4 portrait;margin:12mm} *{font-family:Arial,sans-serif;box-sizing:border-box}'
+  +'body{font-size:12px;color:#000;margin:0}'
+  +'.kop{display:flex;align-items:center;gap:10px}'
+  +'.kop .logo{flex:0 0 92px;text-align:center} .kop .logo img{width:86px;height:auto}'
+  +'.kop .ph{width:84px;height:84px;border:1px dashed #99a;border-radius:50%;margin:auto;'
+  +'  display:flex;align-items:center;justify-content:center;color:#99a;font-size:9px;text-align:center}'
+  +'.kop .txt{flex:1;text-align:center;color:#16379b;line-height:1.25}'
+  +'.kop .t{font-weight:bold;font-size:13px} .kop .ti{font-weight:bold;font-size:14px}'
+  +'.kop .addr{color:#000;font-weight:normal;font-size:9px;margin-top:4px;line-height:1.35}'
+  +'.hrt{border:0;border-top:3px solid #000;margin:1px 0 0}'
+  +'.kbox{border:1px solid #000;padding:0}'
+  +'.krow{display:flex;align-items:center;border-bottom:0;padding:8px 12px 0;font-size:11px}'
+  +'.krow .l{width:90px} .krow .v{flex:1;font-weight:bold} .krow .r{text-align:right}'
+  +'.judul{text-align:center;font-weight:bold;font-size:15px;margin:8px 0 14px;letter-spacing:.5px}'
+  +'.info{width:100%;border-collapse:collapse;padding:0 12px} .info td{padding:3px 0;vertical-align:top}'
+  +'.iwrap{padding:0 12px}'
+  +'.info .l{width:130px} .info .s{width:10px}'
+  +'.us{font-weight:bold;border-bottom:1px solid #000;display:inline-block;min-width:200px;padding:1px 4px}'
+  +'.terb{background:#dcdcdc;display:block;padding:3px 6px;font-style:italic}'
+  +'.rinci{width:100%;border-collapse:collapse;margin-top:6px}'
+  +'.rinci td{border:1px solid #000;padding:4px 8px} .rinci td.r{text-align:right;width:130px} .rinci tr.b td{font-weight:bold}'
+  +'.terima{width:55%;margin-left:45%;padding:14px 12px 8px;font-size:11px}'
+  +'.terima .nm{margin-top:46px}'
+  +'.hrf{border:0;border-top:1px solid #000;margin:0}'
+  +'.foot{padding:8px 12px 4px;font-size:11px}'
+  +'.ttd2{width:100%;border-collapse:collapse;font-size:11px} .ttd2 td{width:50%;padding:4px 12px 14px;vertical-align:top}'
+  +'.ttd2 .nm{margin-top:46px}'
   +'@media print{.noprint{display:none}}'
   +'</style></head><body>'
-  +'<div class="noprint" style="text-align:right;margin-bottom:10px">'
+  +'<div class="noprint" style="text-align:right;margin:6px 0 10px">'
   +'<button onclick="window.print()">Cetak / Simpan PDF</button></div>'
 
-  +'<div class="kop">'+(logo?('<div class="logo">'+logo+'</div>'):'')
-  +'<div class="txt"><div class="k1">'+esc(INST.kementerian)+'</div>'
-  +'<div class="k2">'+esc(INST.namaWP).toUpperCase()+'</div>'
-  +'<div class="k3">'+esc(INST.alamatWP)+'</div></div></div>'
+  +'<div class="kop"><div class="logo">'+logoEl+'</div>'
+  +'<div class="txt">'
+  +'<div class="t">'+esc(INST.kop[0])+'</div>'
+  +'<div class="t">'+esc(INST.kop[1])+'</div>'
+  +'<div class="ti">'+esc(INST.kop[2])+'</div>'
+  +'<div class="addr">'+esc(INST.alamatKop[0])+'<br>'+esc(INST.alamatKop[1])+'<br>'+esc(INST.alamatKop[2])+'</div>'
+  +'</div></div>'
+  +'<hr class="hrt">'
 
-  +'<div class="title"><h1>KUITANSI</h1>'
-  +'<div class="nokt">No. : '+noKuitansi+(t.noSpby?('<br>No. SPBY : '+esc(t.noSpby)):'')+'</div></div>'
+  +'<div class="kbox">'
+  +'<div class="krow"><span class="l">No Kuitansi</span><span class="v">'+noKwt+'</span><span class="r">T.A '+thn+'</span></div>'
+  +'<div class="judul">KUITANSI BUKTI PEMBAYARAN</div>'
 
-  +'<div class="box">'
-  +'<table>'
-  +'<tr><td style="width:34%">Sudah terima dari</td><td>: Bendahara Pengeluaran '+esc(INST.namaWP)+'</td></tr>'
-  +'<tr><td>Uang sejumlah</td><td class="amt">: '+rupiah(jumlah)+'</td></tr>'
-  +'<tr><td>Terbilang</td><td>: <span class="terbilang">'+_terbilang(jumlah)+'</span></td></tr>'
-  +'<tr><td>Untuk keperluan</td><td>: '+esc(t.kegiatan)+'</td></tr>'
-  +makRow+spbyRow
-  +'<tr><td>Tanggal</td><td>: '+_tglPanjang(t.tanggal)+'</td></tr>'
-  +'</table>'
+  +'<div class="iwrap"><table class="info">'
+  +'<tr><td class="l">Telah terima dari</td><td class="s">:</td><td>Pejabat Pembuat Komitmen '+esc(INST.namaWP)+'</td></tr>'
+  +'<tr><td class="l">Uang sejumlah</td><td class="s">:</td><td><span class="us">'+_angka2(jumlah)+'</span></td></tr>'
+  +'<tr><td class="l">Terbilang</td><td class="s">:</td><td><span class="terb">'+_terbilangTitle(jumlah)+'</span></td></tr>'
+  +'<tr><td class="l">Untuk Pembayaran</td><td class="s">:</td><td>'+esc(t.kegiatan)
+  +'<table class="rinci">'
+  +'<tr><td>-&nbsp; Besarnya pembayaran</td><td class="r">'+_rp0(jumlah)+'</td></tr>'
+  +'<tr><td>PPN</td><td class="r">'+_rp0(pj.ppn)+'</td></tr>'
+  +'<tr><td>PPh</td><td class="r">'+_rp0(pj.pph)+'</td></tr>'
+  +'<tr class="b"><td>- Yang diterima</td><td class="r">'+_rp0(pj.nettoRekanan)+'</td></tr>'
+  +'</table></td></tr>'
+  +'</table></div>'
 
-  +'<div class="ttd">'
-  +'<div class="col">Yang Menyerahkan,<br>Bendahara Pengeluaran,'
-  +'<div class="sign">'+esc(INST.bendahara)+'</div>NIP. '+esc(INST.nipBendahara)+'</div>'
-  +'<div class="col">'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)+'<br>Yang Menerima,<br>Pemegang Uang Muka / Penanggung Jawab,'+materai
-  +'<div class="sign" style="margin-top:'+(materai?'6px':'50px')+'">'+penerima+'</div></div>'
-  +'</div></div></body></html>';
+  +'<div class="terima">'+esc(INST.kota)+' ,&nbsp; '+_tglPanjang(t.tanggal)+'<br>Yang menerima,'
+  +'<div class="nm">'+esc(penerima.nama||'(…………………………)')+'</div></div>'
+
+  +'<hr class="hrf">'
+  +'<div class="foot">Setuju dan lunas dibayar Tgl '+_tglPanjang(t.tanggal)+'</div>'
+  +'<table class="ttd2"><tr>'
+  +'<td>Pejabat Pembuat Komitmen<div class="nm">'+esc(INST.ppk)+'</div>NIP. '+esc(INST.nipPpk)+'</td>'
+  +'<td>Bendahara Pengeluaran<div class="nm">'+esc(INST.bendahara)+'</div>NIP. '+esc(INST.nipBendahara)+'</td>'
+  +'</tr></table>'
+  +'</div></body></html>';
 }
 
 /* ============== SSP (dasar) ============== */
@@ -920,8 +1003,14 @@ function _bukaPopup(html){
       currentFilter=this.getAttribute('data-f');
       for(var j=0;j<btns.length;j++)btns[j].classList.remove('active');
       this.classList.add('active');
+      // Filter status hanya relevan untuk transaksi keluar
+      if(currentArah==='masuk') setArah('keluar');
       renderList();
     });
+  }
+  var abtns=document.querySelectorAll('#arahBar button');
+  for(var k=0;k<abtns.length;k++){
+    abtns[k].addEventListener('click',function(){ setArah(this.getAttribute('data-a')); renderList(); });
   }
   loadAll();
 })();
