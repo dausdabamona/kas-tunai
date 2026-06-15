@@ -295,8 +295,11 @@ var INST = {
     'LAMAN www.polikpsorong.ac.id SUREL polteksorong@kkp.go.id'
   ],
   namaWP   : 'Politeknik Kelautan dan Perikanan Sorong',
-  npwpWP   : '00.172.581.1-951.000',
-  alamatWP : 'Jl. Kapitan Pattimura Kel. Malaingkedi Distrik Sorong Utara, Kota Sorong',
+  npwpWP   : '',  // NPWP instansi (diinput kemudian; biarkan kosong = kotak SSP kosong)
+  alamatWP : 'Jl. Kapitan Pattimura, Suprau, Kota Sorong',
+  // Identitas WP pada SSP (instansi)
+  namaWpPajak  : 'POLITEKNIK KELAUTAN DAN PERIKANAN SORONG',
+  alamatWpPajak: 'JALAN KAPITAN PATTIMURA, SUPRAU',
   ppk         : 'Firdaus Dabamona, S.T',
   nipPpk      : '19820103 200701 002',
   bendahara   : 'Abdul Rauf M. Saleh',
@@ -947,56 +950,85 @@ function cetakSSP(jenis){
     document.getElementById('pjAdaNpwp').checked);
   if(jenis==='pph' && !pj.pph){ toast('Tidak ada PPh untuk transaksi ini','info'); return; }
   if(jenis==='ppn' && !pj.ppn){ toast('Tidak ada PPN untuk transaksi ini','info'); return; }
-  butuhPenyedia(_sspTarget, 'ssp', function(penyedia){
-    _bukaPopup(_renderSspHtml(t, pj, penyedia, jenis));
-  });
+  _bukaPopup(_renderSspHtml(t, pj, jenis)); // WP = instansi, penyetor = Bendahara
 }
 // Peruntukan 5 lembar SSP (format F.2.0.32.01)
 var SSP_LEMBAR = [
   'Untuk Arsip Wajib Pajak',
-  'Untuk KPP melalui Bank Persepsi/Kantor Pos',
+  'Untuk Kantor Pelayanan Pajak',
   'Untuk dilaporkan oleh Wajib Pajak ke KPP',
   'Untuk Bank Persepsi/Kantor Pos & Giro',
-  'Untuk Arsip Wajib Pungut/Bendahara'
+  'Untuk Arsip Wajib Pungut'
 ];
 
-function _renderSspHtml(t, pj, penyedia, jenis){
+/** Deret kotak digit; isi dari val, sisanya kosong, total n kotak. */
+function _sspBoxes(val, n){
+  val=String(val||'').replace(/[^0-9]/g,'');
+  var h='';
+  for(var i=0;i<n;i++) h+='<span class="dg">'+(val.charAt(i)||'&nbsp;')+'</span>';
+  return h;
+}
+/** Kotak NPWP dengan pemisah .  .  .  -  . sesuai format XX.XXX.XXX.X-XXX.XXX */
+function _npwpBoxes(val){
+  val=String(val||'').replace(/[^0-9]/g,'');
+  var grup=[2,3,3,1,3,3], sep=['.','.','.','-','.',''], idx=0, h='';
+  for(var g=0;g<grup.length;g++){
+    for(var k=0;k<grup[g];k++) h+='<span class="dg">'+(val.charAt(idx++)||'&nbsp;')+'</span>';
+    if(sep[g]) h+='<span class="sp">'+sep[g]+'</span>';
+  }
+  return h;
+}
+
+function _renderSspHtml(t, pj, jenis){
   var isPph=(jenis==='pph');
   var info={
     map:    isPph ? pj.mapPPh : '411211',
     kjs:    isPph ? pj.kjsPPh : '900',
     jumlah: isPph ? pj.pph : pj.ppn,
-    uraian: (isPph ? ((pj.jenisPPh||'PPh')+(pj.tarifPPhPct?(' '+pj.tarifPPhPct+'%'):'')) : 'PPN 11%')
-            +' atas '+t.kegiatan+' (DPP '+rupiah(pj.dpp)+')'
+    uraian: isPph
+      ? ((pj.jenisPPh||'PPh')+' dengan tarif pajak '+String(pj.tarifPPhPct).replace('.',',')+'%')
+      : 'PPN dengan tarif 11%'
   };
   var parts=String(t.tanggal||'').split('-');
-  info.tahun=parts[0]||(new Date().getFullYear());
+  info.tahun=parts[0]||(''+new Date().getFullYear());
   info.bulan=parseInt(parts[1]||'1',10);
 
   var pages='';
-  for(var i=0;i<SSP_LEMBAR.length;i++){
-    pages+=_sspLembar(t, pj, penyedia, info, jenis, i+1, SSP_LEMBAR[i],
-      i<SSP_LEMBAR.length-1);
-  }
+  for(var i=0;i<SSP_LEMBAR.length;i++)
+    pages+=_sspLembar(t, info, i+1, SSP_LEMBAR[i], i<SSP_LEMBAR.length-1);
+
   return ''
   +'<html><head><meta charset="utf-8"><title>SSP '+(isPph?'PPh':'PPN')+' KT-'+t.no+'</title><style>'
-  +'@page{size:A4 portrait;margin:12mm} *{font-family:Arial,sans-serif;box-sizing:border-box}'
-  +'body{font-size:11px;color:#000;margin:0}'
-  +'.ssp{page-break-after:always} .ssp.last{page-break-after:auto}'
-  +'.shead{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}'
-  +'.shead .ka{font-size:10px;line-height:1.3} .shead .kb{text-align:right;font-size:10px}'
-  +'.judul{text-align:center;font-weight:bold;font-size:14px;margin:6px 0 2px}'
-  +'.sub{text-align:center;font-size:10px;margin-bottom:8px}'
-  +'.b{border:1px solid #000;border-collapse:collapse;width:100%}'
-  +'.b td{border:1px solid #000;padding:5px 7px;vertical-align:top}'
-  +'.lbl{font-weight:bold} .npwp{letter-spacing:2px;font-weight:bold;font-size:13px}'
-  +'.kode{display:flex;gap:16px} .kode b{font-size:14px;letter-spacing:2px}'
-  +'.masa{display:flex;flex-wrap:wrap;gap:2px;margin-top:3px}'
-  +'.masa span{border:1px solid #000;width:30px;text-align:center;padding:1px 0;font-size:9px}'
-  +'.masa span.on{background:#000;color:#fff;font-weight:bold}'
-  +'.jml{font-size:15px;font-weight:bold} .terb{font-style:italic}'
-  +'.ttd{display:flex;justify-content:space-between;margin-top:6px;font-size:10px}'
-  +'.ttd .col{width:48%} .ttd .nm{margin-top:40px;font-weight:bold;text-decoration:underline}'
+  +'@page{size:A4 portrait;margin:10mm} *{font-family:Arial,sans-serif;box-sizing:border-box}'
+  +'body{font-size:10px;color:#000;margin:0}'
+  +'.ssp{border:2px solid #000;page-break-after:always} .ssp.last{page-break-after:auto}'
+  +'.fc{font-size:8px;margin:2px 0 14px}'
+  +'.sh{display:flex;border-bottom:2px solid #000}'
+  +'.sh .c1{flex:1.1;display:flex;align-items:center;gap:8px;padding:6px 8px;border-right:2px solid #000}'
+  +'.sh .lg{width:42px;height:42px;flex:0 0 42px}'
+  +'.sh .lg img{width:42px;height:auto} .sh .lg .ph{width:42px;height:42px;border:1px dashed #aaa;border-radius:50%}'
+  +'.sh .dp{font-weight:bold;font-size:11px;line-height:1.25}'
+  +'.sh .c2{flex:1.2;text-align:center;padding:3px;border-right:2px solid #000}'
+  +'.sh .c2 .t1{font-weight:bold;font-size:12px} .sh .c2 .t2{font-weight:bold;font-size:22px;line-height:1.1}'
+  +'.sh .c3{width:160px;padding:4px 6px;font-size:9px;text-align:center}'
+  +'.sh .c3 .top{display:flex;justify-content:space-between;align-items:center}'
+  +'.sh .c3 .lb{font-weight:bold;font-size:11px} .sh .c3 .num{border:1.5px solid #000;font-weight:bold;font-size:20px;width:32px;height:30px;line-height:30px}'
+  +'.sh .c3 .pr{margin-top:4px;font-weight:bold}'
+  +'.sec{padding:5px 8px;border-bottom:1px solid #000}'
+  +'.r{display:flex;align-items:center;margin:2px 0} .r .l{width:130px;font-weight:bold;flex:0 0 130px}'
+  +'.r .c{width:10px} .note{font-style:italic;font-size:7.5px;color:#333;margin:1px 0 0 130px}'
+  +'.dg{display:inline-block;border:1px solid #000;width:15px;height:17px;line-height:16px;text-align:center;font-size:10px;margin-right:1px}'
+  +'.sp{display:inline-block;width:8px;text-align:center;font-weight:bold}'
+  +'.colset{display:flex} .colset .left{flex:0 0 46%;border-right:1px solid #000;padding-right:8px}'
+  +'.colset .right{flex:1;padding-left:10px}'
+  +'.kp .t{font-weight:bold;font-size:9px;margin-bottom:2px}'
+  +'.masaT{width:100%;border-collapse:collapse} .masaT td{border:1px solid #000;text-align:center;font-size:9px;width:8.33%;padding:1px}'
+  +'.masaT .mk{height:16px;font-weight:bold}'
+  +'.jml{font-weight:bold;font-size:13px} .terb{font-style:italic}'
+  +'.sig{display:flex} .sig .col{flex:1;padding:6px 8px;min-height:96px} .sig .col.rr{border-left:1px solid #000;text-align:center}'
+  +'.sig .ttl{font-weight:bold} .sig .it{font-style:italic} .sig .nm{margin-top:42px;font-weight:bold}'
+  +'.foot{text-align:center;padding:5px;border-top:1px solid #000}'
+  +'.foot .i{font-style:italic} .foot .b{font-weight:bold}'
   +'.noprint{margin-bottom:8px;text-align:right}@media print{.noprint{display:none}}'
   +'</style></head><body>'
   +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF (5 lembar)</button></div>'
@@ -1004,38 +1036,91 @@ function _renderSspHtml(t, pj, penyedia, jenis){
   +'</body></html>';
 }
 
-function _sspLembar(t, pj, penyedia, info, jenis, lembarNo, untuk, notLast){
-  var masa='';
+function _sspLembar(t, info, lembarNo, untuk, notLast){
   var bln=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
-  for(var m=1;m<=12;m++) masa+='<span class="'+(m===info.bulan?'on':'')+'">'+bln[m-1]+'</span>';
+  var hd='', mk='';
+  for(var m=1;m<=12;m++){ hd+='<td>'+bln[m-1]+'</td>'; mk+='<td class="mk">'+(m===info.bulan?'X':'')+'</td>'; }
+  var logo=INST.logoUrl?('<img src="'+INST.logoUrl+'">'):'<div class="ph"></div>';
 
   return ''
   +'<div class="ssp'+(notLast?'':' last')+'">'
-  +'<div class="shead">'
-  +'<div class="ka"><b>KEMENTERIAN KEUANGAN R.I.</b><br>DIREKTORAT JENDERAL PAJAK</div>'
-  +'<div class="kb">F.2.0.32.01<br><b>Lembar ke-'+lembarNo+'</b><br>'+esc(untuk)+'</div>'
+
+  // ---- header
+  +'<div class="sh">'
+  +'<div class="c1"><div class="lg">'+logo+'</div>'
+  +'<div class="dp">DEPARTEMEN KEUANGAN R.I.<br>DIREKTORAT JENDERAL PAJAK</div></div>'
+  +'<div class="c2"><div class="t1">SURAT SETORAN PAJAK</div><div class="t2">(SSP)</div></div>'
+  +'<div class="c3"><div class="top"><span class="lb">LEMBAR</span><span class="num">'+lembarNo+'</span></div>'
+  +'<div class="pr">'+esc(untuk)+'</div></div>'
   +'</div>'
-  +'<div class="judul">SURAT SETORAN PAJAK (SSP)</div>'
-  +'<div class="sub">'+(jenis==='pph'?'Pajak Penghasilan ('+(pj.jenisPPh||'PPh')+')':'Pajak Pertambahan Nilai (PPN)')+'</div>'
-  +'<table class="b">'
-  +'<tr><td style="width:22%"><span class="lbl">NPWP</span></td>'
-  +'<td><span class="npwp">'+esc(penyedia.npwp||'00.000.000.0-000.000')+'</span>'
-  +(penyedia.npwp?'':' <i>(rekanan non-NPWP)</i>')+'</td></tr>'
-  +'<tr><td><span class="lbl">Nama WP</span></td><td>'+esc(penyedia.nama||'')+'</td></tr>'
-  +'<tr><td><span class="lbl">Alamat</span></td><td>'+esc(penyedia.alamat||'')+'</td></tr>'
-  +'<tr><td><span class="lbl">Kode Akun Pajak / Jenis Setoran</span></td>'
-  +'<td><div class="kode"><span>MAP: <b>'+esc(info.map)+'</b></span><span>KJS: <b>'+esc(info.kjs)+'</b></span></div></td></tr>'
-  +'<tr><td><span class="lbl">Uraian Pembayaran</span></td><td>'+esc(info.uraian)+'</td></tr>'
-  +'<tr><td><span class="lbl">Masa Pajak</span></td><td><div class="masa">'+masa+'</div></td></tr>'
-  +'<tr><td><span class="lbl">Tahun Pajak</span></td><td><b>'+esc(info.tahun)+'</b></td></tr>'
-  +'<tr><td><span class="lbl">Jumlah Pembayaran</span></td><td class="jml">'+rupiah(info.jumlah)+'</td></tr>'
-  +'<tr><td><span class="lbl">Terbilang</span></td><td class="terb">'+_terbilangTitle(info.jumlah)+'</td></tr>'
-  +'</table>'
-  +'<div class="ttd">'
-  +'<div class="col">Diterima oleh:<br>Bank Persepsi / Kantor Pos & Giro<br><br><br>Tanggal &amp; Cap</div>'
-  +'<div class="col" style="text-align:center">'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)+'<br>Penyetor,<br>Bendahara Pengeluaran,'
-  +'<div class="nm">'+esc(INST.bendahara)+'</div>NIP. '+esc(INST.nipBendahara)+'</div>'
-  +'</div></div>';
+
+  // ---- NPWP / Nama / Alamat WP
+  +'<div class="sec">'
+  +'<div class="r"><span class="l">NPWP</span><span class="c">:</span><span>'+_npwpBoxes(INST.npwpWP)+'</span></div>'
+  +'<div class="note">Diisi sesuai dengan Nomor Pokok Wajib Pajak yang dimiliki</div>'
+  +'<div class="r"><span class="l">NAMA WP</span><span class="c">:</span><span>'+esc(INST.namaWpPajak)+'</span></div>'
+  +'<div class="r"><span class="l">ALAMAT WP</span><span class="c">:</span><span>'+esc(INST.alamatWpPajak)+'</span></div>'
+  +'</div>'
+
+  // ---- NOP / Alamat OP (kosong)
+  +'<div class="sec">'
+  +'<div class="r"><span class="l">NOP</span><span class="c">:</span><span>'+_sspBoxes('',18)+'</span></div>'
+  +'<div class="note">Diisi sesuai dengan Nomor Objek Pajak</div>'
+  +'<div class="r"><span class="l">ALAMAT OP</span><span class="c">:</span>'
+  +'<span style="flex:1;border-bottom:1px dotted #000">&nbsp;</span></div>'
+  +'</div>'
+
+  // ---- Kode Akun Pajak / KJS | Uraian
+  +'<div class="sec colset">'
+  +'<div class="left kp"><div style="display:flex;gap:18px">'
+  +'<div><div class="t">Kode Akun Pajak</div>'+_sspBoxes(info.map,6)+'</div>'
+  +'<div><div class="t">Kode Jenis Setoran</div>'+_sspBoxes(info.kjs,3)+'</div>'
+  +'</div></div>'
+  +'<div class="right"><div class="t" style="font-weight:bold">Uraian Pembayaran :</div>'+esc(info.uraian)+'</div>'
+  +'</div>'
+
+  // ---- Masa Pajak | Tahun Pajak
+  +'<div class="sec colset">'
+  +'<div class="left" style="flex:0 0 74%"><div class="kp t" style="text-align:center;font-weight:bold">Masa Pajak</div>'
+  +'<table class="masaT"><tr>'+hd+'</tr><tr>'+mk+'</tr></table>'
+  +'<div class="note" style="margin-left:0">Beri tanda silang (x) pada kolom bulan, sesuai dengan pembayaran untuk masa pajak yang berkenaan</div></div>'
+  +'<div class="right" style="text-align:center"><div class="t" style="font-weight:bold">Tahun Pajak</div>'
+  +'<div style="margin-top:4px">'+_sspBoxes(info.tahun,4)+'</div>'
+  +'<div class="note" style="margin-left:0">Diisi Tahun terutangnya Pajak</div></div>'
+  +'</div>'
+
+  // ---- Nomor Ketetapan (kosong)
+  +'<div class="sec">'
+  +'<div class="r"><span class="l">Nomor Ketetapan</span><span class="c">:</span><span>'
+  +_sspBoxes('',3)+'<span class="sp">/</span>'+_sspBoxes('',6)+'<span class="sp">/</span>'
+  +_sspBoxes('',2)+'<span class="sp">/</span>'+_sspBoxes('',2)+'</span></div>'
+  +'<div class="note">Diisi sesuai Nomor Ketetapan : STP, SKPKB, SKPKBT</div>'
+  +'</div>'
+
+  // ---- Jumlah Pembayaran + Terbilang
+  +'<div class="sec">'
+  +'<div class="r"><span class="l">Jumlah Pembayaran</span><span class="c">:</span>'
+  +'<span class="jml">'+_rp0(info.jumlah)+'</span>'
+  +'<span style="flex:1;text-align:right;font-style:italic;font-size:8px">Diisi dengan rupiah penuh</span></div>'
+  +'<div class="r"><span class="l">Terbilang</span><span class="c">:</span>'
+  +'<span class="terb">( '+_terbilangTitle(info.jumlah)+'. )</span></div>'
+  +'</div>'
+
+  // ---- Tanda tangan
+  +'<div class="sig">'
+  +'<div class="col"><div class="ttl">Diterima oleh Kantor Penerima Pembayaran</div>Tanggal'
+  +'<div class="it" style="margin-top:46px;text-align:center">Cap dan tanda tangan dan Nama</div></div>'
+  +'<div class="col rr"><div class="ttl">Wajib Pajak/Penyetor</div>'
+  +esc(INST.kota)+' , &nbsp; '+_tglPanjang(t.tanggal)+'<div class="it">Cap dan tanda tangan</div>'
+  +'<div class="nm">'+esc(INST.bendahara)+'</div></div>'
+  +'</div>'
+
+  // ---- footer validasi
+  +'<div class="foot"><div class="i">" Terima kasih Telah Membayar Pajak - Pajak Untuk Pembangunan Bangsa "</div>'
+  +'<div class="b">Ruang Validasi Kantor Penerima Pembayaran</div></div>'
+
+  +'</div>'
+  +'<div class="fc">F.2.0.32.01</div>';
 }
 
 /* ============== Util popup ============== */
