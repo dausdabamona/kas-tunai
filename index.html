@@ -27,6 +27,16 @@
 
   .wrap{padding:12px;max-width:760px;margin:0 auto}
 
+  .saldo-bar{display:flex;gap:10px;margin-bottom:12px}
+  .saldo-bar .sb-item{flex:1;background:var(--c-card);border:1px solid var(--c-line);
+    border-radius:var(--radius);padding:10px 12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .saldo-bar .sb-main{background:var(--c-primary);border-color:var(--c-primary);color:#fff}
+  .saldo-bar .sb-lbl{display:block;font-size:11px;color:var(--c-muted)}
+  .saldo-bar .sb-main .sb-lbl{color:rgba(255,255,255,.85)}
+  .saldo-bar .sb-val{display:block;font-size:18px;font-weight:700;margin-top:2px;white-space:nowrap}
+  .saldo-bar .sb-val.neg{color:var(--c-err)}
+  .saldo-bar .sb-main .sb-val.neg{color:#ffd1d1}
+
   .filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:4px}
   .filters button{flex:0 0 auto;border:1px solid var(--c-line);background:#fff;
     border-radius:20px;padding:7px 14px;font-size:13px;color:var(--c-text);font-weight:600}
@@ -112,6 +122,10 @@
 
 <!-- ================= TAB TRANSAKSI ================= -->
 <div id="viewTransaksi" class="wrap">
+  <div class="saldo-bar">
+    <div class="sb-item"><span class="sb-lbl">Saldo Awal</span><span class="sb-val" id="sbAwal">-</span></div>
+    <div class="sb-item sb-main"><span class="sb-lbl">Saldo Saat Ini</span><span class="sb-val" id="sbAkhir">-</span></div>
+  </div>
   <div class="filters" id="filterBar">
     <button data-f="all">Semua</button>
     <button data-f="belum">Belum SPJ</button>
@@ -418,7 +432,21 @@ function passFilter(t){
   }
 }
 
+function saldoAkhirNow(){
+  var s=SALDO_AWAL_JS;
+  for(var i=0;i<allTransaksi.length;i++) s+=(allTransaksi[i].debet||0)-(allTransaksi[i].kredit||0);
+  return s;
+}
+function updateSaldoBar(){
+  var akhir=saldoAkhirNow();
+  document.getElementById('sbAwal').textContent=rupiah(SALDO_AWAL_JS);
+  var el=document.getElementById('sbAkhir');
+  el.textContent=rupiah(akhir);
+  el.className='sb-val'+(akhir<0?' neg':'');
+}
+
 function renderList(){
+  updateSaldoBar();
   var box=document.getElementById('listTransaksi');
   var rows=allTransaksi.filter(passFilter);
   if(!rows.length){box.innerHTML='<div class="empty">Tidak ada transaksi pada filter ini.</div>';return;}
