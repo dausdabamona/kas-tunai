@@ -7,88 +7,118 @@
 <title>Kas Tunai - Poltek KP Sorong</title>
 <style>
   :root{
-    --c-primary:#1565c0; --c-bg:#f4f6f9; --c-card:#fff; --c-line:#e2e6ec;
+    --c-primary:#1565c0; --c-head1:#16456e; --c-head2:#1d6299;
+    --c-bg:#eef1f5; --c-card:#fff; --c-line:#e2e6ec;
     --c-text:#1f2937; --c-muted:#6b7280; --c-ok:#16a34a; --c-warn:#ea580c;
-    --c-err:#dc2626; --radius:12px;
+    --c-err:#dc2626; --c-purple:#7c3aed; --radius:12px;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{margin:0;font-family:-apple-system,Roboto,"Segoe UI",sans-serif;
-    background:var(--c-bg);color:var(--c-text);font-size:15px;line-height:1.4}
-  header{position:sticky;top:0;z-index:20;background:var(--c-primary);color:#fff;
-    padding:12px 14px;box-shadow:0 2px 6px rgba(0,0,0,.15)}
-  header h1{margin:0;font-size:17px;font-weight:600}
-  header .sub{font-size:12px;opacity:.85;margin-top:2px}
+    background:var(--c-bg);color:var(--c-text);font-size:14px;line-height:1.4}
 
-  .tabs{display:flex;background:var(--c-card);border-bottom:1px solid var(--c-line);
-    position:sticky;top:54px;z-index:15}
+  /* Header */
+  .topbar{position:sticky;top:0;z-index:20;background:linear-gradient(90deg,var(--c-head1),var(--c-head2));
+    color:#fff;padding:11px 18px;display:flex;justify-content:space-between;align-items:center}
+  .topbar .brand{font-size:18px;font-weight:700;display:flex;align-items:center;gap:9px;line-height:1.1}
+  .topbar .brand small{display:block;font-size:11px;font-weight:400;opacity:.85;margin-top:2px}
+  .topbar .saldo-pill{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);
+    border-radius:12px;padding:5px 14px;text-align:right}
+  .topbar .saldo-pill .l{font-size:10px;opacity:.85} .topbar .saldo-pill .v{font-weight:700;font-size:14px}
+
+  /* Tabs */
+  .tabs{display:flex;background:#123a5e;position:sticky;top:52px;z-index:15}
   .tabs button{flex:1;border:0;background:none;padding:12px 6px;font-size:14px;
-    color:var(--c-muted);font-weight:600;border-bottom:3px solid transparent}
-  .tabs button.active{color:var(--c-primary);border-bottom-color:var(--c-primary)}
+    color:rgba(255,255,255,.7);font-weight:600;border-bottom:3px solid transparent}
+  .tabs button.active{color:#fff;border-bottom-color:#f6c343}
 
-  .wrap{padding:12px;max-width:760px;margin:0 auto}
+  .wrap{padding:14px;max-width:1180px;margin:0 auto}
 
-  .saldo-bar{display:flex;gap:10px;margin-bottom:12px}
-  .saldo-bar .sb-item{flex:1;background:var(--c-card);border:1px solid var(--c-line);
-    border-radius:var(--radius);padding:10px 12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-  .saldo-bar .sb-main{background:var(--c-primary);border-color:var(--c-primary);color:#fff}
-  .saldo-bar .sb-lbl{display:block;font-size:11px;color:var(--c-muted)}
-  .saldo-bar .sb-main .sb-lbl{color:rgba(255,255,255,.85)}
-  .saldo-bar .sb-val{display:block;font-size:18px;font-weight:700;margin-top:2px;white-space:nowrap}
-  .saldo-bar .sb-val.neg{color:var(--c-err)}
-  .saldo-bar .sb-main .sb-val.neg{color:#ffd1d1}
+  /* Saldo summary */
+  .saldo-sum{background:linear-gradient(135deg,var(--c-head2),var(--c-head1));color:#fff;
+    border-radius:14px;padding:15px 18px;margin-bottom:14px}
+  .saldo-sum .lbl{font-size:12px;opacity:.9}
+  .saldo-sum .big{font-size:30px;font-weight:800;margin:2px 0 12px}
+  .saldo-sum .big.neg{color:#ffd1d1}
+  .saldo-sum .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .saldo-sum .gi{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);
+    border-radius:10px;padding:9px 12px}
+  .saldo-sum .gi .k{font-size:11px;opacity:.85} .saldo-sum .gi .v{font-weight:700;margin-top:3px}
+  @media(max-width:720px){.saldo-sum .grid{grid-template-columns:repeat(2,1fr)} .saldo-sum .big{font-size:24px}}
 
-  .arah-bar{display:flex;gap:0;margin-bottom:10px;border:1px solid var(--c-line);
-    border-radius:10px;overflow:hidden}
-  .arah-bar button{flex:1;border:0;background:#fff;padding:10px;font-size:14px;font-weight:600;
-    color:var(--c-muted);border-right:1px solid var(--c-line)}
-  .arah-bar button:last-child{border-right:0}
-  .arah-bar button.active{background:var(--c-primary);color:#fff}
+  /* Search */
+  .search{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--c-line);
+    border-radius:12px;padding:11px 14px;margin-bottom:12px}
+  .search input{flex:1;border:0;outline:0;font-size:14px;background:none}
 
-  .sec-head{display:flex;justify-content:space-between;align-items:center;margin:6px 2px 8px;
-    font-size:13px;font-weight:700;color:var(--c-text);border-bottom:2px solid var(--c-line);
-    padding-bottom:4px}
-  .sec-head .debet{color:var(--c-ok)} .sec-head .kredit{color:var(--c-err)}
+  /* Filters */
+  .filters{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px}
+  .filters button{flex:1 0 auto;border:1px solid var(--c-line);background:#fff;border-radius:10px;
+    padding:11px 14px;font-size:13px;color:var(--c-text);font-weight:600;white-space:nowrap}
+  .filters button.active{background:var(--c-purple);color:#fff;border-color:var(--c-purple)}
+  .filters button.active.warn{background:var(--c-warn);border-color:var(--c-warn)}
 
-  .filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:4px}
-  .filters button{flex:0 0 auto;border:1px solid var(--c-line);background:#fff;
-    border-radius:20px;padding:7px 14px;font-size:13px;color:var(--c-text);font-weight:600}
-  .filters button.active{background:var(--c-primary);color:#fff;border-color:var(--c-primary)}
+  /* Daftar transaksi + kolom */
+  .daftar-head{background:#16456e;color:#fff;border-radius:10px 10px 0 0;padding:10px 14px;
+    display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:14px}
+  .daftar-head .r{font-weight:400;font-size:12px;display:flex;gap:8px;align-items:center}
+  .daftar-head .pill{background:rgba(255,255,255,.16);border-radius:8px;padding:3px 9px}
+  .listbox{background:#fff;border:1px solid var(--c-line);border-top:0;
+    border-radius:0 0 10px 10px;padding:12px}
+  .cols{display:flex;gap:14px}
+  .col{flex:1;min-width:0}
+  @media(max-width:880px){.cols{flex-direction:column}}
+  .col-head{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;
+    border-radius:8px;font-weight:700;font-size:13px;margin-bottom:10px}
+  .col-head.belum{background:#fff7ed;color:#9a3412}
+  .col-head.sudah{background:#ecfdf3;color:#15803d}
+  .col-head .ch{display:flex;gap:6px;font-weight:600;font-size:11px}
+  .col-head .c{background:rgba(0,0,0,.06);border-radius:8px;padding:2px 7px}
 
-  .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--c-muted);
-    margin:2px 0 12px}
-  .legend span{display:inline-flex;align-items:center;gap:4px}
-  .dot{width:12px;height:12px;border-radius:3px;border:1px solid var(--c-line)}
+  /* Grup per penjab */
+  .grp{margin-bottom:14px}
+  .grp-head{display:flex;align-items:center;gap:8px;padding:4px 2px 7px;
+    border-bottom:1px solid var(--c-line);margin-bottom:9px}
+  .avatar{width:30px;height:30px;border-radius:50%;color:#fff;display:flex;align-items:center;
+    justify-content:center;font-weight:700;font-size:13px;flex:0 0 30px}
+  .grp-head .gn{font-weight:700;flex:1}
+  .grp-head .gx{color:var(--c-muted);font-size:12px}
 
-  .card{background:var(--c-card);border:1px solid var(--c-line);border-radius:var(--radius);
-    padding:12px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-  .status-spby{background:#fdf5ff} .status-lengkap{background:#f0faf4}
-  .status-nota-ok{background:#f0f6ff} .status-foto-ok{background:#fffbf0}
-  .status-belum{background:#fff}
-
-  .card .row1{display:flex;justify-content:space-between;gap:8px}
-  .card .keg{font-weight:600;font-size:15px}
-  .card .tgl{font-size:12px;color:var(--c-muted)}
-  .card .amt{font-weight:700;white-space:nowrap}
-  .amt.kredit{color:var(--c-err)} .amt.debet{color:var(--c-ok)}
-  .card .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:12px}
-  .chip{background:#eef2f7;border-radius:20px;padding:3px 9px;color:var(--c-muted)}
+  /* Kartu transaksi */
+  .tcard{border:1px solid var(--c-line);border-radius:12px;padding:11px;margin-bottom:10px;background:#fff}
+  .tcard .top{display:flex;justify-content:space-between;gap:8px}
+  .tcard .jd{font-weight:700;font-size:14px}
+  .tcard .sb{font-size:12px;color:var(--c-muted);margin-top:2px}
+  .tcard .amt{font-weight:700;color:var(--c-err);white-space:nowrap;text-align:right}
+  .tcard .amt.debet{color:var(--c-ok)}
+  .tcard .amt .dt{display:block;font-size:11px;color:var(--c-muted);font-weight:400;margin-top:3px}
+  .lrow{display:flex;justify-content:space-between;align-items:center;gap:8px;border-radius:8px;
+    padding:7px 9px;margin-top:8px;font-size:12.5px}
+  .lrow.keluar{background:#faf5ff;border:1px solid #ead6ff}
+  .lrow.ok{background:#f0fdf4;border:1px solid #bbf7d0}
+  .lrow.pajak{background:#fffbeb;border:1px solid #fde68a}
+  .lrow .mini{border:0;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;color:#fff}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+  .chip{border-radius:8px;padding:3px 9px;font-size:11px;font-weight:600;background:#eef2f7;color:var(--c-muted)}
   .chip.ok{background:#dcfce7;color:#166534} .chip.no{background:#fee2e2;color:#991b1b}
-  .chip.pajak{background:#fef3c7;color:#92400e}
-  .card .acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-  .card .acts button{flex:1;min-width:90px;border:1px solid var(--c-line);background:#fff;
-    border-radius:8px;padding:8px;font-size:13px;font-weight:600;color:var(--c-primary)}
+  .chip.warn{background:#ffedd5;color:#9a3412}
+  .acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+  .acts button{border:0;border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:700;color:#fff;flex:1 0 auto}
+  .b-orange{background:#ea7317} .b-purple{background:var(--c-purple)} .b-gray{background:#e5e7eb;color:#374151}
+  .b-dark{background:#1f3a5f} .b-green{background:var(--c-ok)}
 
   .fab{position:fixed;right:18px;bottom:20px;width:56px;height:56px;border-radius:50%;
-    background:var(--c-primary);color:#fff;border:0;font-size:28px;z-index:30;
+    background:var(--c-purple);color:#fff;border:0;font-size:28px;z-index:30;
     box-shadow:0 4px 12px rgba(0,0,0,.25)}
 
-  .empty{text-align:center;color:var(--c-muted);padding:40px 10px;font-size:14px}
+  .empty{text-align:center;color:var(--c-muted);padding:24px 10px;font-size:13px}
 
   /* Rekap */
-  .rekap-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .rekap-grid .card{margin:0;text-align:center}
+  .rekap-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .rekap-grid .card{margin:0;text-align:center;background:#fff;border:1px solid var(--c-line);
+    border-radius:var(--radius);padding:14px}
   .rekap-grid .lbl{font-size:12px;color:var(--c-muted)}
   .rekap-grid .val{font-size:18px;font-weight:700;margin-top:4px}
+  @media(max-width:600px){.rekap-grid{grid-template-columns:repeat(2,1fr)}}
 
   /* Modal */
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;display:none;
@@ -123,41 +153,44 @@
 </head>
 <body>
 
-<header>
-  <h1>Kas Tunai</h1>
-  <div class="sub">Politeknik KP Sorong &middot; <span id="userLabel"></span></div>
+<header class="topbar">
+  <div class="brand">&#128176; <span>Kas Tunai<small>Poltek KP Sorong &middot; <span id="userLabel"></span></small></span></div>
+  <div class="saldo-pill"><div class="l">Saldo</div><div class="v" id="saldoPill">-</div></div>
 </header>
 
 <div class="tabs">
-  <button id="tabTransaksi" class="active" onclick="switchTab('transaksi')">Transaksi</button>
-  <button id="tabLaporan" onclick="switchTab('laporan')">Laporan</button>
+  <button id="tabTransaksi" class="active" onclick="switchTab('transaksi')">&#128221; Transaksi</button>
+  <button id="tabLaporan" onclick="switchTab('laporan')">&#128202; Laporan</button>
 </div>
 
 <!-- ================= TAB TRANSAKSI ================= -->
 <div id="viewTransaksi" class="wrap">
-  <div class="saldo-bar">
-    <div class="sb-item"><span class="sb-lbl">Saldo Awal</span><span class="sb-val" id="sbAwal">-</span></div>
-    <div class="sb-item sb-main"><span class="sb-lbl">Saldo Saat Ini</span><span class="sb-val" id="sbAkhir">-</span></div>
+  <div class="saldo-sum">
+    <div class="lbl">&#128176; SALDO KAS TUNAI</div>
+    <div class="big" id="saldoBig">-</div>
+    <div class="grid">
+      <div class="gi"><div class="k">Total Masuk</div><div class="v" id="sumMasuk">-</div></div>
+      <div class="gi"><div class="k">Total Keluar</div><div class="v" id="sumKeluar">-</div></div>
+      <div class="gi"><div class="k">Dikembalikan</div><div class="v" id="sumKembali">-</div></div>
+      <div class="gi"><div class="k">Transaksi</div><div class="v" id="sumJml">-</div></div>
+    </div>
   </div>
-  <div class="arah-bar" id="arahBar">
-    <button data-a="semua" class="active">Semua</button>
-    <button data-a="masuk">&#11015; Masuk</button>
-    <button data-a="keluar">&#11014; Keluar</button>
+
+  <div class="search">&#128269;
+    <input type="text" id="searchBox" placeholder="Cari kegiatan atau penjab..." oninput="onSearch()">
   </div>
+
   <div class="filters" id="filterBar">
     <button data-f="all">Semua</button>
     <button data-f="belum">Belum SPJ</button>
     <button data-f="sudah">Sudah SPJ</button>
-    <button data-f="belumlunas">Belum Lunas</button>
-    <button data-f="belumfoto" class="active">Belum Foto</button>
-    <button data-f="spby">SPBY</button>
+    <button data-f="belumlunas">&#9888; Belum Lunas</button>
+    <button data-f="belumfoto" class="active">&#129534; Belum Foto</button>
   </div>
-  <div class="legend">
-    <span><i class="dot" style="background:#fdf5ff"></i>SPBY</span>
-    <span><i class="dot" style="background:#f0faf4"></i>Lengkap</span>
-    <span><i class="dot" style="background:#f0f6ff"></i>Nota OK</span>
-    <span><i class="dot" style="background:#fffbf0"></i>Foto OK</span>
-    <span><i class="dot" style="background:#fff"></i>Belum</span>
+
+  <div class="daftar-head">
+    <span>Daftar Transaksi</span>
+    <span class="r"><span id="daftarCount">0 transaksi</span></span>
   </div>
   <div id="listTransaksi"></div>
 </div>
@@ -275,7 +308,7 @@ var IS_ADMIN      = <?= appData.isAdmin ? 'true' : 'false' ?>;
 
 var allTransaksi  = [];
 var currentFilter = 'belumfoto';
-var currentArah   = 'semua';   // 'semua' | 'masuk' | 'keluar'
+var currentSearch = '';        // kata kunci pencarian (kegiatan/penjab)
 var _txMode       = 'keluar';  // mode form transaksi: 'masuk' | 'keluar'
 var fotoJmlMap    = {};      // {noTransaksi: jumlahFotoNota}
 var _notaTarget   = null;    // noTransaksi yang sedang dikelola notanya
@@ -464,96 +497,131 @@ function passFilter(t){
   }
 }
 
-function saldoAkhirNow(){
-  var s=SALDO_AWAL_JS;
-  for(var i=0;i<allTransaksi.length;i++) s+=(allTransaksi[i].debet||0)-(allTransaksi[i].kredit||0);
-  return s;
-}
 function updateSaldoBar(){
-  var akhir=saldoAkhirNow();
-  document.getElementById('sbAwal').textContent=rupiah(SALDO_AWAL_JS);
-  var el=document.getElementById('sbAkhir');
-  el.textContent=rupiah(akhir);
-  el.className='sb-val'+(akhir<0?' neg':'');
+  var masuk=0,keluar=0,kembali=0;
+  for(var i=0;i<allTransaksi.length;i++){
+    masuk+=allTransaksi[i].debet||0; keluar+=allTransaksi[i].kredit||0;
+    kembali+=allTransaksi[i].kembalianTotal||0;
+  }
+  var saldo=SALDO_AWAL_JS+masuk-keluar;
+  document.getElementById('saldoPill').textContent=rupiah(saldo);
+  var big=document.getElementById('saldoBig');
+  big.textContent=rupiah(saldo); big.className='big'+(saldo<0?' neg':'');
+  document.getElementById('sumMasuk').textContent=rupiah(masuk);
+  document.getElementById('sumKeluar').textContent=rupiah(keluar);
+  document.getElementById('sumKembali').textContent=rupiah(kembali);
+  document.getElementById('sumJml').textContent=allTransaksi.length+' transaksi';
 }
 
-function setArah(a){
-  currentArah=a;
-  var abtns=document.querySelectorAll('#arahBar button');
-  for(var i=0;i<abtns.length;i++) abtns[i].classList.toggle('active', abtns[i].getAttribute('data-a')===a);
+function _matchSearch(t){
+  if(!currentSearch) return true;
+  return String(t.kegiatan||'').toLowerCase().indexOf(currentSearch)!==-1
+      || String(t.penjab||'').toLowerCase().indexOf(currentSearch)!==-1;
 }
+function _sum(list,f){var s=0;for(var i=0;i<list.length;i++)s+=list[i][f]||0;return s;}
+function _initial(s){s=String(s||'?').trim();return (s.charAt(0)||'?').toUpperCase();}
+function _avatarColor(s){var h=0;s=String(s||'');for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))&0xffffff;
+  return ['#1565c0','#7c3aed','#0891b2','#db2777','#15803d','#b45309','#4f46e5','#be123c'][h%8];}
 
-function _cardHtml(t){
-  var st=statusOf(t);
-  var fnJml=fotoCount(t);
-  var amtCls=t.kredit>0?'kredit':'debet';
-  var amt=t.kredit>0?('-'+rupiah(t.kredit)):('+'+rupiah(t.debet));
-  var notaChip=(t.kredit>0)
-    ?('<span class="chip '+(t.notaTotal>=t.kredit?'ok':'no')+'">Nota '+rupiah(t.notaTotal)+'</span>')
-    :'';
-  var fotoChip=(t.kredit>0)
-    ?('<span class="chip '+(fnJml>0?'ok':'no')+'">Foto '+fnJml+'</span>')
-    :'';
-  var spbyChip=t.noSpby?('<span class="chip ok">SPBY '+t.noSpby+'</span>'):'';
-  var pj=t.kredit>0?hitungPajak(t.kegiatan,t.kredit):null;
-  var pajakChip='';
-  if(pj){
-    if(pj.totalPajak>0){
-      var pp=[];
-      if(pj.pph>0) pp.push('PPh '+rupiah(pj.pph));
-      if(pj.ppn>0) pp.push('PPN '+rupiah(pj.ppn));
-      pajakChip='<span class="chip pajak">'+pp.join(' · ')+'</span>';
-    } else {
-      pajakChip='<span class="chip">Pajak Rp 0</span>';
+/* Kelompokkan list per penjab lalu render grup + kartu */
+function _renderGroups(list, mode){
+  var groups={}, order=[];
+  for(var i=0;i<list.length;i++){
+    var key=list[i].penjab||'(Tanpa Penjab)';
+    if(!groups[key]){groups[key]=[];order.push(key);}
+    groups[key].push(list[i]);
+  }
+  var h='';
+  for(var g=0;g<order.length;g++){
+    var key=order[g], items=groups[key], stat='';
+    if(mode==='keluar'){
+      var bl=0; for(var k=0;k<items.length;k++) if(!isNotaLunas(items[k])) bl++;
+      stat = bl ? '<span class="chip warn">&#9888; '+bl+' belum lunas</span>'
+                : '<span class="chip ok">&#10003; Lunas</span>';
     }
+    h+='<div class="grp"><div class="grp-head">'
+      +'<div class="avatar" style="background:'+_avatarColor(key)+'">'+esc(_initial(key))+'</div>'
+      +'<div class="gn">'+esc(key)+'</div><div class="gx">'+items.length+'</div>'+stat+'</div>';
+    for(var j=0;j<items.length;j++) h+=_cardHtml(items[j], mode);
+    h+='</div>';
   }
-  var html=''
-    +'<div class="card status-'+st+'">'
-    +  '<div class="row1">'
-    +    '<div><div class="keg">'+esc(t.kegiatan||'(tanpa kegiatan)')+'</div>'
-    +    '<div class="tgl">'+esc(t.tanggal)+' &middot; No '+t.no+'</div></div>'
-    +    '<div class="amt '+amtCls+'">'+amt+'</div>'
-    +  '</div>'
-    +  '<div class="meta">'+notaChip+fotoChip+spbyChip+pajakChip
-    +    '<span class="chip">Saldo '+rupiah(t.saldo)+'</span>'
-    +  '</div>';
-  if(t.kredit>0){
-    html+='<div class="acts">'
-      +'<button onclick="openModalNota('+t.no+')">Nota</button>'
-      +'<button onclick="openModalKembali('+t.no+')">Kembalian</button>'
-      +'<button onclick="bukaPdfKuitansi('+t.no+')">&#129534; Kuitansi</button>'
-      +'<button onclick="openModalPajak('+t.no+')">&#9881; Pajak</button>'
-      +'<button onclick="promptSpby('+t.no+','+t.rowIndex+')">SPBY</button>'
-      +'</div>';
-  }
-  return html+'</div>';
+  return h;
 }
 
-function _sectionHtml(judul, icon, rows, isMasuk){
-  if(!rows.length) return '';
-  var total=0;
-  for(var i=0;i<rows.length;i++) total+=isMasuk?rows[i].debet:rows[i].kredit;
-  var h='<div class="sec-head"><span>'+icon+' '+judul+' ('+rows.length+')</span>'
-    +'<span class="'+(isMasuk?'debet':'kredit')+'">'+(isMasuk?'+':'-')+rupiah(total)+'</span></div>';
-  for(var j=0;j<rows.length;j++) h+=_cardHtml(rows[j]);
+function _cardHtml(t, mode){
+  var head='<div class="top"><div><div class="jd">#'+t.no+' '+esc(t.kegiatan||'-')+'</div>'
+    +'<div class="sb">&#128100; '+esc(t.penjab||'-')+(t.keterangan?(' &middot; '+esc(t.keterangan)):'')+'</div></div>';
+  if(mode==='masuk'){
+    return '<div class="tcard">'+head
+      +'<div class="amt debet">+'+rupiah(t.debet)+'<span class="dt">'+esc(t.tanggal)+'</span></div></div></div>';
+  }
+  var fnJml=fotoCount(t), lunas=isNotaLunas(t);
+  var pj=hitungPajak(t.kegiatan,t.kredit);
+  var sisa=t.kredit-t.notaTotal; if(sisa<0) sisa=0;
+  var h='<div class="tcard">'+head
+    +'<div class="amt">-'+rupiah(t.kredit)+'<span class="dt">'+esc(t.tanggal)+'</span></div></div>';
+  // baris keluar / nota lunas
+  h+= lunas
+    ? '<div class="lrow ok"><span>Keluar: '+rupiah(t.kredit)+' &middot; &#10003; Nota Lunas</span>'
+      +'<button class="mini b-purple" onclick="openModalKembali('+t.no+')">Catat Kembali</button></div>'
+    : '<div class="lrow keluar"><span>Keluar: '+rupiah(t.kredit)+' &middot; Sisa nota: '+rupiah(sisa)+'</span>'
+      +'<button class="mini b-purple" onclick="openModalKembali('+t.no+')">Catat Kembali</button></div>';
+  // baris pajak
+  if(pj.ref===PAJAK_DEFAULT){
+    h+='<div class="lrow pajak"><span>&#9888; Cek pajak manual</span>'
+      +'<button class="mini b-dark" onclick="openModalPajak('+t.no+')">Pajak</button></div>';
+  } else if(pj.totalPajak>0){
+    h+='<div class="lrow pajak"><span>'+esc(pj.label)+': PPh = '+rupiah(pj.pph)+' &middot; PPN = '+rupiah(pj.ppn)+'</span>'
+      +'<button class="mini b-dark" onclick="openModalPajak('+t.no+')">SSP</button></div>';
+  } else {
+    h+='<div class="lrow ok"><span>'+esc(pj.label)+': &#10003; Bebas PPh &amp; PPN</span></div>';
+  }
+  // chips
+  var spjChip=lunas?'<span class="chip ok">&#9989; SPJ Lengkap</span>':'<span class="chip">&#8987; Belum SPJ</span>';
+  var notaChip=lunas?'<span class="chip ok">&#9989; Nota '+rupiah(t.notaTotal)+' (100%)</span>'
+                    :'<span class="chip warn">&#9888; Nota Belum Lunas</span>';
+  var fotoChip=fnJml>0?'<span class="chip ok">&#128247; Foto '+fnJml+'</span>':'<span class="chip">&#128247; 0</span>';
+  h+='<div class="chips">'+spjChip+notaChip+fotoChip+'</div>';
+  // actions
+  h+='<div class="acts">'
+    +'<button class="b-orange" onclick="openModalNota('+t.no+')">Kelola Nota</button>'
+    +'<button class="b-gray" onclick="openFoto('+t.no+')">Foto</button>'
+    +'<button class="b-purple" onclick="bukaPdfKuitansi('+t.no+')">Kuitansi</button>';
+  if(lunas) h+='<button class="b-dark" onclick="cetakSPJ('+t.no+')">Cetak SPJ</button>';
+  h+='</div></div>';
   return h;
 }
 
 function renderList(){
   updateSaldoBar();
   var box=document.getElementById('listTransaksi');
-  // Masuk = debet (tak terpengaruh filter SPJ); Keluar = kredit (kena filter status)
-  var masuk=allTransaksi.filter(function(t){return t.debet>0;});
-  var keluar=allTransaksi.filter(function(t){return t.kredit>0;}).filter(passFilter);
+  var keluar=allTransaksi.filter(function(t){return t.kredit>0;}).filter(passFilter).filter(_matchSearch);
+  var masuk =allTransaksi.filter(function(t){return t.debet>0;}).filter(_matchSearch);
+  var belum =keluar.filter(function(t){return t.notaJml===0;});
+  var sudah =keluar.filter(function(t){return t.notaJml>0;});
 
-  var html='';
-  if(currentArah==='masuk')      html=_sectionHtml('Transaksi Masuk','&#11015;',masuk,true);
-  else if(currentArah==='keluar')html=_sectionHtml('Transaksi Keluar','&#11014;',keluar,false);
-  else html=_sectionHtml('Transaksi Masuk','&#11015;',masuk,true)
-          + _sectionHtml('Transaksi Keluar','&#11014;',keluar,false);
+  document.getElementById('daftarCount').textContent=(keluar.length+masuk.length)+' transaksi';
 
-  box.innerHTML=html||'<div class="empty">Tidak ada transaksi pada pilihan ini.</div>';
+  var html='<div class="listbox">';
+  if(masuk.length){
+    html+='<div class="col-head sudah">&#11015; Transaksi Masuk'
+      +'<span class="ch"><span class="c">'+masuk.length+' transaksi</span>'
+      +'<span class="c">'+rupiah(_sum(masuk,'debet'))+'</span></span></div>'
+      +_renderGroups(masuk,'masuk');
+  }
+  html+='<div class="cols">'
+    +'<div class="col"><div class="col-head belum">&#8987; Belum Ada Nota'
+    +'<span class="ch"><span class="c">'+belum.length+' pengeluaran</span></span></div>'
+    +(belum.length?_renderGroups(belum,'keluar'):'<div class="empty">Tidak ada</div>')+'</div>'
+    +'<div class="col"><div class="col-head sudah">&#128196; Sudah Ada Nota'
+    +'<span class="ch"><span class="c">'+sudah.length+' transaksi</span></span></div>'
+    +(sudah.length?_renderGroups(sudah,'keluar'):'<div class="empty">Tidak ada</div>')+'</div>'
+    +'</div></div>';
+  box.innerHTML=html;
 }
+function onSearch(){ currentSearch=(document.getElementById('searchBox').value||'').toLowerCase().trim(); renderList(); }
+function openFoto(no){ toast('Fitur foto nota akan ditambahkan','info'); }
+function cetakSPJ(no){ toast('Cetak SPJ PUM akan ditambahkan','info'); }
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 
@@ -1118,16 +1186,11 @@ function _bukaPopup(html){
   for(var i=0;i<btns.length;i++){
     btns[i].addEventListener('click',function(){
       currentFilter=this.getAttribute('data-f');
-      for(var j=0;j<btns.length;j++)btns[j].classList.remove('active');
+      for(var j=0;j<btns.length;j++)btns[j].classList.remove('active','warn');
       this.classList.add('active');
-      // Filter status hanya relevan untuk transaksi keluar
-      if(currentArah==='masuk') setArah('keluar');
+      if(currentFilter==='belumlunas') this.classList.add('warn');
       renderList();
     });
-  }
-  var abtns=document.querySelectorAll('#arahBar button');
-  for(var k=0;k<abtns.length;k++){
-    abtns[k].addEventListener('click',function(){ setArah(this.getAttribute('data-a')); renderList(); });
   }
   loadAll();
 })();
