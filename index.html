@@ -503,7 +503,7 @@ function updateSaldoBar(){
     masuk+=allTransaksi[i].debet||0; keluar+=allTransaksi[i].kredit||0;
     kembali+=allTransaksi[i].kembalianTotal||0;
   }
-  var saldo=SALDO_AWAL_JS+masuk-keluar;
+  var saldo=SALDO_AWAL_JS+masuk-keluar+kembali; // pengembalian kembali ke kas
   document.getElementById('saldoPill').textContent=rupiah(saldo);
   var big=document.getElementById('saldoBig');
   big.textContent=rupiah(saldo); big.className='big'+(saldo<0?' neg':'');
@@ -603,12 +603,6 @@ function renderList(){
   document.getElementById('daftarCount').textContent=(keluar.length+masuk.length)+' transaksi';
 
   var html='<div class="listbox">';
-  if(masuk.length){
-    html+='<div class="col-head sudah">&#11015; Transaksi Masuk'
-      +'<span class="ch"><span class="c">'+masuk.length+' transaksi</span>'
-      +'<span class="c">'+rupiah(_sum(masuk,'debet'))+'</span></span></div>'
-      +_renderGroups(masuk,'masuk');
-  }
   html+='<div class="cols">'
     +'<div class="col"><div class="col-head belum">&#8987; Belum Ada Nota'
     +'<span class="ch"><span class="c">'+belum.length+' pengeluaran</span></span></div>'
@@ -616,7 +610,14 @@ function renderList(){
     +'<div class="col"><div class="col-head sudah">&#128196; Sudah Ada Nota'
     +'<span class="ch"><span class="c">'+sudah.length+' transaksi</span></span></div>'
     +(sudah.length?_renderGroups(sudah,'keluar'):'<div class="empty">Tidak ada</div>')+'</div>'
-    +'</div></div>';
+    +'</div>';
+  if(masuk.length){
+    html+='<div class="col-head sudah" style="margin-top:14px">&#11015; Transaksi Masuk'
+      +'<span class="ch"><span class="c">'+masuk.length+' transaksi</span>'
+      +'<span class="c">'+rupiah(_sum(masuk,'debet'))+'</span></span></div>'
+      +_renderGroups(masuk,'masuk');
+  }
+  html+='</div>';
   box.innerHTML=html;
 }
 function onSearch(){ currentSearch=(document.getElementById('searchBox').value||'').toLowerCase().trim(); renderList(); }
@@ -819,8 +820,9 @@ function loadRekap(){
     showLoading(false);
     document.getElementById('rekapGrid').innerHTML=''
       +card('Saldo Awal',rupiah(r.saldoAwal))
-      +card('Total Debet',rupiah(r.totalDebet))
-      +card('Total Kredit',rupiah(r.totalKredit))
+      +card('Total Masuk (Debet)',rupiah(r.totalDebet))
+      +card('Total Keluar (Kredit)',rupiah(r.totalKredit))
+      +card('Dikembalikan',rupiah(r.totalKembali||0))
       +card('Saldo Akhir',rupiah(r.saldoAkhir))
       +card('Jml Transaksi',r.jmlTransaksi);
   }).withFailureHandler(fail).serverGetRekap();

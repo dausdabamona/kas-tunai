@@ -51,7 +51,8 @@ var KasTunai = (function () {
     for (var i = 0; i < data.length; i++) {
       var row = data[i];
       if (isDeleted(row[C.IS_DELETED])) continue;
-      saldo += Util.num(row[C.DEBET]) - Util.num(row[C.KREDIT]);
+      // Saldo kas = +debet (masuk) - kredit (keluar) + kembalian (uang sisa kembali ke kas)
+      saldo += Util.num(row[C.DEBET]) - Util.num(row[C.KREDIT]) + Util.num(row[C.KEMBALIAN_TOTAL]);
       var obj = rowToObj(row, i + 2);
       obj.saldo = saldo;
       out.push(obj);
@@ -215,16 +216,18 @@ var KasTunai = (function () {
    * -------------------------------------------------------- */
   function getRekap() {
     var list = getTransaksi();
-    var totalDebet = 0, totalKredit = 0;
+    var totalDebet = 0, totalKredit = 0, totalKembali = 0;
     for (var i = 0; i < list.length; i++) {
       totalDebet += list[i].debet;
       totalKredit += list[i].kredit;
+      totalKembali += list[i].kembalianTotal;
     }
     return {
       saldoAwal: CONFIG.SALDO_AWAL,
       totalDebet: totalDebet,
       totalKredit: totalKredit,
-      saldoAkhir: CONFIG.SALDO_AWAL + totalDebet - totalKredit,
+      totalKembali: totalKembali,
+      saldoAkhir: CONFIG.SALDO_AWAL + totalDebet - totalKredit + totalKembali,
       jmlTransaksi: list.length
     };
   }
