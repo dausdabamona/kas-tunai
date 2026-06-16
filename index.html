@@ -646,8 +646,9 @@ function _cardHtml(t, mode){
 function renderList(){
   updateSaldoBar();
   var box=document.getElementById('listTransaksi');
-  var keluar=allTransaksi.filter(function(t){return t.kredit>0;}).filter(passFilter).filter(_matchSearch);
-  var masuk =allTransaksi.filter(function(t){return t.debet>0;}).filter(_matchSearch);
+  var byNoDesc=function(a,b){return (+b.no||0)-(+a.no||0);}; // terbaru (No terbesar) di atas
+  var keluar=allTransaksi.filter(function(t){return t.kredit>0;}).filter(passFilter).filter(_matchSearch).sort(byNoDesc);
+  var masuk =allTransaksi.filter(function(t){return t.debet>0;}).filter(_matchSearch).sort(byNoDesc);
   var belum =keluar.filter(function(t){return t.notaJml===0;});
   var sudah =keluar.filter(function(t){return t.notaJml>0;});
 
@@ -740,7 +741,7 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
   +'.ninfo{flex:1;font-size:11px;word-break:break-all} .ninfo a{color:#1565c0}'
   +'.ftag{margin-top:10px;border-top:1px dashed #e2e6ec;padding-top:8px}'
   +'.ftagh{font-weight:bold;font-size:12px;margin-bottom:6px}'
-  +'.ftrow{display:flex;flex-wrap:wrap;gap:6px} .ftrow img{width:120px;height:90px;object-fit:cover;border:1px solid #e2e6ec;border-radius:6px}'
+  +'.ftrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px} .ftrow img{width:100%;height:170px;object-fit:cover;border:1px solid #e2e6ec;border-radius:6px}'
   +'.ftnone{color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:8px;font-size:11px;text-align:center}'
   +'.total{text-align:right;font-weight:bold;color:#16456e;font-size:15px;margin-top:6px}'
   +'.foot{text-align:center;font-size:10px;color:#9aa;margin-top:16px}'
@@ -938,6 +939,7 @@ function onNotaPenyediaInput(){
 function renderNotaList(list){
   var box=document.getElementById('notaList');
   if(!list||!list.length){box.innerHTML='<div class="empty">Belum ada nota.</div>';return;}
+  list=list.slice().sort(function(a,b){return (+b.urutan||0)-(+a.urutan||0);}); // terbaru di atas
   var h='';
   for(var i=0;i<list.length;i++){
     var n=list[i];
