@@ -321,7 +321,8 @@
     <h2 style="font-size:14px">Tambah Foto (dengan lokasi GPS)</h2>
     <div class="field"><label>Keterangan (opsional)</label><input type="text" id="ftKet"></div>
     <div class="field"><label>Ambil / pilih foto (boleh beberapa sekaligus)</label>
-      <input type="file" id="ftFile" accept="image/*" multiple></div>
+      <input type="file" id="ftFile" accept="image/*" multiple>
+      <div class="tgl" style="font-size:11px;color:var(--c-muted);margin-top:4px">atau tempel screenshot dengan Ctrl+V saat jendela ini terbuka</div></div>
     <div id="ftGps" class="tgl" style="font-size:12px;color:var(--c-muted);margin-bottom:8px"></div>
     <button class="btn" style="background:var(--c-ok)" onclick="submitFoto()">Upload Foto</button>
     <button class="btn ghost" onclick="closeModal('modalFoto')">Tutup</button>
@@ -812,10 +813,11 @@ function renderFotoGaleri(res){
   }
   box.innerHTML=h+'</div>';
 }
-function submitFoto(){
-  var fe=document.getElementById('ftFile');
-  var files=fe.files;
-  if(!files||!files.length){ toast('Pilih foto dulu','error'); return; }
+function submitFoto(){ _uploadFotoFiles(document.getElementById('ftFile').files); }
+
+/** Kompres semua file (File/Blob) lalu unggah dalam satu panggilan. */
+function _uploadFotoFiles(files){
+  if(!files||!files.length){ toast('Pilih atau tempel foto dulu','error'); return; }
   var ket=document.getElementById('ftKet').value.trim();
   var arr=[], done=0, n=files.length;
   showLoading(true,'Memproses '+n+' foto...');
@@ -836,6 +838,19 @@ function submitFoto(){
       });
     })(i);
   }
+}
+
+/** Tempel (Ctrl+V) screenshot/gambar saat modal Foto terbuka. */
+function _onPasteFoto(e){
+  if(!document.getElementById('modalFoto').classList.contains('show')) return;
+  var cd=e.clipboardData||window.clipboardData; if(!cd) return;
+  var items=cd.items||[], files=[];
+  for(var i=0;i<items.length;i++){
+    if(items[i].type && items[i].type.indexOf('image')===0){ var f=items[i].getAsFile(); if(f) files.push(f); }
+  }
+  if(!files.length) return;
+  e.preventDefault();
+  _uploadFotoFiles(files);
 }
 function hapusFoto(urutan){
   if(!confirm('Hapus foto ini?')) return;
@@ -1455,6 +1470,7 @@ function _bukaPopup(html){
       renderList();
     });
   }
+  document.addEventListener('paste', _onPasteFoto);
   loadAll();
 })();
 </script>
