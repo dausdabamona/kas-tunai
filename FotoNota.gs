@@ -1,8 +1,10 @@
 /**
  * FotoNota.gs
- * Modul foto per nota (sheet "Foto Nota").
+ * Modul foto per nota (sheet "Foto Nota") dengan geotagging.
  * Relasi ke nota lewat NO_TRANSAKSI + NOTA_ID.
- * Foto dikirim dari frontend sudah terkompresi + watermark GPS.
+ * Kolom: NO_TRANSAKSI, NOTA_ID, URUTAN, FILE_ID, NAMA_FILE, URL_FILE,
+ *        LAT, LNG, LOKASI, MAPS_URL, WAKTU, KETERANGAN, IS_DELETED, DELETED_AT, DELETED_BY
+ * Foto dikirim dari frontend sudah terkompresi; lat/lng dari GPS browser.
  */
 
 var FotoNota = (function () {
@@ -23,6 +25,16 @@ var FotoNota = (function () {
     return map;
   }
 
+  function _toObj(c, r, rowIndex) {
+    return {
+      rowIndex: rowIndex,
+      noTransaksi: r[c.NO_TRANSAKSI], notaId: r[c.NOTA_ID], urutan: r[c.URUTAN],
+      fileId: r[c.FILE_ID], namaFile: r[c.NAMA_FILE], urlFile: r[c.URL_FILE],
+      lat: r[c.LAT], lng: r[c.LNG], lokasi: r[c.LOKASI], mapsUrl: r[c.MAPS_URL],
+      waktu: Util.fmtDate(r[c.WAKTU]), keterangan: r[c.KETERANGAN]
+    };
+  }
+
   /** Daftar foto untuk satu nota tertentu. */
   function getFotoNota(noTransaksi, notaId) {
     var c = FC();
@@ -30,27 +42,40 @@ var FotoNota = (function () {
       return String(r[c.NO_TRANSAKSI]) === String(noTransaksi) &&
              String(r[c.NOTA_ID]) === String(notaId) && !isDeleted(r[c.IS_DELETED]);
     });
-    return rows.map(function (x) {
-      var r = x.values;
-      return {
-        rowIndex: x.rowIndex,
-        noTransaksi: r[c.NO_TRANSAKSI], notaId: r[c.NOTA_ID], urutan: r[c.URUTAN],
-        fileId: r[c.FILE_ID], namaFile: r[c.NAMA_FILE], urlFile: r[c.URL_FILE],
-        lat: r[c.LAT], lng: r[c.LNG]
-      };
-    });
+    return rows.map(function (x) { return _toObj(c, x.values, x.rowIndex); });
   }
 
-  /** Upload daftar foto untuk satu nota. */
+  /** Format URL Maps dari lat/lng. */
+  function _mapsUrl(lat, lng) {
+    if (lat === '' || lng === '' || lat == null || lng == null) return '';
+    return 'https://maps.google.com/?q=' + lat + ',' + lng;
+  }
+
+  /** Nama file standar: fn_txn{no}_nota{notaId}_{urutan}_{yyyymmdd}_{hhmmss}.jpg */
+  function _namaFile(noTransaksi, notaId, urutan, when) {
+    var stamp = Utilities.formatDate(when, Session.getScriptTimeZone(), 'yyyyMMdd_HHmmss');
+    return 'fn_txn' + noTransaksi + '_nota' + notaId + '_' + urutan + '_' + stamp + '.jpg';
+  }
+
+  /**
+   * Upload daftar foto untuk satu nota.
+   * @param fotoArr array of {base64, mimeType, lat, lng, keterangan}
+   */
   function uploadFotoNota(noTransaksi, notaId, fotoArr) {
     var urutan = getFotoNota(noTransaksi, notaId).length;
     for (var i = 0; i < fotoArr.length; i++) {
       var foto = fotoArr[i];
-      var up = DriveHelper.upload(foto);
+      var now = new Date();
       urutan++;
+      foto.namaFile = _namaFile(noTransaksi, notaId, urutan, now);
+      var up = DriveHelper.upload(foto);
+      var lat = (foto.lat == null ? '' : foto.lat);
+      var lng = (foto.lng == null ? '' : foto.lng);
+      var lokasi = (lat !== '' && lng !== '') ? (lat + ',' + lng) : '';
       SheetRepo.appendRow(CONFIG.SHEETS.FOTO_NOTA, [
         noTransaksi, notaId, urutan, up.fileId, up.namaFile, up.url,
-        foto.lat || '', foto.lng || '', new Date(), FLAG_ACTIVE, '', ''
+        lat, lng, lokasi, _mapsUrl(lat, lng), now, foto.keterangan || '',
+        FLAG_ACTIVE, '', ''
       ]);
     }
     DeferredFlush.mark();
@@ -89,10 +114,7 @@ var FotoNota = (function () {
       if (String(r[c.NO_TRANSAKSI]) !== String(noTransaksi)) continue;
       var nid = String(r[c.NOTA_ID]);
       if (!fotoPerNota[nid]) fotoPerNota[nid] = [];
-      fotoPerNota[nid].push({
-        urutan: r[c.URUTAN], fileId: r[c.FILE_ID], namaFile: r[c.NAMA_FILE],
-        urlFile: r[c.URL_FILE], lat: r[c.LAT], lng: r[c.LNG]
-      });
+      fotoPerNota[nid].push(_toObj(c, r, i + 2));
     }
     return { notas: notas, fotoPerNota: fotoPerNota };
   }

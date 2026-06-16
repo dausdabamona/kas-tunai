@@ -105,6 +105,14 @@
   .acts button{border:0;border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:700;color:#fff;flex:1 0 auto}
   .b-orange{background:#ea7317} .b-purple{background:var(--c-purple)} .b-gray{background:#e5e7eb;color:#374151}
   .b-dark{background:#1f3a5f} .b-green{background:var(--c-ok)}
+  .mini{border:0;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;color:#fff}
+
+  /* Galeri foto */
+  .ftgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+  .ftitem{border:1px solid var(--c-line);border-radius:8px;padding:6px}
+  .ftitem img{width:100%;height:110px;object-fit:cover;border-radius:6px;background:#f0f0f0;display:block}
+  .ftitem .ftmeta{font-size:11px;color:var(--c-muted);margin:5px 0}
+  .ftitem .ftmeta a{color:var(--c-primary)}
 
   .fab{position:fixed;right:18px;bottom:20px;width:56px;height:56px;border-radius:50%;
     background:var(--c-purple);color:#fff;border:0;font-size:28px;z-index:30;
@@ -292,6 +300,22 @@
       <button class="btn" onclick="cetakSSP('ppn')">&#128424; SSP PPN</button>
     </div>
     <button class="btn ghost" onclick="closeModal('modalPajak')">Tutup</button>
+  </div>
+</div>
+
+<!-- ================= MODAL FOTO (geotagging) ================= -->
+<div class="modal" id="modalFoto">
+  <div class="sheet">
+    <h2>Foto Bukti <span id="ftTxLabel"></span></h2>
+    <div id="ftGaleri"></div>
+    <hr>
+    <h2 style="font-size:14px">Tambah Foto (dengan lokasi GPS)</h2>
+    <div class="field"><label>Keterangan (opsional)</label><input type="text" id="ftKet"></div>
+    <div class="field"><label>Ambil / pilih foto</label>
+      <input type="file" id="ftFile" accept="image/*" capture="environment"></div>
+    <div id="ftGps" class="tgl" style="font-size:12px;color:var(--c-muted);margin-bottom:8px"></div>
+    <button class="btn" style="background:var(--c-ok)" onclick="submitFoto()">Upload Foto</button>
+    <button class="btn ghost" onclick="closeModal('modalFoto')">Tutup</button>
   </div>
 </div>
 
@@ -637,8 +661,72 @@ function renderList(){
   box.innerHTML=html;
 }
 function onSearch(){ currentSearch=(document.getElementById('searchBox').value||'').toLowerCase().trim(); renderList(); }
-function openFoto(no){ toast('Fitur foto nota akan ditambahkan','info'); }
 function cetakSPJ(no){ toast('Cetak SPJ PUM akan ditambahkan','info'); }
+
+/* ============== Foto nota (geotagging) ============== */
+var _fotoTarget=null, _fotoNotaId=1, _fotoGps=null;
+function openFoto(no){
+  _fotoTarget=no; _fotoNotaId=1; _fotoGps=null;
+  document.getElementById('ftTxLabel').textContent='No '+no;
+  document.getElementById('ftKet').value='';
+  document.getElementById('ftFile').value='';
+  document.getElementById('ftGps').textContent='';
+  document.getElementById('ftGaleri').innerHTML='<div class="empty">Memuat...</div>';
+  openModal('modalFoto');
+  _ambilGps();
+  google.script.run.withSuccessHandler(renderFotoGaleri).withFailureHandler(fail).serverGetNotaDanFoto(no);
+}
+function _ambilGps(){
+  var el=document.getElementById('ftGps');
+  if(!navigator.geolocation){ el.textContent='GPS tidak didukung browser.'; return; }
+  el.textContent='Mengambil lokasi GPS...';
+  navigator.geolocation.getCurrentPosition(function(p){
+    _fotoGps={lat:+p.coords.latitude.toFixed(6), lng:+p.coords.longitude.toFixed(6)};
+    el.innerHTML='&#128205; Lokasi: '+_fotoGps.lat+', '+_fotoGps.lng;
+  }, function(){ el.textContent='⚠ Lokasi GPS tidak tersedia (foto tetap bisa diupload).'; },
+  {enableHighAccuracy:true,timeout:10000});
+}
+function renderFotoGaleri(res){
+  var fotos=(res&&res.fotoPerNota&&res.fotoPerNota['1'])||[];
+  var box=document.getElementById('ftGaleri');
+  if(!fotos.length){ box.innerHTML='<div class="empty">Belum ada foto.</div>'; return; }
+  var h='<div class="ftgrid">';
+  for(var i=0;i<fotos.length;i++){
+    var f=fotos[i];
+    h+='<div class="ftitem">'
+      +'<img loading="lazy" src="https://drive.google.com/thumbnail?id='+esc(f.fileId)+'&sz=w300">'
+      +'<div class="ftmeta">'+esc(f.waktu||'')
+      +(f.mapsUrl?(' &middot; <a href="'+esc(f.mapsUrl)+'" target="_blank">&#128205; lokasi</a>'):'')
+      +(f.keterangan?('<br>'+esc(f.keterangan)):'')+'</div>'
+      +'<button class="mini b-gray" style="color:#374151" onclick="hapusFoto('+f.urutan+')">Hapus</button>'
+      +'</div>';
+  }
+  box.innerHTML=h+'</div>';
+}
+function submitFoto(){
+  var fe=document.getElementById('ftFile');
+  if(!fe.files||!fe.files[0]){ toast('Pilih foto dulu','error'); return; }
+  var ket=document.getElementById('ftKet').value.trim();
+  compressImage(fe.files[0],function(foto){
+    if(_fotoGps){ foto.lat=_fotoGps.lat; foto.lng=_fotoGps.lng; }
+    foto.keterangan=ket;
+    showLoading(true,'Mengupload foto...');
+    google.script.run
+      .withSuccessHandler(function(){ showLoading(false); toast('Foto terupload','success');
+        openFoto(_fotoTarget); loadAll(); })
+      .withFailureHandler(fail)
+      .serverUploadFotoNota(_fotoTarget,_fotoNotaId,[foto]);
+  });
+}
+function hapusFoto(urutan){
+  if(!confirm('Hapus foto ini?')) return;
+  showLoading(true,'Menghapus...');
+  google.script.run
+    .withSuccessHandler(function(){ showLoading(false); toast('Foto dihapus','success');
+      openFoto(_fotoTarget); loadAll(); })
+    .withFailureHandler(fail)
+    .serverHapusFotoNota(_fotoTarget,_fotoNotaId,urutan);
+}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 
