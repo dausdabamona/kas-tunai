@@ -120,6 +120,15 @@
 
   .empty{text-align:center;color:var(--c-muted);padding:24px 10px;font-size:13px}
 
+  /* Kartu generik (dipakai di modal Nota/Kembalian) */
+  .card{background:#fff;border:1px solid var(--c-line);border-radius:10px;padding:12px;margin-bottom:10px}
+  .card .row1{display:flex;justify-content:space-between;gap:8px}
+  .card .keg{font-weight:600} .card .tgl{font-size:12px;color:var(--c-muted)} .card .amt{font-weight:700}
+  .card .acts{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .card .acts button{border:1px solid var(--c-line);background:#fff;border-radius:8px;
+    padding:7px 12px;font-size:13px;font-weight:600;color:var(--c-primary)}
+  .card .nthumb{width:70px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--c-line);margin-top:6px;display:inline-block}
+
   /* Rekap */
   .rekap-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
   .rekap-grid .card{margin:0;text-align:center;background:#fff;border:1px solid var(--c-line);
@@ -689,7 +698,7 @@ function _renderSpjHtml(t, notas, fotoPerNota){
       +'<span class="nval">'+rupiah(n.nilai)+'</span></div>';
     notaHtml+='<div class="nbody">';
     notaHtml+= n.fileId
-      ? '<img class="nthumb" src="https://drive.google.com/thumbnail?id='+esc(n.fileId)+'&sz=w400">'
+      ? '<a href="'+esc(n.urlFile||('https://drive.google.com/file/d/'+n.fileId+'/view'))+'" target="_blank"><img class="nthumb" src="https://drive.google.com/thumbnail?id='+esc(n.fileId)+'&sz=w800"></a>'
       : '<div class="nthumb none">Tidak ada<br>foto nota</div>';
     notaHtml+='<div class="ninfo"><b>'+esc(n.namaFile||'(tanpa berkas)')+'</b><br>'+rupiah(n.nilai)
       +(n.npwp?('<br>NPWP: '+esc(n.npwp)):'')
@@ -698,7 +707,7 @@ function _renderSpjHtml(t, notas, fotoPerNota){
     notaHtml+='<div class="ftag"><div class="ftagh">&#128247; Foto Barang ('+fp.length+')</div>';
     if(fp.length){
       notaHtml+='<div class="ftrow">';
-      for(j=0;j<fp.length;j++) notaHtml+='<img src="https://drive.google.com/thumbnail?id='+esc(fp[j].fileId)+'&sz=w200">';
+      for(j=0;j<fp.length;j++) notaHtml+='<a href="'+esc(fp[j].urlFile||('https://drive.google.com/file/d/'+fp[j].fileId+'/view'))+'" target="_blank"><img src="https://drive.google.com/thumbnail?id='+esc(fp[j].fileId)+'&sz=w400"></a>';
       notaHtml+='</div>';
     } else { notaHtml+='<div class="ftnone">Belum ada foto tagging untuk nota ini</div>'; }
     notaHtml+='</div></div>';
@@ -733,9 +742,11 @@ function _renderSpjHtml(t, notas, fotoPerNota){
   +'.ftnone{color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:8px;font-size:11px;text-align:center}'
   +'.total{text-align:right;font-weight:bold;color:#16456e;font-size:15px;margin-top:6px}'
   +'.foot{text-align:center;font-size:10px;color:#9aa;margin-top:16px}'
+  +'a{text-decoration:none;color:inherit} img{-webkit-print-color-adjust:exact;print-color-adjust:exact}'
   +'.noprint{margin-bottom:10px;text-align:right}@media print{.noprint{display:none}}'
   +'</style></head><body>'
-  +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button></div>'
+  +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button> '
+  +'<span style="font-size:11px;color:#6b7280">Tip: tunggu semua foto termuat sebelum mencetak</span></div>'
   +'<h1>Laporan SPJ PUM (Pemegang Uang Muka)</h1>'
   +'<div class="sub">No. '+noKt+' &middot; '+_tglPanjang(t.tanggal)+' &middot; '+notas.length+' nota &middot; '+totalFoto+' foto tagging</div>'
   +'<div class="hr"></div>'
@@ -787,8 +798,10 @@ function renderFotoGaleri(res){
   var h='<div class="ftgrid">';
   for(var i=0;i<fotos.length;i++){
     var f=fotos[i];
+    var viewUrl=f.urlFile||('https://drive.google.com/file/d/'+f.fileId+'/view');
     h+='<div class="ftitem">'
-      +'<img loading="lazy" src="https://drive.google.com/thumbnail?id='+esc(f.fileId)+'&sz=w300">'
+      +'<a href="'+esc(viewUrl)+'" target="_blank" title="Klik untuk lihat foto">'
+      +'<img loading="lazy" src="https://drive.google.com/thumbnail?id='+esc(f.fileId)+'&sz=w400"></a>'
       +'<div class="ftmeta">'+esc(f.waktu||'')
       +(f.mapsUrl?(' &middot; <a href="'+esc(f.mapsUrl)+'" target="_blank">&#128205; lokasi</a>'):'')
       +(f.keterangan?('<br>'+esc(f.keterangan)):'')+'</div>'
@@ -908,6 +921,7 @@ function renderNotaList(list){
       +'<div class="amt">'+rupiah(n.nilai)+'</div></div>'
       +'<div class="tgl">'+(n.npwp?('NPWP '+esc(n.npwp)+' &middot; '):'')+'No '+esc(n.noNota||'-')+' &middot; '+esc(n.tglNota||'-')+'</div>'
       +(n.alamat?'<div class="tgl">'+esc(n.alamat)+'</div>':'')
+      +(n.fileId?('<a href="'+esc(n.urlFile||('https://drive.google.com/file/d/'+n.fileId+'/view'))+'" target="_blank" title="Lihat foto nota"><img class="nthumb" src="https://drive.google.com/thumbnail?id='+esc(n.fileId)+'&sz=w200"></a>'):'')
       +'<div class="acts"><button onclick="hapusNota('+_notaTarget+','+n.urutan+",'"+(n.fileId||'')+"')\">Hapus</button></div>"
       +'</div>';
   }
