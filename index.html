@@ -542,7 +542,9 @@ function updateSaldoBar(){
     keluar+=(+allTransaksi[i].kredit||0);
     kembali+=(+allTransaksi[i].kembalianTotal||0);
   }
-  var saldo=(+SALDO_AWAL_JS||0)+masuk-keluar+kembali; // pengembalian kembali ke kas
+  // Saldo = saldo awal + masuk - keluar. Pengembalian yang benar-benar masuk kas
+  // sudah tercatat sebagai transaksi debet sendiri, jadi tidak ditambah dari sini.
+  var saldo=(+SALDO_AWAL_JS||0)+masuk-keluar;
   document.getElementById('saldoPill').textContent=rupiah(saldo);
   var big=document.getElementById('saldoBig');
   big.textContent=rupiah(saldo); big.className='big'+(saldo<0?' neg':'');

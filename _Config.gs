@@ -10,8 +10,8 @@ var CONFIG = {
   // ID spreadsheet backend (Google Sheets)
   SPREADSHEET_ID: '15TUNtEK740ZP4MvZUJh3253H_iCCLEeoHoKryTdlNj4',
 
-  // Saldo awal kas tunai
-  SALDO_AWAL: 3461000,
+  // Saldo awal kas tunai (saldo sebelum transaksi No.1)
+  SALDO_AWAL: 3218000,
 
   // Folder Drive root untuk upload (kosong = root My Drive)
   DRIVE_FOLDER_ID: '',

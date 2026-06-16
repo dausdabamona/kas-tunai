@@ -51,8 +51,10 @@ var KasTunai = (function () {
     for (var i = 0; i < data.length; i++) {
       var row = data[i];
       if (isDeleted(row[C.IS_DELETED])) continue;
-      // Saldo kas = +debet (masuk) - kredit (keluar) + kembalian (uang sisa kembali ke kas)
-      saldo += Util.num(row[C.DEBET]) - Util.num(row[C.KREDIT]) + Util.num(row[C.KEMBALIAN_TOTAL]);
+      // Saldo kas berjalan = +debet (masuk) - kredit (keluar).
+      // Pengembalian yang benar-benar masuk kas dicatat sebagai transaksi debet
+      // tersendiri, jadi TIDAK ditambahkan lagi dari kolom KEMBALIAN_TOTAL.
+      saldo += Util.num(row[C.DEBET]) - Util.num(row[C.KREDIT]);
       var obj = rowToObj(row, i + 2);
       obj.saldo = saldo;
       out.push(obj);
@@ -247,7 +249,7 @@ var KasTunai = (function () {
       totalDebet: totalDebet,
       totalKredit: totalKredit,
       totalKembali: totalKembali,
-      saldoAkhir: CONFIG.SALDO_AWAL + totalDebet - totalKredit + totalKembali,
+      saldoAkhir: CONFIG.SALDO_AWAL + totalDebet - totalKredit,
       jmlTransaksi: list.length
     };
   }
