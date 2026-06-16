@@ -319,12 +319,15 @@
     <div id="ftGaleri"></div>
     <hr>
     <h2 style="font-size:14px">Tambah Foto (dengan lokasi GPS)</h2>
-    <div class="field"><label>Keterangan (opsional)</label><input type="text" id="ftKet"></div>
-    <div class="field"><label>Ambil / pilih foto (boleh beberapa sekaligus)</label>
-      <input type="file" id="ftFile" accept="image/*" multiple>
-      <div class="tgl" style="font-size:11px;color:var(--c-muted);margin-top:4px">atau tempel screenshot dengan Ctrl+V saat jendela ini terbuka</div></div>
+    <div class="field"><label>Keterangan (opsional, isi sebelum ambil foto)</label><input type="text" id="ftKet"></div>
     <div id="ftGps" class="tgl" style="font-size:12px;color:var(--c-muted);margin-bottom:8px"></div>
-    <button class="btn" style="background:var(--c-ok)" onclick="submitFoto()">Upload Foto</button>
+    <div class="row2">
+      <button class="btn" style="background:var(--c-primary)" onclick="document.getElementById('ftCam').click()">&#128247; Kamera</button>
+      <button class="btn" style="background:var(--c-ok)" onclick="document.getElementById('ftFile').click()">&#128247; Galeri</button>
+    </div>
+    <div class="tgl" style="font-size:11px;color:var(--c-muted);margin:6px 0">Boleh beberapa foto sekaligus &middot; atau tempel screenshot dengan Ctrl+V</div>
+    <input type="file" id="ftCam" accept="image/*" capture="environment" style="display:none" onchange="_uploadFotoFiles(this.files)">
+    <input type="file" id="ftFile" accept="image/*" multiple style="display:none" onchange="_uploadFotoFiles(this.files)">
     <button class="btn ghost" onclick="closeModal('modalFoto')">Tutup</button>
   </div>
 </div>
@@ -778,6 +781,7 @@ function openFoto(no){
   document.getElementById('ftTxLabel').textContent='No '+no;
   document.getElementById('ftKet').value='';
   document.getElementById('ftFile').value='';
+  document.getElementById('ftCam').value='';
   document.getElementById('ftGps').textContent='';
   document.getElementById('ftGaleri').innerHTML='<div class="empty">Memuat...</div>';
   openModal('modalFoto');
