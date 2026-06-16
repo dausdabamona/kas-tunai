@@ -675,14 +675,16 @@ function onSearch(){ currentSearch=(document.getElementById('searchBox').value||
 function cetakSPJ(no){
   var t=_cariTransaksi(no);
   if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
-  showLoading(true,'Menyiapkan SPJ...');
+  showLoading(true,'Menyiapkan SPJ & memuat foto...');
   google.script.run
     .withSuccessHandler(function(res){ showLoading(false);
-      _bukaPopup(_renderSpjHtml(t,(res&&res.notas)||[],(res&&res.fotoPerNota)||{})); })
+      _bukaPopup(_renderSpjHtml(t,(res&&res.notas)||[],(res&&res.fotoPerNota)||{},(res&&res.imgB64)||{})); })
     .withFailureHandler(fail)
-    .serverGetNotaDanFoto(no);
+    .serverGetSpjData(no);
 }
-function _renderSpjHtml(t, notas, fotoPerNota){
+function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
+  imgB64=imgB64||{};
+  function srcOf(fileId){ return imgB64[fileId] || ('https://drive.google.com/thumbnail?id='+fileId+'&sz=w800'); }
   var thn=(String(t.tanggal||'').split('-')[0])||(''+new Date().getFullYear());
   var noKt='KT-'+('00'+t.no).slice(-3)+'/'+thn;
   var nilai=(t.uangDiserahkan&&t.uangDiserahkan>0)?t.uangDiserahkan:t.kredit;
@@ -698,7 +700,7 @@ function _renderSpjHtml(t, notas, fotoPerNota){
       +'<span class="nval">'+rupiah(n.nilai)+'</span></div>';
     notaHtml+='<div class="nbody">';
     notaHtml+= n.fileId
-      ? '<a href="'+esc(n.urlFile||('https://drive.google.com/file/d/'+n.fileId+'/view'))+'" target="_blank"><img class="nthumb" src="https://drive.google.com/thumbnail?id='+esc(n.fileId)+'&sz=w800"></a>'
+      ? '<a href="'+esc(n.urlFile||('https://drive.google.com/file/d/'+n.fileId+'/view'))+'" target="_blank"><img class="nthumb" src="'+srcOf(n.fileId)+'"></a>'
       : '<div class="nthumb none">Tidak ada<br>foto nota</div>';
     notaHtml+='<div class="ninfo"><b>'+esc(n.namaFile||'(tanpa berkas)')+'</b><br>'+rupiah(n.nilai)
       +(n.npwp?('<br>NPWP: '+esc(n.npwp)):'')
@@ -707,7 +709,7 @@ function _renderSpjHtml(t, notas, fotoPerNota){
     notaHtml+='<div class="ftag"><div class="ftagh">&#128247; Foto Barang ('+fp.length+')</div>';
     if(fp.length){
       notaHtml+='<div class="ftrow">';
-      for(j=0;j<fp.length;j++) notaHtml+='<a href="'+esc(fp[j].urlFile||('https://drive.google.com/file/d/'+fp[j].fileId+'/view'))+'" target="_blank"><img src="https://drive.google.com/thumbnail?id='+esc(fp[j].fileId)+'&sz=w400"></a>';
+      for(j=0;j<fp.length;j++) notaHtml+='<a href="'+esc(fp[j].urlFile||('https://drive.google.com/file/d/'+fp[j].fileId+'/view'))+'" target="_blank"><img src="'+srcOf(fp[j].fileId)+'"></a>';
       notaHtml+='</div>';
     } else { notaHtml+='<div class="ftnone">Belum ada foto tagging untuk nota ini</div>'; }
     notaHtml+='</div></div>';

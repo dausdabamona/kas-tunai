@@ -99,6 +99,9 @@ function serverHapusFotoNota(noTransaksi, notaId, urutan) {
 function serverGetNotaDanFoto(noTransaksi) {
   return _run(function () { return FotoNota.getNotaDanFoto(noTransaksi); });
 }
+function serverGetSpjData(noTransaksi) {
+  return _run(function () { return FotoNota.getSpjData(noTransaksi); });
+}
 
 /* ============================================================
  * Foto Barang

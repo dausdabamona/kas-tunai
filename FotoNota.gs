@@ -119,11 +119,42 @@ var FotoNota = (function () {
     return { notas: notas, fotoPerNota: fotoPerNota };
   }
 
+  /** Data SPJ: nota + foto per nota + peta gambar base64 (untuk cetak). */
+  function getSpjData(noTransaksi) {
+    var nd = getNotaDanFoto(noTransaksi);
+    var imgB64 = {};
+    var i, j;
+    for (i = 0; i < nd.notas.length; i++) {
+      var fid = nd.notas[i].fileId;
+      if (fid && !imgB64[fid]) imgB64[fid] = _imgDataUri(fid);
+    }
+    for (var nid in nd.fotoPerNota) {
+      var arr = nd.fotoPerNota[nid];
+      for (j = 0; j < arr.length; j++) {
+        var ff = arr[j].fileId;
+        if (ff && !imgB64[ff]) imgB64[ff] = _imgDataUri(ff);
+      }
+    }
+    return { notas: nd.notas, fotoPerNota: nd.fotoPerNota, imgB64: imgB64 };
+  }
+
+  /** Baca file Drive -> data URI base64; '' bila gagal (frontend fallback). */
+  function _imgDataUri(fileId) {
+    try {
+      var b = DriveApp.getFileById(fileId).getBlob();
+      return 'data:' + b.getContentType() + ';base64,' + Utilities.base64Encode(b.getBytes());
+    } catch (e) {
+      Logger.log('[FotoNota] _imgDataUri gagal (' + fileId + '): ' + e.message);
+      return '';
+    }
+  }
+
   return {
     getJmlFotoPerTransaksi: getJmlFotoPerTransaksi,
     getFotoNota: getFotoNota,
     uploadFotoNota: uploadFotoNota,
     hapusFotoNota: hapusFotoNota,
-    getNotaDanFoto: getNotaDanFoto
+    getNotaDanFoto: getNotaDanFoto,
+    getSpjData: getSpjData
   };
 })();
