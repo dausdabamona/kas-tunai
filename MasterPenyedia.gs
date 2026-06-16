@@ -1,6 +1,8 @@
 /**
  * MasterPenyedia.gs
- * Data rekanan/penyedia untuk pembuatan SSP pajak (autocomplete di frontend).
+ * Data rekanan/penyedia untuk autocomplete nota & SSP.
+ * Kolom: NO, NAMA_PENYEDIA, NPWP, ALAMAT, TERAKHIR_DIGUNAKAN, FREKUENSI
+ * (tidak ada kolom soft-delete).
  */
 
 var MasterPenyedia = (function () {
@@ -13,8 +15,8 @@ var MasterPenyedia = (function () {
     var out = [];
     for (var i = 0; i < data.length; i++) {
       var r = data[i];
-      if (isDeleted(r[c.IS_DELETED])) continue;
-      out.push({ nama: r[c.NAMA], npwp: r[c.NPWP], alamat: r[c.ALAMAT] });
+      if (!r[c.NAMA_PENYEDIA]) continue;
+      out.push({ nama: r[c.NAMA_PENYEDIA], npwp: r[c.NPWP], alamat: r[c.ALAMAT] });
     }
     return out;
   }
@@ -24,22 +26,33 @@ var MasterPenyedia = (function () {
     if (!p || !p.nama) throw new Error('Nama penyedia wajib diisi');
     var c = MC();
     var rows = findRows(CONFIG.SHEETS.MASTER_PENYEDIA, function (r) {
-      return String(r[c.NAMA]).toLowerCase() === String(p.nama).toLowerCase() &&
-             !isDeleted(r[c.IS_DELETED]);
+      return String(r[c.NAMA_PENYEDIA]).toLowerCase() === String(p.nama).toLowerCase();
     });
 
     if (rows.length) {
-      SheetRepo.setCells(CONFIG.SHEETS.MASTER_PENYEDIA, rows[0].rowIndex,
-        Util.set(c.NPWP, p.npwp || '', c.ALAMAT, p.alamat || ''));
+      var frek = Util.num(rows[0].values[c.FREKUENSI]) + 1;
+      SheetRepo.setCells(CONFIG.SHEETS.MASTER_PENYEDIA, rows[0].rowIndex, Util.set(
+        c.NPWP, p.npwp || '', c.ALAMAT, p.alamat || '',
+        c.TERAKHIR_DIGUNAKAN, new Date(), c.FREKUENSI, frek));
       DeferredFlush.mark();
       return { success: true, updated: true };
     }
 
     SheetRepo.appendRow(CONFIG.SHEETS.MASTER_PENYEDIA, [
-      p.nama, p.npwp || '', p.alamat || '', new Date(), FLAG_ACTIVE, '', ''
+      _nextNo(c), p.nama, p.npwp || '', p.alamat || '', new Date(), 1
     ]);
     DeferredFlush.mark();
     return { success: true, updated: false };
+  }
+
+  function _nextNo(c) {
+    var data = SheetRepo.getData(CONFIG.SHEETS.MASTER_PENYEDIA);
+    var max = 0;
+    for (var i = 0; i < data.length; i++) {
+      var n = parseInt(data[i][c.NO], 10);
+      if (!isNaN(n) && n > max) max = n;
+    }
+    return max + 1;
   }
 
   /** Cari penyedia by keyword (nama/npwp). */

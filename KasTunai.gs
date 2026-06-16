@@ -36,7 +36,9 @@ var KasTunai = (function () {
       kembalianJml:    Util.num(row[C.KEMBALIAN_JML]),
       kembalianTotal:  Util.num(row[C.KEMBALIAN_TOTAL]),
       noSpby:          row[C.NO_SPBY],
-      tglSpby:         Util.fmtDate(row[C.TGL_SPBY])
+      tglSpby:         Util.fmtDate(row[C.TGL_SPBY]),
+      kuitansiFileId:  row[C.KUITANSI_FILE_ID],
+      kuitansiUrl:     row[C.KUITANSI_URL]
     };
   }
 
@@ -104,10 +106,10 @@ var KasTunai = (function () {
       var r = x.values;
       return {
         rowIndex: x.rowIndex,
-        noTransaksi: r[n.NO_TRANSAKSI], urutan: r[n.URUTAN], namaPenyedia: r[n.NAMA_PENYEDIA],
+        noTransaksi: r[n.NO_TRANSAKSI], urutan: r[n.URUTAN], namaPenyedia: r[n.NAMA_NOTA],
         npwp: r[n.NPWP_PENYEDIA], alamat: r[n.ALAMAT_PENYEDIA],
-        noNota: r[n.NO_NOTA], tglNota: Util.fmtDate(r[n.TGL_NOTA]), nilai: Util.num(r[n.NILAI]),
-        keterangan: r[n.KETERANGAN], fileId: r[n.FILE_ID], namaFile: r[n.NAMA_FILE], urlFile: r[n.URL_FILE]
+        noNota: '', tglNota: Util.fmtDate(r[n.TGL_UPLOAD]), nilai: Util.num(r[n.NOMINAL]),
+        keterangan: '', fileId: r[n.FILE_ID], namaFile: r[n.NAMA_FILE], urlFile: r[n.URL_FILE]
       };
     });
   }
@@ -117,11 +119,9 @@ var KasTunai = (function () {
     var file = (notaData.file && notaData.file.base64) ? DriveHelper.upload(notaData.file) : null;
 
     SheetRepo.appendRow(CONFIG.SHEETS.MULTI_NOTA, [
-      transactionId, urutan, notaData.namaPenyedia || '', notaData.npwp || '', notaData.alamat || '',
-      notaData.noNota || '', notaData.tglNota ? new Date(notaData.tglNota) : '', Util.num(notaData.nilai),
-      notaData.keterangan || '',
-      file ? file.fileId : '', file ? file.namaFile : '', file ? file.url : '',
-      new Date(), FLAG_ACTIVE, '', ''
+      transactionId, 0, urutan, notaData.namaPenyedia || '', Util.num(notaData.nilai),
+      file ? file.fileId : '', file ? file.namaFile : '', file ? file.url : '', new Date(),
+      notaData.npwp || '', notaData.alamat || '', FLAG_ACTIVE, '', ''
     ]);
     DeferredFlush.mark();
     _recalcNota(transactionId);
@@ -187,9 +187,13 @@ var KasTunai = (function () {
 
     for (var i = 0; i < fotoArr.length; i++) {
       var f = DriveHelper.upload(fotoArr[i]);
+      var lat = fotoArr[i].lat == null ? '' : fotoArr[i].lat;
+      var lng = fotoArr[i].lng == null ? '' : fotoArr[i].lng;
+      var maps = (lat !== '' && lng !== '') ? ('https://maps.google.com/?q=' + lat + ',' + lng) : '';
       urutan++;
       SheetRepo.appendRow(CONFIG.SHEETS.FOTO_BARANG, [
-        transactionId, urutan, f.fileId, f.namaFile, f.url, new Date(), FLAG_ACTIVE, '', ''
+        transactionId, 0, urutan, f.fileId, f.namaFile, f.url,
+        lat, lng, maps, new Date(), FLAG_ACTIVE, '', ''
       ]);
     }
     DeferredFlush.mark();
@@ -219,7 +223,7 @@ var KasTunai = (function () {
   function uploadKuitansi(transactionId, file) {
     var up = DriveHelper.upload(file);
     updateByTransactionId(transactionId, Util.set(
-      C.FILE_ID, up.fileId, C.NAMA_FILE, up.namaFile, C.URL_FILE, up.url));
+      C.KUITANSI_FILE_ID, up.fileId, C.KUITANSI_NAMA_FILE, up.namaFile, C.KUITANSI_URL, up.url));
     DeferredFlush.mark();
     AuditLog.write('UPLOAD_KUITANSI', CONFIG.SHEETS.KAS_TUNAI, transactionId, up.namaFile);
     return { success: true, fileId: up.fileId, namaFile: up.namaFile, url: up.url };
@@ -227,8 +231,8 @@ var KasTunai = (function () {
 
   function hapusKuitansi(transactionId) {
     var t = getRowByTransactionId(transactionId);
-    if (t && t.values[C.FILE_ID]) DriveHelper.trash(t.values[C.FILE_ID]);
-    updateByTransactionId(transactionId, Util.set(C.FILE_ID, '', C.NAMA_FILE, '', C.URL_FILE, ''));
+    if (t && t.values[C.KUITANSI_FILE_ID]) DriveHelper.trash(t.values[C.KUITANSI_FILE_ID]);
+    updateByTransactionId(transactionId, Util.set(C.KUITANSI_FILE_ID, '', C.KUITANSI_NAMA_FILE, '', C.KUITANSI_URL, ''));
     DeferredFlush.mark();
     return { success: true };
   }

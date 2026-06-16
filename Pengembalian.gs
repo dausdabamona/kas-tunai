@@ -17,7 +17,7 @@ var Pengembalian = (function () {
       return {
         rowIndex: x.rowIndex,
         noTransaksi: r[p.NO_TRANSAKSI], urutan: r[p.URUTAN],
-        tanggal: Util.fmtDate(r[p.TANGGAL]), nilai: Util.num(r[p.NILAI]),
+        tanggal: Util.fmtDate(r[p.TANGGAL]), nilai: Util.num(r[p.JUMLAH]),
         keterangan: r[p.KETERANGAN], refMasukNo: r[p.REF_MASUK_NO]
       };
     });
@@ -34,8 +34,8 @@ var Pengembalian = (function () {
     var tgl = data.tanggal ? new Date(data.tanggal) : new Date();
 
     var rowIndex = SheetRepo.appendRow(CONFIG.SHEETS.PENGEMBALIAN, [
-      transactionId, urutan, tgl, nilai, data.keterangan || '', '',
-      new Date(), FLAG_ACTIVE, '', ''
+      transactionId, urutan, tgl, nilai, data.keterangan || '',
+      getOperator(), new Date(), FLAG_ACTIVE, '', '', ''
     ]);
     DeferredFlush.mark();
 

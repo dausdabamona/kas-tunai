@@ -62,9 +62,10 @@ function isDeleted(val) {
 var AuditLog = (function () {
   function write(action, sheetName, recordId, detail) {
     try {
+      // Kolom: TIMESTAMP, ACTION, SHEET, ROW_REF, DETAIL, OPERATOR
       SheetRepo.appendRow(CONFIG.SHEETS.AUDIT_LOG, [
-        new Date(), getOperator(), action, sheetName,
-        recordId == null ? '' : recordId, detail || ''
+        new Date(), action, sheetName,
+        recordId == null ? '' : recordId, detail || '', getOperator()
       ]);
       DeferredFlush.mark();
     } catch (e) {

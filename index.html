@@ -254,19 +254,15 @@
     <div id="notaList"></div>
     <hr>
     <h2 style="font-size:14px">Tambah Nota</h2>
-    <div class="field"><label>Nama Penyedia</label>
+    <div class="field"><label>Nama Nota / Penyedia</label>
       <input type="text" id="ntPenyedia" list="ntPenyediaList" oninput="onNotaPenyediaInput()" autocomplete="off">
       <datalist id="ntPenyediaList"></datalist>
     </div>
     <div class="row2">
       <div class="field"><label>NPWP Penyedia</label><input type="text" id="ntNpwp" placeholder="kosongkan bila non-NPWP"></div>
-      <div class="field"><label>No Nota</label><input type="text" id="ntNoNota"></div>
+      <div class="field"><label>Nominal</label><input type="number" id="ntNilai" value="0"></div>
     </div>
     <div class="field"><label>Alamat Penyedia</label><input type="text" id="ntAlamat"></div>
-    <div class="row2">
-      <div class="field"><label>Nilai</label><input type="number" id="ntNilai" value="0"></div>
-      <div class="field"><label>Tgl Nota</label><input type="date" id="ntTgl"></div>
-    </div>
     <div class="field"><label>Foto nota (opsional)</label><input type="file" id="ntFile" accept="image/*" capture="environment"></div>
     <button class="btn" onclick="submitNota()">Tambah Nota</button>
     <button class="btn ghost" onclick="closeModal('modalNota')">Tutup</button>
@@ -635,7 +631,7 @@ function _cardHtml(t, mode){
   var notaChip=lunas?'<span class="chip ok">&#9989; Nota '+rupiah(t.notaTotal)+' (100%)</span>'
                     :'<span class="chip warn">&#9888; Nota Belum Lunas</span>';
   var fotoChip=fnJml>0?'<span class="chip ok">&#128247; Foto '+fnJml+'</span>':'<span class="chip">&#128247; 0</span>';
-  var kwChip=t.urlFile?'<span class="chip ok">&#129534; TTD &#10003;</span>':'';
+  var kwChip=t.kuitansiUrl?'<span class="chip ok">&#129534; TTD &#10003;</span>':'';
   h+='<div class="chips">'+spjChip+notaChip+fotoChip+kwChip+'</div>';
   // actions
   h+='<div class="acts">'
@@ -911,9 +907,7 @@ function openModalNota(no){
   document.getElementById('ntPenyedia').value='';
   document.getElementById('ntNpwp').value='';
   document.getElementById('ntAlamat').value='';
-  document.getElementById('ntNoNota').value='';
   document.getElementById('ntNilai').value=0;
-  document.getElementById('ntTgl').value=todayISO();
   document.getElementById('ntFile').value='';
   document.getElementById('notaList').innerHTML='<div class="empty">Memuat...</div>';
   openModal('modalNota');
@@ -964,9 +958,7 @@ function submitNota(){
     namaPenyedia:document.getElementById('ntPenyedia').value.trim(),
     npwp:document.getElementById('ntNpwp').value.trim(),
     alamat:document.getElementById('ntAlamat').value.trim(),
-    noNota:document.getElementById('ntNoNota').value.trim(),
-    nilai:nilai,
-    tglNota:document.getElementById('ntTgl').value
+    nilai:nilai
   };
   if(nilai<=0){toast('Nilai nota harus > 0','error');return;}
   var fileEl=document.getElementById('ntFile');
@@ -1185,9 +1177,9 @@ function bukaModalKuitansi(no){
   document.getElementById('kwTxLabel').textContent='No '+no;
   document.getElementById('kwFile').value='';
   var el=document.getElementById('kwStatus');
-  if(t && t.urlFile){
+  if(t && t.kuitansiUrl){
     el.innerHTML='<div class="lrow ok"><span>&#10003; Kuitansi ber-TTD sudah diupload</span>'
-      +'<a class="mini b-dark" style="text-decoration:none" target="_blank" href="'+esc(t.urlFile)+'">Lihat</a></div>'
+      +'<a class="mini b-dark" style="text-decoration:none" target="_blank" href="'+esc(t.kuitansiUrl)+'">Lihat</a></div>'
       +'<button class="btn ghost" style="margin-top:8px" onclick="hapusKuitansiTtd()">Hapus file TTD</button>';
   } else {
     el.innerHTML='<div class="empty" style="padding:6px 0">Belum ada kuitansi ber-TTD.</div>';
