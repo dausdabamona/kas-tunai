@@ -147,6 +147,16 @@ function serverHapusSpby(rowIndex) {
 }
 
 /* ============================================================
+ * Kuitansi ber-TTD (upload scan/foto)
+ * ============================================================ */
+function serverUploadKuitansi(transactionId, file) {
+  return _run(function () { return KasTunai.uploadKuitansi(transactionId, file); });
+}
+function serverHapusKuitansi(transactionId) {
+  return _run(function () { return KasTunai.hapusKuitansi(transactionId); });
+}
+
+/* ============================================================
  * Rekap
  * ============================================================ */
 function serverGetRekap() {

@@ -212,6 +212,26 @@ var KasTunai = (function () {
   }
 
   /* -------------------------------------------------------- *
+   * Kuitansi ber-TTD (scan/foto) - disimpan di kolom FILE_ID/NAMA_FILE/URL_FILE
+   * -------------------------------------------------------- */
+  function uploadKuitansi(transactionId, file) {
+    var up = DriveHelper.upload(file);
+    updateByTransactionId(transactionId, Util.set(
+      C.FILE_ID, up.fileId, C.NAMA_FILE, up.namaFile, C.URL_FILE, up.url));
+    DeferredFlush.mark();
+    AuditLog.write('UPLOAD_KUITANSI', CONFIG.SHEETS.KAS_TUNAI, transactionId, up.namaFile);
+    return { success: true, fileId: up.fileId, namaFile: up.namaFile, url: up.url };
+  }
+
+  function hapusKuitansi(transactionId) {
+    var t = getRowByTransactionId(transactionId);
+    if (t && t.values[C.FILE_ID]) DriveHelper.trash(t.values[C.FILE_ID]);
+    updateByTransactionId(transactionId, Util.set(C.FILE_ID, '', C.NAMA_FILE, '', C.URL_FILE, ''));
+    DeferredFlush.mark();
+    return { success: true };
+  }
+
+  /* -------------------------------------------------------- *
    * Rekap
    * -------------------------------------------------------- */
   function getRekap() {
@@ -242,6 +262,8 @@ var KasTunai = (function () {
     tambahFotoBarang: tambahFotoBarang,
     simpanSpby: simpanSpby,
     hapusSpby: hapusSpby,
+    uploadKuitansi: uploadKuitansi,
+    hapusKuitansi: hapusKuitansi,
     getRekap: getRekap
   };
 })();
