@@ -320,8 +320,8 @@
     <hr>
     <h2 style="font-size:14px">Tambah Foto (dengan lokasi GPS)</h2>
     <div class="field"><label>Keterangan (opsional)</label><input type="text" id="ftKet"></div>
-    <div class="field"><label>Ambil / pilih foto</label>
-      <input type="file" id="ftFile" accept="image/*" capture="environment"></div>
+    <div class="field"><label>Ambil / pilih foto (boleh beberapa sekaligus)</label>
+      <input type="file" id="ftFile" accept="image/*" multiple></div>
     <div id="ftGps" class="tgl" style="font-size:12px;color:var(--c-muted);margin-bottom:8px"></div>
     <button class="btn" style="background:var(--c-ok)" onclick="submitFoto()">Upload Foto</button>
     <button class="btn ghost" onclick="closeModal('modalFoto')">Tutup</button>
@@ -812,18 +812,28 @@ function renderFotoGaleri(res){
 }
 function submitFoto(){
   var fe=document.getElementById('ftFile');
-  if(!fe.files||!fe.files[0]){ toast('Pilih foto dulu','error'); return; }
+  var files=fe.files;
+  if(!files||!files.length){ toast('Pilih foto dulu','error'); return; }
   var ket=document.getElementById('ftKet').value.trim();
-  compressImage(fe.files[0],function(foto){
-    if(_fotoGps){ foto.lat=_fotoGps.lat; foto.lng=_fotoGps.lng; }
-    foto.keterangan=ket;
-    showLoading(true,'Mengupload foto...');
-    google.script.run
-      .withSuccessHandler(function(){ showLoading(false); toast('Foto terupload','success');
-        openFoto(_fotoTarget); loadAll(); })
-      .withFailureHandler(fail)
-      .serverUploadFotoNota(_fotoTarget,_fotoNotaId,[foto]);
-  });
+  var arr=[], done=0, n=files.length;
+  showLoading(true,'Memproses '+n+' foto...');
+  for(var i=0;i<n;i++){
+    (function(idx){
+      compressImage(files[idx], function(foto){
+        if(_fotoGps){ foto.lat=_fotoGps.lat; foto.lng=_fotoGps.lng; }
+        foto.keterangan=ket;
+        arr[idx]=foto; done++;
+        if(done===n){
+          showLoading(true,'Mengupload '+n+' foto...');
+          google.script.run
+            .withSuccessHandler(function(){ showLoading(false); toast(n+' foto terupload','success');
+              openFoto(_fotoTarget); loadAll(); })
+            .withFailureHandler(fail)
+            .serverUploadFotoNota(_fotoTarget,_fotoNotaId,arr);
+        }
+      });
+    })(i);
+  }
 }
 function hapusFoto(urutan){
   if(!confirm('Hapus foto ini?')) return;
