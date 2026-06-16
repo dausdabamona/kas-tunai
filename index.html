@@ -719,8 +719,8 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
 
   return ''
   +'<html><head><meta charset="utf-8"><title>SPJ PUM '+noKt+'</title><style>'
-  +'@page{size:A4 portrait;margin:14mm} *{font-family:Arial,sans-serif;box-sizing:border-box}'
-  +'body{font-size:12px;color:#1f2937;margin:0}'
+  +'@page{size:A4 portrait;margin:0} *{font-family:Arial,sans-serif;box-sizing:border-box}'
+  +'body{font-size:12px;color:#1f2937;margin:0;padding:14mm}'
   +'h1{text-align:center;font-size:18px;margin:0;color:#16456e}'
   +'.sub{text-align:center;font-size:12px;color:#6b7280;margin:3px 0 8px}'
   +'.hr{border-top:2px solid #16456e;margin-bottom:14px}'
@@ -1217,8 +1217,8 @@ function _renderKuitansiHtml(t){
 
   return ''
   +'<html><head><meta charset="utf-8"><title>Kuitansi '+noKwt+'</title><style>'
-  +'@page{size:A4 portrait;margin:16mm} *{font-family:Arial,sans-serif;box-sizing:border-box}'
-  +'body{font-size:13px;color:#000;margin:0}'
+  +'@page{size:A4 portrait;margin:0} *{font-family:Arial,sans-serif;box-sizing:border-box}'
+  +'body{font-size:13px;color:#000;margin:0;padding:16mm}'
   +'.kop .nm{font-weight:bold;font-size:18px} .kop .ad{font-size:11px;margin-top:2px}'
   +'.hrt{border:0;border-top:2.5px solid #000;margin:5px 0 0}'
   +'.judul{text-align:center;font-weight:bold;font-size:19px;letter-spacing:6px;margin:18px 0 2px}'
@@ -1316,9 +1316,9 @@ function _renderSspHtml(t, pj, jenis){
 
   return ''
   +'<html><head><meta charset="utf-8"><title>SSP '+(isPph?'PPh':'PPN')+' KT-'+t.no+'</title><style>'
-  +'@page{size:A4 portrait;margin:10mm} *{font-family:Arial,sans-serif;box-sizing:border-box}'
+  +'@page{size:A4 portrait;margin:0} *{font-family:Arial,sans-serif;box-sizing:border-box}'
   +'body{font-size:12px;color:#000;margin:0}'
-  +'.page{page-break-after:always} .page.last{page-break-after:auto}'
+  +'.page{page-break-after:always;padding:10mm} .page.last{page-break-after:auto}'
   +'.ssp{border:2px solid #000;display:flex;flex-direction:column;min-height:262mm}'
   +'.fc{font-size:9px;margin:3px 0 0}'
   +'.sh{display:flex;border-bottom:2px solid #000}'
