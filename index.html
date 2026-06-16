@@ -661,7 +661,99 @@ function renderList(){
   box.innerHTML=html;
 }
 function onSearch(){ currentSearch=(document.getElementById('searchBox').value||'').toLowerCase().trim(); renderList(); }
-function cetakSPJ(no){ toast('Cetak SPJ PUM akan ditambahkan','info'); }
+function cetakSPJ(no){
+  var t=_cariTransaksi(no);
+  if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
+  showLoading(true,'Menyiapkan SPJ...');
+  google.script.run
+    .withSuccessHandler(function(res){ showLoading(false);
+      _bukaPopup(_renderSpjHtml(t,(res&&res.notas)||[],(res&&res.fotoPerNota)||{})); })
+    .withFailureHandler(fail)
+    .serverGetNotaDanFoto(no);
+}
+function _renderSpjHtml(t, notas, fotoPerNota){
+  var thn=(String(t.tanggal||'').split('-')[0])||(''+new Date().getFullYear());
+  var noKt='KT-'+('00'+t.no).slice(-3)+'/'+thn;
+  var nilai=(t.uangDiserahkan&&t.uangDiserahkan>0)?t.uangDiserahkan:t.kredit;
+  var totalNota=0, totalFoto=0, i, j;
+  for(i=0;i<notas.length;i++){ totalNota+=(+notas[i].nilai||0); totalFoto+=((fotoPerNota[String(notas[i].urutan)]||[]).length); }
+  var lengkap=(totalNota>=t.kredit && t.kredit>0);
+
+  var notaHtml='';
+  for(i=0;i<notas.length;i++){
+    var n=notas[i], fp=fotoPerNota[String(n.urutan)]||[];
+    notaHtml+='<div class="nota"><div class="nhead">'
+      +'<span class="nno">'+(i+1)+'</span><span class="nnm">'+esc(n.namaPenyedia||n.noNota||'Nota')+'</span>'
+      +'<span class="nval">'+rupiah(n.nilai)+'</span></div>';
+    notaHtml+='<div class="nbody">';
+    notaHtml+= n.fileId
+      ? '<img class="nthumb" src="https://drive.google.com/thumbnail?id='+esc(n.fileId)+'&sz=w400">'
+      : '<div class="nthumb none">Tidak ada<br>foto nota</div>';
+    notaHtml+='<div class="ninfo"><b>'+esc(n.namaFile||'(tanpa berkas)')+'</b><br>'+rupiah(n.nilai)
+      +(n.npwp?('<br>NPWP: '+esc(n.npwp)):'')
+      +(n.urlFile?('<br><a href="'+esc(n.urlFile)+'" target="_blank">'+esc(n.urlFile)+'</a>'):'')
+      +'</div></div>';
+    notaHtml+='<div class="ftag"><div class="ftagh">&#128247; Foto Barang ('+fp.length+')</div>';
+    if(fp.length){
+      notaHtml+='<div class="ftrow">';
+      for(j=0;j<fp.length;j++) notaHtml+='<img src="https://drive.google.com/thumbnail?id='+esc(fp[j].fileId)+'&sz=w200">';
+      notaHtml+='</div>';
+    } else { notaHtml+='<div class="ftnone">Belum ada foto tagging untuk nota ini</div>'; }
+    notaHtml+='</div></div>';
+  }
+  if(!notas.length) notaHtml='<div class="ftnone" style="text-align:center">Belum ada nota.</div>';
+
+  return ''
+  +'<html><head><meta charset="utf-8"><title>SPJ PUM '+noKt+'</title><style>'
+  +'@page{size:A4 portrait;margin:14mm} *{font-family:Arial,sans-serif;box-sizing:border-box}'
+  +'body{font-size:12px;color:#1f2937;margin:0}'
+  +'h1{text-align:center;font-size:18px;margin:0;color:#16456e}'
+  +'.sub{text-align:center;font-size:12px;color:#6b7280;margin:3px 0 8px}'
+  +'.hr{border-top:2px solid #16456e;margin-bottom:14px}'
+  +'.grid{display:flex;gap:10px;margin-bottom:10px} .grid>.bx{flex:1}'
+  +'.bx{border:1px solid #e2e6ec;border-radius:8px;padding:9px 12px}'
+  +'.bx .k{font-size:11px;color:#6b7280} .bx .v{font-weight:bold;color:#16456e;margin-top:2px;font-size:14px}'
+  +'.status{border:1px solid #bbf7d0;background:#f0fdf4;border-radius:8px;padding:10px 12px;margin-bottom:14px}'
+  +'.status .s{font-weight:bold;color:#15803d} .status .x{font-size:11px;color:#6b7280;margin-top:3px}'
+  +'.status.no{border-color:#fed7aa;background:#fff7ed} .status.no .s{color:#9a3412}'
+  +'.sechead{font-weight:bold;color:#16456e;border-bottom:1px solid #e2e6ec;padding-bottom:5px;margin:14px 0 10px}'
+  +'.nota{border:1px solid #e2e6ec;border-radius:8px;padding:10px;margin-bottom:12px}'
+  +'.nhead{display:flex;align-items:center;gap:8px;font-weight:bold}'
+  +'.nno{background:#16456e;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px}'
+  +'.nnm{flex:1} .nval{color:#16456e}'
+  +'.nbody{display:flex;gap:12px;margin-top:9px}'
+  +'.nthumb{width:160px;height:120px;object-fit:cover;border:1px solid #e2e6ec;border-radius:6px}'
+  +'.nthumb.none{display:flex;align-items:center;justify-content:center;color:#9aa;font-size:10px;text-align:center}'
+  +'.ninfo{flex:1;font-size:11px;word-break:break-all} .ninfo a{color:#1565c0}'
+  +'.ftag{margin-top:10px;border-top:1px dashed #e2e6ec;padding-top:8px}'
+  +'.ftagh{font-weight:bold;font-size:12px;margin-bottom:6px}'
+  +'.ftrow{display:flex;flex-wrap:wrap;gap:6px} .ftrow img{width:120px;height:90px;object-fit:cover;border:1px solid #e2e6ec;border-radius:6px}'
+  +'.ftnone{color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:8px;font-size:11px;text-align:center}'
+  +'.total{text-align:right;font-weight:bold;color:#16456e;font-size:15px;margin-top:6px}'
+  +'.foot{text-align:center;font-size:10px;color:#9aa;margin-top:16px}'
+  +'.noprint{margin-bottom:10px;text-align:right}@media print{.noprint{display:none}}'
+  +'</style></head><body>'
+  +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button></div>'
+  +'<h1>Laporan SPJ PUM (Pemegang Uang Muka)</h1>'
+  +'<div class="sub">No. '+noKt+' &middot; '+_tglPanjang(t.tanggal)+' &middot; '+notas.length+' nota &middot; '+totalFoto+' foto tagging</div>'
+  +'<div class="hr"></div>'
+  +'<div class="grid">'
+  +'<div class="bx"><div class="k">Kegiatan / Belanja</div><div class="v">'+esc(t.kegiatan||'-')+'</div></div>'
+  +'<div class="bx"><div class="k">PUM (Penerima Uang Muka)</div><div class="v">'+esc(t.penjab||'-')+'</div></div>'
+  +'</div>'
+  +'<div class="grid">'
+  +'<div class="bx"><div class="k">Tanggal</div><div class="v">'+_tglPanjang(t.tanggal)+'</div></div>'
+  +'<div class="bx"><div class="k">Nilai Diterima PUM</div><div class="v">'+rupiah(nilai)+'</div></div>'
+  +'</div>'
+  +'<div class="status'+(lengkap?'':' no')+'"><div class="s">'
+  +(lengkap?('&#9989; Nota Lengkap ('+rupiah(totalNota)+')'):('&#9888; Nota Belum Lengkap ('+rupiah(totalNota)+' dari '+rupiah(t.kredit)+')'))
+  +'</div><div class="x">'+notas.length+' nota | '+totalFoto+' foto tagging</div></div>'
+  +'<div class="sechead">&#129534; Rincian Nota &amp; Foto Barang</div>'
+  +notaHtml
+  +'<div class="total">Total Nota: '+rupiah(totalNota)+'</div>'
+  +'<div class="foot">Dicetak dari Sistem Kas Tunai Politeknik KP Sorong TA '+thn+'</div>'
+  +'</body></html>';
+}
 
 /* ============== Foto nota (geotagging) ============== */
 var _fotoTarget=null, _fotoNotaId=1, _fotoGps=null;
