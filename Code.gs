@@ -142,6 +142,59 @@ function serverTambahTransaksi(data) {
 }
 
 /* ============================================================
+ * Impor Rekening Koran (Bank) — .xlsx via Advanced Drive Service
+ * ============================================================ */
+/** Konversi .xlsx (base64) ke Google Sheet sementara, baca semua sel, lalu hapus.
+ *  Kembalikan array 2D (tanggal di-format string) untuk pratinjau & pemetaan di frontend. */
+function serverParseRekKoran(base64, filename) {
+  var blob = Utilities.newBlob(Utilities.base64Decode(base64), MimeType.MICROSOFT_EXCEL, filename || 'rk.xlsx');
+  var tmp = Drive.Files.insert({ title: 'tmp_rk_' + Date.now(), mimeType: MimeType.GOOGLE_SHEETS }, blob, { convert: true });
+  var tz = Session.getScriptTimeZone();
+  try {
+    var sheet = SpreadsheetApp.openById(tmp.id).getSheets()[0];
+    var values = sheet.getDataRange().getValues();
+    return values.map(function (row) {
+      return row.map(function (c) {
+        return (c instanceof Date) ? Utilities.formatDate(c, tz, 'yyyy-MM-dd') : c;
+      });
+    });
+  } finally {
+    try { Drive.Files.remove(tmp.id); } catch (e) {}
+  }
+}
+
+/** Simpan mutasi rekening koran sbg transaksi BANK (dedup via REF 'RK-...').
+ *  list: [{tanggal, uraian, debet, kredit}] — perspektif REKENING:
+ *  debet rekening = uang KELUAR (kredit app), kredit rekening = uang MASUK (debet app). */
+function serverImporBank(list) {
+  return _run(function () {
+    var hasil = { ditambah: 0, dilewati: 0 };
+    list = list || [];
+    for (var i = 0; i < list.length; i++) {
+      var it = list[i];
+      var masuk = Util.num(it.kredit);   // kredit rekening → masuk
+      var keluar = Util.num(it.debet);   // debet rekening → keluar
+      if (masuk <= 0 && keluar <= 0) continue;
+      var ref = 'RK-' + _rkRef(it.tanggal, masuk - keluar, it.uraian);
+      if (KasTunai.findByRef(ref)) { hasil.dilewati++; continue; }
+      KasTunai.tambahTransaksi({
+        tanggal: it.tanggal, debet: masuk, kredit: keluar, sumber: 'BANK', refTransfer: ref,
+        kegiatan: (it.uraian || 'Mutasi bank'), penjab: 'Bank',
+        keterangan: 'Impor rekening koran' });
+      hasil.ditambah++;
+    }
+    return hasil;
+  });
+}
+/** Penanda unik baris rekening koran untuk anti-duplikat. */
+function _rkRef(tanggal, nominal, uraian) {
+  var key = String(tanggal || '') + '|' + nominal + '|' + String(uraian || '').replace(/\s+/g, ' ').trim();
+  var h = 0;
+  for (var i = 0; i < key.length; i++) { h = (h * 31 + key.charCodeAt(i)) & 0x7fffffff; }
+  return h.toString(36);
+}
+
+/* ============================================================
  * Multi Nota
  * ============================================================ */
 function serverGetMultiNota(transactionId) {
