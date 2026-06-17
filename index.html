@@ -478,6 +478,10 @@
       <div class="keg" id="pjKategori" style="font-size:14px"></div>
       <div class="tgl" id="pjNominal"></div>
     </div>
+    <div class="field"><label>Nilai Kontrak / Nota (dasar DPP)</label>
+      <input type="text" class="numfmt" id="pjNilaiDasar" inputmode="numeric" value="0" oninput="recalcPajak()">
+      <div class="tgl" style="margin-top:2px">DPP = 100/111 &times; nilai ini (bila termasuk PPN). Isi sesuai nilai kontrak/nota bruto, bukan nilai bersih transfer.</div>
+    </div>
     <div class="field"><label>Penyedia / Rekanan</label>
       <input type="text" id="pjPenyedia" list="pjPenyediaList" oninput="onPajakPenyediaInput()" autocomplete="off" placeholder="nama rekanan (Wajib Pajak)">
       <datalist id="pjPenyediaList"></datalist>
@@ -935,7 +939,8 @@ function _cardHtml(t, mode){
   }
   var fnJml=fotoCount(t), lunas=isNotaLunas(t);
   var kembali=(+t.kembalianTotal||0);
-  var pj=hitungPajak(t.kegiatan,t.kredit);
+  // Dasar DPP pajak = nilai kontrak/nota bruto (Nilai SPBY bila diisi), bukan nilai bersih transfer
+  var pj=hitungPajak(t.kegiatan, (+t.nilaiSpby>0)?t.nilaiSpby:t.kredit);
   var sisa=_spbyTarget(t)-t.notaTotal-kembali; if(sisa<0) sisa=0;
   var st = t.noSpby ? 'st-spby'
     : (lunas && fnJml>0) ? 'st-sudah'
@@ -2342,7 +2347,9 @@ function openModalPajak(noTransaksi){
   if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
   _sspTarget=noTransaksi;
   document.getElementById('pjTxLabel').textContent='No '+t.no;
-  document.getElementById('pjNominal').textContent='Nilai transaksi: '+rupiah(t.kredit);
+  document.getElementById('pjNominal').textContent='Nilai pengeluaran (transfer): '+rupiah(t.kredit)+(+t.nilaiSpby>0?(' · Nilai SPBY (bruto): '+rupiah(t.nilaiSpby)):'');
+  // Dasar DPP = nilai kontrak/nota bruto (pakai Nilai SPBY bila ada, selain itu nilai transaksi)
+  document.getElementById('pjNilaiDasar').value=_grp((+t.nilaiSpby>0)?t.nilaiSpby:t.kredit);
   document.getElementById('pjTermasukPPN').checked=true;
   document.getElementById('pjAdaNpwp').checked=true;
   // NPWP Poltek (pemungut) — diingat browser
@@ -2374,7 +2381,8 @@ function openModalPajak(noTransaksi){
 }
 function recalcPajak(){
   var t=_cariTransaksi(_sspTarget); if(!t) return;
-  var pj=hitungPajak(t.kegiatan, t.kredit,
+  var dasar=unfmt(document.getElementById('pjNilaiDasar').value)||t.kredit;
+  var pj=hitungPajak(t.kegiatan, dasar,
     document.getElementById('pjTermasukPPN').checked,
     document.getElementById('pjAdaNpwp').checked);
   document.getElementById('pjKategori').textContent=pj.label+(pj.jenisPPh?(' — '+pj.jenisPPh):'');
@@ -2618,7 +2626,8 @@ function _kuitansiPage(t, o){
 /* ============== SSP (dasar) ============== */
 function cetakSSP(jenis){
   var t=_cariTransaksi(_sspTarget); if(!t) return;
-  var pj=hitungPajak(t.kegiatan, t.kredit,
+  var dasar=unfmt(document.getElementById('pjNilaiDasar').value)||t.kredit;
+  var pj=hitungPajak(t.kegiatan, dasar,
     document.getElementById('pjTermasukPPN').checked,
     document.getElementById('pjAdaNpwp').checked);
   if(jenis==='pph' && !pj.pph){ toast('Tidak ada PPh untuk transaksi ini','info'); return; }
