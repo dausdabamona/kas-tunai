@@ -226,6 +226,20 @@
     </select>
   </div>
 
+  <div class="search" style="margin-top:8px">&#128100;
+    <select id="filterPenjab" onchange="onFilterPenjab()" style="flex:1;border:none;background:transparent;font:inherit;color:inherit;outline:none">
+      <option value="">Semua Penanggung Jawab</option>
+    </select>
+  </div>
+
+  <div class="search" style="margin-top:8px">&#8597;
+    <select id="filterSort" onchange="onFilterSort()" style="flex:1;border:none;background:transparent;font:inherit;color:inherit;outline:none">
+      <option value="terbaru">Urutkan: Terbaru</option>
+      <option value="nilai">Urutkan: Nilai Tertinggi</option>
+      <option value="nilaiasc">Urutkan: Nilai Terendah</option>
+    </select>
+  </div>
+
   <div class="filters" id="filterBar">
     <button data-f="all">Semua</button>
     <button data-f="belum">Belum SPJ</button>
@@ -560,6 +574,8 @@ var allTransaksi  = [];
 var currentFilter = 'belumfoto';
 var currentSearch = '';        // kata kunci pencarian (kegiatan/penjab)
 var currentMonth  = '';        // filter bulan 'YYYY-MM' ('' = semua bulan)
+var currentPenjab = '';        // filter penanggung jawab ('' = semua)
+var currentSort   = 'terbaru'; // urutan daftar: 'terbaru' | 'nilai' | 'nilaiasc'
 var _txMode       = 'keluar';  // mode form transaksi: 'masuk' | 'keluar'
 var _txEditNo     = null;      // null = tambah baru; berisi NO saat mengedit transaksi
 var fotoJmlMap    = {};      // {noTransaksi: jumlahFotoNota}
@@ -822,6 +838,27 @@ function _matchSearch(t){
 function _matchMonth(t){
   return !currentMonth || String(t.tanggal||'').slice(0,7)===currentMonth;
 }
+function _matchPenjab(t){
+  return !currentPenjab || String(t.penjab||'')===currentPenjab;
+}
+function _nilai(t){ return Math.max(+t.kredit||0, +t.debet||0); }
+function onFilterPenjab(){ currentPenjab=document.getElementById('filterPenjab').value; renderList(); }
+function onFilterSort(){ currentSort=document.getElementById('filterSort').value; renderList(); }
+/* Isi dropdown penanggung jawab dari nama unik di data (A→Z) */
+function _populatePenjab(){
+  var sel=document.getElementById('filterPenjab'); if(!sel) return;
+  var seen={}, names=[];
+  for(var i=0;i<allTransaksi.length;i++){
+    var p=String(allTransaksi[i].penjab||'').trim();
+    if(p && !seen[p]){ seen[p]=1; names.push(p); }
+  }
+  names.sort(function(a,b){return a.localeCompare(b);});
+  if(currentPenjab && !seen[currentPenjab]) currentPenjab='';
+  var html='<option value="">Semua Penanggung Jawab</option>';
+  for(var j=0;j<names.length;j++) html+='<option value="'+esc(names[j])+'">'+esc(names[j])+'</option>';
+  sel.innerHTML=html;
+  sel.value=currentPenjab;
+}
 var _NAMA_BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 function _labelBulan(ym){ var p=ym.split('-'); return (_NAMA_BULAN[(+p[1]||1)-1]||'')+' '+p[0]; }
 function onFilterBulan(){ currentMonth=document.getElementById('filterBulan').value; renderList(); }
@@ -949,10 +986,14 @@ function _cardHtml(t, mode){
 function renderList(){
   updateSaldoBar();
   _populateBulan();
+  _populatePenjab();
   var box=document.getElementById('listTransaksi');
   var byNoDesc=function(a,b){return (+b.no||0)-(+a.no||0);}; // terbaru (No terbesar) di atas
-  var keluar=allTransaksi.filter(function(t){return t.kredit>0;}).filter(passFilter).filter(_matchSearch).filter(_matchMonth).sort(byNoDesc);
-  var masuk =allTransaksi.filter(function(t){return t.debet>0;}).filter(_matchSearch).filter(_matchMonth).sort(byNoDesc);
+  var cmp = currentSort==='nilai'    ? function(a,b){return _nilai(b)-_nilai(a);}   // nilai tertinggi
+          : currentSort==='nilaiasc' ? function(a,b){return _nilai(a)-_nilai(b);}   // nilai terendah
+          : byNoDesc;
+  var keluar=allTransaksi.filter(function(t){return t.kredit>0;}).filter(passFilter).filter(_matchSearch).filter(_matchMonth).filter(_matchPenjab).sort(cmp);
+  var masuk =allTransaksi.filter(function(t){return t.debet>0;}).filter(_matchSearch).filter(_matchMonth).filter(_matchPenjab).sort(cmp);
   var belum =keluar.filter(function(t){return t.notaJml===0;});
   var sudah =keluar.filter(function(t){return t.notaJml>0;});
 
