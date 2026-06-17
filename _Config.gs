@@ -24,6 +24,7 @@ var CONFIG = {
     PENGEMBALIAN:   'Pengembalian',
     FOTO_BARANG:    'Foto Barang',
     MASTER_PENYEDIA:'Master Penyedia',
+    SURAT_TUGAS:    'Surat Tugas',
     AUDIT_LOG:      'Audit Log'
   },
 
@@ -69,6 +70,12 @@ var CONFIG = {
     ],
     MASTER_PENYEDIA: [
       'NO', 'NAMA_PENYEDIA', 'NPWP', 'ALAMAT', 'TERAKHIR_DIGUNAKAN', 'FREKUENSI'
+    ],
+    SURAT_TUGAS: [
+      'NO', 'NO_TRANSAKSI', 'NOMOR_SURAT', 'PEGAWAI', 'NIP', 'PANGKAT', 'JABATAN',
+      'MAKSUD', 'ANGKUTAN', 'BERANGKAT', 'TUJUAN', 'TGL_MULAI', 'TGL_SELESAI',
+      'JUMLAH_HARI', 'BIAYA', 'AKUN', 'PPK', 'NIP_PPK',
+      'LOK_NAMA', 'LOK_JAB', 'KERJA_NAMA', 'KERJA_JAB', 'CREATED_AT', 'CREATED_BY'
     ],
     AUDIT_LOG: [
       'TIMESTAMP', 'ACTION', 'SHEET', 'ROW_REF', 'DETAIL', 'OPERATOR'

@@ -52,14 +52,35 @@ function serverGetTransaksi() {
   return _run(function () { return KasTunai.getTransaksi(); });
 }
 
-/** Muat data dashboard awal dalam satu round-trip: transaksi + jumlah foto. */
+/** Muat data dashboard awal dalam satu round-trip: transaksi + jumlah foto + surat tugas. */
 function serverGetDashboard() {
   return _run(function () {
     return {
       transaksi: KasTunai.getTransaksi(),
-      fotoMap: FotoNota.getJmlFotoPerTransaksi()
+      fotoMap: FotoNota.getJmlFotoPerTransaksi(),
+      suratMap: SuratTugas.getMap()
     };
   });
+}
+
+/* ============================================================
+ * Perjalanan Dinas / Surat Tugas
+ * ============================================================ */
+function serverSimpanPerjalananDinas(data) {
+  return _run(function () {
+    var res = KasTunai.tambahTransaksi({
+      tanggal: data.tglMulai,
+      debet: 0, kredit: Util.num(data.biaya),
+      penjab: data.pegawai || '',
+      kegiatan: data.maksud || ('Perjalanan Dinas ' + (data.nomor || '')),
+      keterangan: 'Surat Tugas ' + (data.nomor || '') + ' (' + Util.num(data.jumlahHari) + ' hari)'
+    });
+    SuratTugas.simpan(res.no, data);
+    return { success: true, no: res.no };
+  });
+}
+function serverGetSuratTugas(noTransaksi) {
+  return _run(function () { return SuratTugas.get(noTransaksi); });
 }
 function serverTambahTransaksi(data) {
   return _run(function () { return KasTunai.tambahTransaksi(data); });

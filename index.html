@@ -193,6 +193,7 @@
 
 <div class="tabs">
   <button id="tabTransaksi" class="active" onclick="switchTab('transaksi')">&#128221; Transaksi</button>
+  <button id="tabSpd" onclick="switchTab('spd')">&#9992; Perjalanan Dinas</button>
   <button id="tabLaporan" onclick="switchTab('laporan')">&#128202; Laporan</button>
 </div>
 
@@ -227,6 +228,52 @@
     <span class="r"><span id="daftarCount">0 transaksi</span></span>
   </div>
   <div id="listTransaksi"></div>
+</div>
+
+<!-- ================= TAB PERJALANAN DINAS ================= -->
+<div id="viewSpd" class="wrap hidden">
+  <div class="daftar-head" style="border-radius:10px">&#9992; Surat Perjalanan Dinas Dalam Kota</div>
+  <div class="listbox" style="border-top:1px solid var(--c-line);border-radius:10px;margin-top:10px">
+    <div class="field"><label>Nomor Surat Tugas</label><input type="text" id="spdNomor" placeholder="mis. 094/ST/2026"></div>
+    <div class="row2">
+      <div class="field"><label>Nama Pegawai</label><input type="text" id="spdPegawai"></div>
+      <div class="field"><label>NIP Pegawai</label><input type="text" id="spdNip"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Pangkat / Golongan</label><input type="text" id="spdPangkat"></div>
+      <div class="field"><label>Jabatan / Instansi</label><input type="text" id="spdJabatan"></div>
+    </div>
+    <div class="field"><label>Maksud tujuan perjalanan</label><input type="text" id="spdMaksud"></div>
+    <div class="field"><label>Alat angkutan</label><input type="text" id="spdAngkutan"></div>
+    <div class="row2">
+      <div class="field"><label>Tempat berangkat</label><input type="text" id="spdBerangkat"></div>
+      <div class="field"><label>Tempat tujuan</label><input type="text" id="spdTujuan"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Tanggal mulai</label><input type="date" id="spdTglB" onchange="hitungHari()"></div>
+      <div class="field"><label>Tanggal selesai</label><input type="date" id="spdTglS" onchange="hitungHari()"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Jumlah hari</label><input type="text" id="spdHari" readonly></div>
+      <div class="field"><label>Besar biaya (Rp)</label><input type="number" id="spdBiaya" value="0"></div>
+    </div>
+    <div class="field"><label>Akun / kode rekening</label><input type="text" id="spdAkun"></div>
+    <div class="field"><label>Pejabat pemberi perintah</label><input type="text" id="spdPpk"></div>
+    <div class="field"><label>NIP pemberi perintah</label><input type="text" id="spdNipPpk"></div>
+    <hr>
+    <div style="font-size:12px;color:var(--c-muted);margin-bottom:6px">Mengetahui (opsional)</div>
+    <div class="row2">
+      <div class="field"><label>Lokasi: Nama</label><input type="text" id="spdLokNama"></div>
+      <div class="field"><label>Lokasi: Jabatan</label><input type="text" id="spdLokJab"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Pekerjaan: Nama</label><input type="text" id="spdKerjaNama"></div>
+      <div class="field"><label>Pekerjaan: Jabatan</label><input type="text" id="spdKerjaJab"></div>
+    </div>
+    <button class="btn" style="background:#0369a1" onclick="cetakSpdForm()">&#128424; Cetak SPD (pratinjau)</button>
+    <button class="btn" style="background:var(--c-ok);margin-top:8px" onclick="simpanPerjalananDinas()">Simpan ke Kas Tunai</button>
+    <button class="btn ghost" style="margin-top:8px" onclick="resetSpdForm()">Reset</button>
+  </div>
 </div>
 
 <!-- ================= TAB LAPORAN ================= -->
@@ -371,48 +418,6 @@
   </div>
 </div>
 
-<!-- ================= MODAL SPD (isian Perjalanan Dinas) ================= -->
-<div class="modal" id="modalSpd">
-  <div class="sheet">
-    <h2>Surat Perjalanan Dinas <span id="spdTxLabel"></span></h2>
-    <div class="field"><label>Pejabat pemberi perintah</label><input type="text" id="spdPpk"></div>
-    <div class="row2">
-      <div class="field"><label>NIP pemberi perintah</label><input type="text" id="spdNipPpk"></div>
-      <div class="field"><label>Nama pegawai diperintah</label><input type="text" id="spdNama"></div>
-    </div>
-    <div class="row2">
-      <div class="field"><label>NIP pegawai</label><input type="text" id="spdNip"></div>
-      <div class="field"><label>Pangkat / Golongan</label><input type="text" id="spdPangkat"></div>
-    </div>
-    <div class="field"><label>Jabatan / Instansi</label><input type="text" id="spdJabatan"></div>
-    <div class="field"><label>Maksud tujuan perjalanan</label><input type="text" id="spdMaksud"></div>
-    <div class="field"><label>Alat angkutan</label><input type="text" id="spdAngkutan"></div>
-    <div class="field"><label>Tempat berangkat</label><input type="text" id="spdBerangkat"></div>
-    <div class="field"><label>Tempat tujuan</label><input type="text" id="spdTujuan"></div>
-    <div class="row2">
-      <div class="field"><label>Lamanya</label><input type="text" id="spdLama"></div>
-      <div class="field"><label>Tgl berangkat</label><input type="date" id="spdTglB" onchange="if(!document.getElementById('spdTglK').value)document.getElementById('spdTglK').value=this.value"></div>
-    </div>
-    <div class="row2">
-      <div class="field"><label>Tgl kembali</label><input type="date" id="spdTglK"></div>
-      <div class="field"><label>Besar biaya (Rp)</label><input type="number" id="spdBiaya"></div>
-    </div>
-    <div class="field"><label>Akun / kode rekening</label><input type="text" id="spdAkun"></div>
-    <hr>
-    <div style="font-size:12px;color:var(--c-muted);margin-bottom:6px">Mengetahui (opsional)</div>
-    <div class="row2">
-      <div class="field"><label>Lokasi: Nama</label><input type="text" id="spdLokNama"></div>
-      <div class="field"><label>Lokasi: Jabatan</label><input type="text" id="spdLokJab"></div>
-    </div>
-    <div class="row2">
-      <div class="field"><label>Pekerjaan: Nama</label><input type="text" id="spdKerjaNama"></div>
-      <div class="field"><label>Pekerjaan: Jabatan</label><input type="text" id="spdKerjaJab"></div>
-    </div>
-    <button class="btn" onclick="submitSpd()">&#128424; Cetak SPD</button>
-    <button class="btn ghost" onclick="closeModal('modalSpd')">Tutup</button>
-  </div>
-</div>
-
 <div id="toast"></div>
 <div id="loading"><div class="spinner"></div><div class="msg" id="loadingMsg">Memuat...</div></div>
 
@@ -429,6 +434,7 @@ var currentFilter = 'belumfoto';
 var currentSearch = '';        // kata kunci pencarian (kegiatan/penjab)
 var _txMode       = 'keluar';  // mode form transaksi: 'masuk' | 'keluar'
 var fotoJmlMap    = {};      // {noTransaksi: jumlahFotoNota}
+var suratMap      = {};      // {noTransaksi: nomorSurat} penanda perjalanan dinas
 var _notaTarget   = null;    // noTransaksi yang sedang dikelola notanya
 var _kbTarget     = null;    // noTransaksi yang sedang dikelola pengembaliannya
 var _allPenyedia  = null;
@@ -571,10 +577,13 @@ function fail(e){showLoading(false);toast('Gagal: '+(e&&e.message?e.message:e),'
 /* ============== Tab ============== */
 function switchTab(tab){
   document.getElementById('viewTransaksi').classList.toggle('hidden',tab!=='transaksi');
+  document.getElementById('viewSpd').classList.toggle('hidden',tab!=='spd');
   document.getElementById('viewLaporan').classList.toggle('hidden',tab!=='laporan');
   document.getElementById('tabTransaksi').classList.toggle('active',tab==='transaksi');
+  document.getElementById('tabSpd').classList.toggle('active',tab==='spd');
   document.getElementById('tabLaporan').classList.toggle('active',tab==='laporan');
   if(tab==='laporan') loadRekap();
+  if(tab==='spd' && !document.getElementById('spdPpk').value) resetSpdForm();
 }
 
 /* ============== Load transaksi ============== */
@@ -584,6 +593,7 @@ function loadAll(){
     .withSuccessHandler(function(d){
       allTransaksi=(d&&d.transaksi)||[];
       fotoJmlMap=(d&&d.fotoMap)||{};
+      suratMap=(d&&d.suratMap)||{};
       showLoading(false);
       renderList();
     })
@@ -718,13 +728,21 @@ function _cardHtml(t, mode){
   var kwChip=t.kuitansiUrl?'<span class="chip ok">&#129534; TTD &#10003;</span>':'';
   h+='<div class="chips">'+spjChip+notaChip+fotoChip+kwChip+'</div>';
   // actions
-  h+='<div class="acts">'
-    +'<button class="b-orange" onclick="openModalNota('+t.no+')">Kelola Nota</button>'
-    +'<button class="b-gray" onclick="openFoto('+t.no+')">Foto</button>'
-    +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">Kuitansi</button>'
-    +'<button class="b-spby" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+(t.noSpby?'SPBY &#10003;':'SPBY')+'</button>'
-    +'<button class="b-spd" onclick="cetakSpd('+t.no+')">SPD</button>';
-  if(lunas) h+='<button class="b-dark" onclick="cetakSPJ('+t.no+')">Cetak SPJ</button>';
+  var isPd=!!suratMap[String(t.no)];
+  h+='<div class="acts">';
+  if(isPd){
+    // Kartu Perjalanan Dinas: pertanggungjawaban via SPD (tanpa Kelola Nota)
+    h+='<button class="b-gray" onclick="openFoto('+t.no+')">Foto</button>'
+      +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">Kuitansi</button>'
+      +'<button class="b-spby" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+(t.noSpby?'SPBY &#10003;':'SPBY')+'</button>'
+      +'<button class="b-spd" onclick="cetakSpd('+t.no+')">SPD</button>';
+  } else {
+    h+='<button class="b-orange" onclick="openModalNota('+t.no+')">Kelola Nota</button>'
+      +'<button class="b-gray" onclick="openFoto('+t.no+')">Foto</button>'
+      +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">Kuitansi</button>'
+      +'<button class="b-spby" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+(t.noSpby?'SPBY &#10003;':'SPBY')+'</button>';
+    if(lunas) h+='<button class="b-dark" onclick="cetakSPJ('+t.no+')">Cetak SPJ</button>';
+  }
   h+='</div></div>';
   return h;
 }
@@ -893,37 +911,56 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
   +'</body></html>';
 }
 
-/* ============== Surat Perjalanan Dinas Dalam Kota ============== */
-var _spdTarget=null;
-function cetakSpd(no){
-  var t=_cariTransaksi(no);
-  if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
-  _spdTarget=no;
-  document.getElementById('spdTxLabel').textContent='No '+no;
-  var iso=(t.tanggal&&/^\d{4}-\d\d-\d\d$/.test(t.tanggal))?t.tanggal:todayISO();
-  var V={spdPpk:INST.ppk,spdNipPpk:INST.nipPpk,spdNama:t.penjab||'',spdNip:'',
-    spdPangkat:'',spdJabatan:'',spdMaksud:t.kegiatan||'',spdAngkutan:'Kendaraan Roda Dua',
-    spdBerangkat:'Kampus Politeknik KP Sorong',spdTujuan:'',spdLama:'Satu Hari',
-    spdTglB:iso,spdTglK:iso,spdBiaya:(+t.kredit||0),spdAkun:'',
-    spdLokNama:'',spdLokJab:'',spdKerjaNama:'',spdKerjaJab:''};
+/* ============== Surat Perjalanan Dinas (menu Perjalanan Dinas) ============== */
+function resetSpdForm(){
+  var V={spdNomor:'',spdPegawai:'',spdNip:'',spdPangkat:'',spdJabatan:'',spdMaksud:'',
+    spdAngkutan:'Kendaraan Roda Dua',spdBerangkat:'Kampus Politeknik KP Sorong',spdTujuan:'',
+    spdTglB:todayISO(),spdTglS:todayISO(),spdBiaya:0,spdAkun:'',
+    spdPpk:INST.ppk,spdNipPpk:INST.nipPpk,spdLokNama:'',spdLokJab:'',spdKerjaNama:'',spdKerjaJab:''};
   for(var id in V) document.getElementById(id).value=V[id];
-  openModal('modalSpd');
+  hitungHari();
 }
-function submitSpd(){
-  var t=_cariTransaksi(_spdTarget); if(!t) return;
+function hitungHari(){
+  var b=document.getElementById('spdTglB').value, s=document.getElementById('spdTglS').value;
+  var n=1;
+  if(b&&s){ n=Math.round((new Date(s)-new Date(b))/86400000)+1; if(n<1)n=1; }
+  document.getElementById('spdHari').value=n+' Hari';
+}
+function _gatherSpd(){
   function g(id){return (document.getElementById(id).value||'').trim();}
-  var data={
-    ppk:g('spdPpk'), nipPpk:g('spdNipPpk'), nama:g('spdNama'), nip:g('spdNip'),
-    pangkat:g('spdPangkat'), jabatan:g('spdJabatan'), maksud:g('spdMaksud'),
-    angkutan:g('spdAngkutan'), berangkat:g('spdBerangkat'), tujuan:g('spdTujuan'),
-    lama:g('spdLama'), tglB:g('spdTglB'), tglK:g('spdTglK'),
-    biaya:(parseFloat(g('spdBiaya'))||0), akun:g('spdAkun'),
-    lokNama:g('spdLokNama'), lokJab:g('spdLokJab'), kerjaNama:g('spdKerjaNama'), kerjaJab:g('spdKerjaJab')
-  };
-  closeModal('modalSpd');
-  _bukaPopup(_renderSpdHtml(t, data));
+  var b=g('spdTglB'), s=g('spdTglS');
+  var n=1; if(b&&s){ n=Math.round((new Date(s)-new Date(b))/86400000)+1; if(n<1)n=1; }
+  return { nomor:g('spdNomor'), pegawai:g('spdPegawai'), nip:g('spdNip'), pangkat:g('spdPangkat'),
+    jabatan:g('spdJabatan'), maksud:g('spdMaksud'), angkutan:g('spdAngkutan'),
+    berangkat:g('spdBerangkat'), tujuan:g('spdTujuan'), tglMulai:b, tglSelesai:s, jumlahHari:n,
+    biaya:(parseFloat(g('spdBiaya'))||0), akun:g('spdAkun'), ppk:g('spdPpk'), nipPpk:g('spdNipPpk'),
+    lokNama:g('spdLokNama'), lokJab:g('spdLokJab'), kerjaNama:g('spdKerjaNama'), kerjaJab:g('spdKerjaJab') };
 }
-function _renderSpdHtml(t, data){
+function cetakSpdForm(){ _bukaPopup(_renderSpdHtml(_gatherSpd())); }
+function simpanPerjalananDinas(){
+  var data=_gatherSpd();
+  if(data.biaya<=0){ toast('Besar biaya harus > 0','error'); return; }
+  if(!data.pegawai){ toast('Nama pegawai wajib diisi','error'); return; }
+  showLoading(true,'Menyimpan ke kas tunai...');
+  google.script.run
+    .withSuccessHandler(function(res){ showLoading(false);
+      toast('Tersimpan sebagai pengeluaran No '+res.no,'success');
+      _bukaPopup(_renderSpdHtml(data));
+      resetSpdForm(); switchTab('transaksi'); loadAll(); })
+    .withFailureHandler(fail)
+    .serverSimpanPerjalananDinas(data);
+}
+/* Cetak ulang SPD dari kartu transaksi perjalanan dinas */
+function cetakSpd(no){
+  showLoading(true,'Memuat surat tugas...');
+  google.script.run
+    .withSuccessHandler(function(st){ showLoading(false);
+      if(!st){ toast('Data surat tugas tidak ditemukan','error'); return; }
+      _bukaPopup(_renderSpdHtml(st)); })
+    .withFailureHandler(fail)
+    .serverGetSuratTugas(no);
+}
+function _renderSpdHtml(data){
   data=data||{};
   var d='..................................';
   function f(v){ return (v!=null && String(v).trim()!=='') ? esc(String(v)) : d; }
@@ -931,7 +968,7 @@ function _renderSpdHtml(t, data){
   var biaya=(+data.biaya||0);
   function R(n,l,v){return '<tr><td class="no">'+n+'</td><td class="lbl">'+l+'</td><td>'+v+'</td></tr>';}
   return ''
-  +'<html><head><meta charset="utf-8"><title>SPD Dalam Kota No '+t.no+'</title><style>'
+  +'<html><head><meta charset="utf-8"><title>SPD '+(data.nomor||'Dalam Kota')+'</title><style>'
   +'@page{size:A4 portrait;margin:0} *{font-family:Arial,sans-serif;box-sizing:border-box}'
   +'body{font-size:12px;color:#000;margin:0;padding:15mm}'
   +'h1{text-align:center;font-size:15px;margin:0 0 14px;text-transform:uppercase}'
@@ -944,30 +981,31 @@ function _renderSpdHtml(t, data){
   +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button></div>'
   +'<div style="text-align:center;font-weight:bold">'+esc(INST.namaWP).toUpperCase()+'</div>'
   +'<h1>Surat Perjalanan Dinas Dalam Kota</h1>'
+  +(data.nomor?('<div style="text-align:center;margin:-8px 0 12px">Nomor Surat Tugas : '+esc(data.nomor)+'</div>'):'')
   +'<table class="b">'
   +R(1,'Pejabat berwenang yang memberikan perintah', f(data.ppk))
-  +R(2,'Nama/NIP Pegawai yang diperintahkan','Nama : '+f(data.nama)+'<br>NIP &nbsp;&nbsp;: '+f(data.nip))
+  +R(2,'Nama/NIP Pegawai yang diperintahkan','Nama : '+f(data.pegawai)+'<br>NIP &nbsp;&nbsp;: '+f(data.nip))
   +R(3,'a.&nbsp; Pangkat dan Golongan<br>b.&nbsp; Jabatan / Instansi','a.&nbsp; '+f(data.pangkat)+'<br>b.&nbsp; '+f(data.jabatan))
   +R(4,'Maksud tujuan perjalanan', f(data.maksud))
   +R(5,'Alat angkutan yang digunakan', f(data.angkutan))
   +R(6,'a.&nbsp; Tempat berangkat<br>b.&nbsp; Tempat Tujuan','a.&nbsp; '+f(data.berangkat)+'<br>b.&nbsp; '+f(data.tujuan))
-  +R(7,'a.&nbsp; Lamanya pelaksanaan pekerjaan<br>b.&nbsp; Tanggal berangkat<br>c.&nbsp; Tanggal kembali','a.&nbsp; '+f(data.lama)+'<br>b.&nbsp; '+fd(data.tglB)+'<br>c.&nbsp; '+fd(data.tglK))
+  +R(7,'a.&nbsp; Lamanya pelaksanaan pekerjaan<br>b.&nbsp; Tanggal berangkat<br>c.&nbsp; Tanggal kembali','a.&nbsp; '+f((+data.jumlahHari>0)?(data.jumlahHari+' Hari'):'')+'<br>b.&nbsp; '+fd(data.tglMulai)+'<br>c.&nbsp; '+fd(data.tglSelesai))
   +R(8,'Pembebanan Anggaran<br>a.&nbsp; Instansi<br>b.&nbsp; Akun<br>c.&nbsp; Besar Biaya<br>d.&nbsp; Terbilang',
        'a.&nbsp; '+esc(INST.namaWP)+'<br>b.&nbsp; '+f(data.akun)+'<br>c.&nbsp; Rp '+biaya.toLocaleString('id-ID')+',-<br>d.&nbsp; <i>'+_terbilangTitle(biaya)+'</i>')
   +'</table>'
   +'<table class="sig"><tr>'
   +'<td><div class="ttl">PEGAWAI YANG DIPERINTAHKAN,</div>'
-  +'<div class="nm">Nama : '+f(data.nama)+'</div>NIP &nbsp;&nbsp;: '+f(data.nip)+'</td>'
+  +'<div class="nm">Nama : '+f(data.pegawai)+'</div>NIP &nbsp;&nbsp;: '+f(data.nip)+'</td>'
   +'<td><div class="ttl">PEJABAT YANG MEMBERIKAN PERINTAH,</div>'
   +'a.n. Kuasa Pengguna Anggaran<br>Pejabat Pembuat Komitmen '+esc(INST.namaWP)
   +'<div class="nm">Nama : '+f(data.ppk)+'</div>NIP &nbsp;&nbsp;: '+f(data.nipPpk)+'</td>'
   +'</tr></table>'
   +'<table class="sig"><tr>'
   +'<td><div class="ttl">MENGETAHUI INSTANSI DI LOKASI PEKERJAAN</div>'
-  +'Nama Kota : '+esc(INST.kota)+'<br>Tanggal &nbsp;&nbsp;: '+fd(data.tglB)
+  +'Nama Kota : '+esc(INST.kota)+'<br>Tanggal &nbsp;&nbsp;: '+fd(data.tglMulai)
   +'<div class="nm">Nama &nbsp;&nbsp;&nbsp;: '+f(data.lokNama)+'</div>Jabatan : '+f(data.lokJab)+'</td>'
   +'<td><div class="ttl">TELAH DILAKSANAKAN PEKERJAAN</div>'
-  +'Nama Kota : '+esc(INST.kota)+'<br>Tanggal &nbsp;&nbsp;: '+fd(data.tglK)
+  +'Nama Kota : '+esc(INST.kota)+'<br>Tanggal &nbsp;&nbsp;: '+fd(data.tglSelesai)
   +'<div class="nm">Nama &nbsp;&nbsp;&nbsp;: '+f(data.kerjaNama)+'</div>Jabatan : '+f(data.kerjaJab)+'</td>'
   +'</tr></table>'
   +'</body></html>';
