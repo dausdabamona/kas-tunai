@@ -545,11 +545,11 @@
 <!-- ================= MODAL KUITANSI (cetak + upload TTD) ================= -->
 <div class="modal" id="modalKuitansi">
   <div class="sheet">
-    <h2>Kuitansi <span id="kwTxLabel"></span></h2>
+    <h2><span id="kwTitleTxt">Tanda Terima</span> <span id="kwTxLabel"></span></h2>
     <button class="btn b-dark" onclick="bukaPdfKuitansi(_kwTarget)">&#128424; Cetak / Simpan PDF</button>
     <hr>
     <div id="kwStatus"></div>
-    <div class="field"><label>Upload kuitansi yang sudah ditandatangani (foto/scan)</label>
+    <div class="field"><label>Upload kuitansi ber-TTD (mis. cetakan SAKTI, dilampiri SPBY)</label>
       <input type="file" id="kwFile" accept="image/*" capture="environment"></div>
     <button class="btn" style="background:var(--c-ok)" onclick="submitUploadKuitansi()">Upload Kuitansi TTD</button>
     <button class="btn ghost" onclick="closeModal('modalKuitansi')">Tutup</button>
@@ -1000,7 +1000,7 @@ function _cardHtml(t, mode){
     h+='<button class="b-edit" onclick="editTransaksi('+t.no+')">&#9998; Edit</button>'
       +'<button class="b-orange" onclick="openModalNota('+t.no+')">Kelola Nota</button>'
       +'<button class="b-gray" onclick="openFoto('+t.no+')">Foto</button>'
-      +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">Kuitansi</button>'
+      +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">Tanda Terima</button>'
       +'<button class="b-spby" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+(t.noSpby?'SPBY &#10003;':'SPBY')+'</button>';
     if(lunas) h+='<button class="b-dark" onclick="cetakSPJ('+t.no+')">Cetak SPJ</button>';
   }
@@ -2502,6 +2502,7 @@ var _kwTarget=null;
 function bukaModalKuitansi(no){
   _kwTarget=no;
   var t=_cariTransaksi(no);
+  document.getElementById('kwTitleTxt').textContent=suratMap[String(no)]?'Kuitansi':'Tanda Terima';
   document.getElementById('kwTxLabel').textContent='No '+no;
   document.getElementById('kwFile').value='';
   var el=document.getElementById('kwStatus');
@@ -2538,17 +2539,21 @@ function hapusKuitansiTtd(){
 function _renderKuitansiHtml(t, list){
   var thn=(String(t.tanggal||'').split('-')[0])||(''+new Date().getFullYear());
   var noBase='KT-'+('00'+t.no).slice(-3);
-  var pages;
+  var pages, docTitle;
   if(list && list.length){
+    // Perjalanan Dinas: tetap "KUITANSI" per pegawai
+    docTitle='Kuitansi '+noBase+'/'+thn;
     pages=list.map(function(p,i){
       var no=(list.length>1)?(noBase+'-'+(i+1)+'/'+thn):(noBase+'/'+thn);
       return _kuitansiPage(t,{ penerima:(p.nama||'(…………………)'), jumlah:(+p.biaya||0), noKwt:no });
     }).join('');
   } else {
-    pages=_kuitansiPage(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn });
+    // Transaksi biasa (uang muka PUM): Tanda Terima Uang Muka
+    docTitle='Tanda Terima Uang Muka '+noBase+'/'+thn;
+    pages=_kuitansiPage(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'TANDA TERIMA UANG MUKA' });
   }
   return ''
-  +'<html><head><meta charset="utf-8"><title>Kuitansi '+noBase+'/'+thn+'</title><style>'+_kuitansiCss()
+  +'<html><head><meta charset="utf-8"><title>'+esc(docTitle)+'</title><style>'+_kuitansiCss()
   +'</style></head><body>'
   +'<div class="noprint" style="text-align:right;padding:10px 16mm 0">'
   +'<button onclick="window.print()">Cetak / Simpan PDF</button></div>'
@@ -2580,7 +2585,7 @@ function _kuitansiPage(t, o){
   +'<div class="ad">'+esc(INST.alamatKop2)+'</div></div>'
   +'<hr class="hrt">'
 
-  +'<div class="judul">K U I T A N S I</div>'
+  +'<div class="judul" style="letter-spacing:'+((o.judul&&o.judul.length>12)?'3px':'6px')+'">'+esc(o.judul||'K U I T A N S I')+'</div>'
   +'<div class="nomor">Nomor: '+o.noKwt+'</div>'
 
   +'<table class="b">'
