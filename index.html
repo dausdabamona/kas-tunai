@@ -257,11 +257,14 @@
     <label><input type="radio" name="spdJenis" value="LUAR_KOTA" onchange="setSpdJenis('LUAR_KOTA')">Luar Kota</label>
   </div>
   <div class="listbox" style="border-top:1px solid var(--c-line);border-radius:10px;margin-top:10px">
-    <div class="field"><label>Nomor Surat Tugas</label><input type="text" id="spdNomor" placeholder="mis. 094/ST/2026"></div>
-    <div class="row2 lk-only">
-      <div class="field"><label>Dasar Surat</label><input type="text" id="spdDasar" placeholder="DIPA/POK / nomor undangan"></div>
-      <div class="field"><label>Tanggal Surat</label><input type="date" id="spdTglSurat"></div>
+    <div class="row2">
+      <div class="field"><label>Nomor Surat Tugas</label><input type="text" id="spdNomor" placeholder="mis. B.450/BPPSDM.5/KP.440/VI/2026"></div>
+      <div class="field"><label>Tanggal Surat Tugas</label><input type="date" id="spdTglSurat"></div>
     </div>
+    <div class="field"><label>Menimbang <span style="color:var(--c-muted);font-weight:400">(opsional — kosong = otomatis dari maksud)</span></label>
+      <textarea id="spdMenimbang" rows="2" style="width:100%;font:inherit;padding:8px;border:1px solid var(--c-line);border-radius:8px;box-sizing:border-box;resize:vertical" placeholder="Bahwa dalam rangka pelaksanaan kegiatan ..., dipandang perlu menugaskan pegawai dengan Surat Tugas."></textarea></div>
+    <div class="field"><label>Dasar <span style="color:var(--c-muted);font-weight:400">(satu rujukan per baris — mis. DIPA; surat undangan)</span></label>
+      <textarea id="spdDasar" rows="3" style="width:100%;font:inherit;padding:8px;border:1px solid var(--c-line);border-radius:8px;box-sizing:border-box;resize:vertical" placeholder="DIPA Politeknik KP Sorong TA 2026 Nomor SP DIPA ...&#10;Surat Undangan ... Nomor ... tanggal ..."></textarea></div>
     <div class="field"><label>Maksud tujuan perjalanan</label><input type="text" id="spdMaksud"></div>
     <div class="field"><label>Alat angkutan</label><input type="text" id="spdAngkutan"></div>
     <div class="row2">
@@ -301,6 +304,12 @@
       </div>
       <div class="field"><label>KPA: Jabatan</label><input type="text" id="spdKpaJab" placeholder="mis. Direktur selaku Kuasa Pengguna Anggaran"></div>
     </div>
+    <div style="font-size:12px;color:var(--c-muted);margin:6px 0">Penanda tangan Surat Tugas (default: Direktur Politeknik KP Sorong)</div>
+    <div class="row2">
+      <div class="field"><label>Nama penanda tangan</label><input type="text" id="spdTtdNama"></div>
+      <div class="field"><label>NIP penanda tangan</label><input type="text" id="spdTtdNip"></div>
+    </div>
+    <div class="field"><label>Jabatan penanda tangan</label><input type="text" id="spdTtdJab"></div>
     <hr>
     <div style="font-size:12px;color:var(--c-muted);margin-bottom:6px">Mengetahui (opsional)</div>
     <div class="row2">
@@ -313,7 +322,7 @@
     </div>
     <div id="spdEditNote" style="display:none;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:8px;padding:8px;margin-bottom:8px;font-size:13px"></div>
     <button class="btn" style="background:#0369a1" onclick="cetakSpdForm()">&#128424; Cetak SPD (pratinjau)</button>
-    <button class="btn lk-only" style="background:#1f3a5f;margin-top:8px" onclick="cetakSuratTugas()">&#128221; Cetak Surat Tugas</button>
+    <button class="btn" style="background:#1f3a5f;margin-top:8px" onclick="cetakSuratTugas()">&#128221; Cetak Surat Tugas</button>
     <button class="btn lk-only" style="background:#7c3aed;margin-top:8px" onclick="cetakRincianBiaya()">&#129534; Cetak Rincian Biaya (Kuitansi Rampung)</button>
     <button class="btn lk-only" style="background:#0d9488;margin-top:8px" onclick="cetakPengeluaranRiil()">&#128203; Cetak Daftar Pengeluaran Riil</button>
     <button id="btnSimpanSpd" class="btn" style="background:var(--c-ok);margin-top:8px" onclick="simpanPerjalananDinas()">Simpan ke Kas Tunai</button>
@@ -549,7 +558,24 @@ var INST = {
   nipBendahara: '198309122007011001',
   kota     : 'Sorong',
   // Logo Kementerian Keuangan (untuk header SSP)
-  logoPajak: 'https://commons.wikimedia.org/wiki/Special:FilePath/Seal_of_the_Ministry_of_Finance_of_the_Republic_of_Indonesia.svg?width=120'
+  logoPajak: 'https://commons.wikimedia.org/wiki/Special:FilePath/Seal_of_the_Ministry_of_Finance_of_the_Republic_of_Indonesia.svg?width=120',
+  // ===== Kop resmi Surat Tugas (hierarki kementerian) =====
+  kementerian: 'KEMENTERIAN KELAUTAN DAN PERIKANAN',
+  eselon1    : 'BADAN PENYULUHAN DAN PENGEMBANGAN SUMBER DAYA MANUSIA KELAUTAN DAN PERIKANAN',
+  satker     : 'POLITEKNIK KELAUTAN DAN PERIKANAN SORONG',
+  kopAlamat  : 'Jalan Kapitan Pattimura, Kelurahan Malaingkedi, Distrik Sorong Utara, Kota Sorong, Papua Barat Daya',
+  kopTelp    : '(0951) 321039',
+  kopFaks    : '',
+  kopLaman   : 'www.polikpsorong.ac.id',
+  kopSurel   : '',
+  kopPos     : '',
+  logoGaruda : '',   // URL logo Garuda/KKP untuk kop Surat Tugas (opsional)
+  // Penanda tangan Surat Tugas (default Direktur) — isi NIP kemudian
+  direktur       : 'Daniel Heintje Ndahawali',
+  nipDirektur    : '',
+  jabatanDirektur: 'Direktur Politeknik Kelautan dan Perikanan Sorong',
+  // Sumber dana untuk klausul "Untuk" pada Surat Tugas (boleh diganti No. SP DIPA lengkap)
+  dipa: 'DIPA Politeknik Kelautan dan Perikanan Sorong Tahun Anggaran 2026'
 };
 var MATERAI_MIN = 5000000; // pembayaran >= nilai ini wajib bermaterai Rp 10.000
 
@@ -1124,10 +1150,11 @@ function hitungSemuaBiaya(){
   }
 }
 function resetSpdForm(){
-  var V={spdNomor:'',spdDasar:'',spdTglSurat:'',spdMaksud:'',spdAngkutan:'Kendaraan Roda Dua',
+  var V={spdNomor:'',spdDasar:'',spdTglSurat:'',spdMenimbang:'',spdMaksud:'',spdAngkutan:'Kendaraan Roda Dua',
     spdBerangkat:'Kampus Politeknik KP Sorong',spdTujuan:'',
     spdTglB:todayISO(),spdTglS:todayISO(),spdHarian:SPD_HARIAN_DEFAULT,spdUangMuka:0,spdAkun:'',
     spdPpk:INST.ppk,spdNipPpk:INST.nipPpk,spdKpaNama:'',spdKpaNip:'',spdKpaJab:'',
+    spdTtdNama:INST.direktur,spdTtdNip:INST.nipDirektur,spdTtdJab:INST.jabatanDirektur,
     spdLokNama:'',spdLokJab:'',spdKerjaNama:'',spdKerjaJab:''};
   for(var id in V) document.getElementById(id).value=V[id];
   document.getElementById('spdPegList').innerHTML='';
@@ -1149,6 +1176,8 @@ function _fillSpdForm(d){
   function set(id,v){ var e=document.getElementById(id); if(e) e.value=(v==null?'':v); }
   setSpdJenis(d.jenis||'DALAM_KOTA');
   set('spdNomor',d.nomor); set('spdDasar',d.dasarSurat); set('spdTglSurat',d.tglSurat||'');
+  set('spdMenimbang',d.menimbang||'');
+  set('spdTtdNama',d.ttdNama||INST.direktur); set('spdTtdNip',d.ttdNip||INST.nipDirektur); set('spdTtdJab',d.ttdJab||INST.jabatanDirektur);
   set('spdMaksud',d.maksud); set('spdAngkutan',d.angkutan);
   set('spdBerangkat',d.berangkat); set('spdTujuan',d.tujuan);
   set('spdTglB',d.tglMulai||todayISO()); set('spdTglS',d.tglSelesai||todayISO());
@@ -1218,6 +1247,7 @@ function _gatherSpd(){
     berangkat:g('spdBerangkat'), tujuan:g('spdTujuan'), tglMulai:b, tglSelesai:s, jumlahHari:n,
     biaya:total, akun:g('spdAkun'), ppk:g('spdPpk'), nipPpk:g('spdNipPpk'),
     kpaNama:g('spdKpaNama'), kpaNip:g('spdKpaNip'), kpaJab:g('spdKpaJab'),
+    menimbang:g('spdMenimbang'), ttdNama:g('spdTtdNama'), ttdJab:g('spdTtdJab'), ttdNip:g('spdTtdNip'),
     lokNama:g('spdLokNama'), lokJab:g('spdLokJab'), kerjaNama:g('spdKerjaNama'), kerjaJab:g('spdKerjaJab') };
 }
 function cetakSpdForm(){ _bukaPopup(_renderSpdHtml(_gatherSpd())); }
@@ -1284,12 +1314,37 @@ function _docCss(){
   +'.sig2{width:100%;margin-top:10px} .sig2 td{width:50%;text-align:center;vertical-align:top;padding:6px}'
   +'.ttl{text-align:center;font-weight:bold;min-height:32px} .nm{margin-top:54px} .nmc{margin-top:60px;font-weight:bold}'
   +'.terb{background:#dcdcdc;font-style:italic;padding:7px 9px;border:1px solid #000;border-top:0}'
+  // Kop resmi & layout Surat Tugas
+  +'table.kopr{width:100%;border-collapse:collapse} .kopr .koplogo{width:90px;text-align:center;vertical-align:middle} .kopr .koplogo img{width:80px}'
+  +'.kopr .kopt{text-align:center;vertical-align:middle} .k1{font-size:12px} .k2{font-size:13px;font-weight:bold} .k3{font-size:16px;font-weight:bold} .kal{font-size:9px;line-height:1.35}'
+  +'hr.hrt2{border:0;border-top:3px double #000;margin:3px 0 14px}'
+  +'table.st{width:100%;border-collapse:collapse;margin:2px 0} table.st>tbody>tr>td{vertical-align:top;padding:2px 0} td.lblst{width:92px} td.sep{width:12px}'
+  +'ol.num{margin:0;padding-left:20px} ol.num li{margin-bottom:4px} ol.kepada li{margin-bottom:8px} ol.kepada .sub{font-size:11px;color:#333}'
+  +'.grat{margin-top:26px;font-style:italic;font-size:10px;border-top:1px solid #999;padding-top:4px}'
   +'.noprint{text-align:right;margin:8px 15mm 0}@media print{.noprint{display:none}}';
 }
 function _docKop(){
   return '<div class="kop">'+esc(INST.namaWP).toUpperCase()+'</div>'
    +'<div class="kopad">'+esc(INST.alamatKop1)+'</div>'
    +'<div class="kopad">'+esc(INST.alamatKop2)+'</div><hr class="hrt">';
+}
+/* Kop resmi bertingkat (Kementerian → Badan → Satker + kontak) untuk Surat Tugas */
+function _docKopResmi(){
+  var contact=[];
+  if(INST.kopTelp) contact.push('Telepon '+esc(INST.kopTelp));
+  if(INST.kopFaks) contact.push('Faksimile '+esc(INST.kopFaks));
+  if(INST.kopLaman) contact.push('Laman '+esc(INST.kopLaman));
+  if(INST.kopSurel) contact.push('Surel '+esc(INST.kopSurel));
+  var alamat=esc(INST.kopAlamat||(INST.alamatKop1+', '+INST.alamatKop2))+(INST.kopPos?(' Kotak Pos '+esc(INST.kopPos)):'');
+  return '<table class="kopr"><tr>'
+    +(INST.logoGaruda?('<td class="koplogo"><img src="'+esc(INST.logoGaruda)+'"></td>'):'')
+    +'<td class="kopt">'
+      +(INST.kementerian?('<div class="k1">'+esc(INST.kementerian)+'</div>'):'')
+      +(INST.eselon1?('<div class="k2">'+esc(INST.eselon1)+'</div>'):'')
+      +'<div class="k3">'+esc(INST.satker||INST.namaWP).toUpperCase()+'</div>'
+      +'<div class="kal">'+alamat+'</div>'
+      +(contact.length?('<div class="kal">'+contact.join(' &middot; ')+'</div>'):'')
+    +'</td></tr></table><hr class="hrt2">';
 }
 function _docWrap(title, pages){
   return '<html><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>'+_docCss()+'</style></head><body>'
@@ -1410,36 +1465,49 @@ function _spdPengesahanPage(data, peg){
 }
 /* 5.1 SURAT TUGAS — satu dokumen untuk semua pegawai */
 function cetakSuratTugas(){ _bukaPopup(_renderSuratTugasHtml(_gatherSpd())); }
-function _renderSuratTugasHtml(data){
+/* Badan Surat Tugas format resmi (dipakai cetak tunggal & bundel SPJ) */
+function _suratTugasBody(data){
+  data=data||{};
   var d='..............................';
   function f(v){ return (v!=null&&String(v).trim()!=='')?esc(String(v)):d; }
   function fd(v){ return v?_tglPanjang(v):d; }
-  var list=_spdList(data), kpa=_kpa(data);
-  var rows='';
+  var list=_spdList(data);
+  var menimbang=(data.menimbang&&data.menimbang.trim())
+    ? esc(data.menimbang)
+    : ('Bahwa dalam rangka pelaksanaan kegiatan '+(data.maksud?esc(data.maksud):'dimaksud')+', dipandang perlu menugaskan pegawai dengan Surat Tugas.');
+  var dasarItems=String(data.dasarSurat||'').split(/\n+/).map(function(s){return s.trim();}).filter(function(s){return s;});
+  var dasarHtml=dasarItems.length
+    ? '<ol class="num">'+dasarItems.map(function(s){return '<li>'+esc(s)+'</li>';}).join('')+'</ol>'
+    : '<span>'+d+'</span>';
+  var kepadaHtml='<ol class="num kepada">';
   for(var i=0;i<list.length;i++){ var p=list[i];
-    rows+='<tr><td class="ct">'+(i+1)+'</td><td>'+f(p.nama)+'</td><td>'+f(p.nip)
-      +'</td><td>'+f(p.pangkat)+'</td><td>'+f(p.jabatan)+'</td></tr>';
+    kepadaHtml+='<li><b>'+f(p.nama)+'</b><br><span class="sub">NIP '+f(p.nip)+' &middot; '+f(p.pangkat)+' &middot; '+f(p.jabatan)+'</span></li>';
   }
-  var body=''
-  +_docKop()
-  +'<h1>Surat Tugas</h1>'
-  +(data.nomor?('<div style="text-align:center;margin-bottom:12px">Nomor : '+esc(data.nomor)+'</div>'):'<div style="height:8px"></div>')
-  +'<p style="margin:0 0 6px"><b>Dasar :</b> '+f(data.dasarSurat)+'</p>'
-  +'<p style="text-align:center;font-weight:bold;letter-spacing:2px;margin:12px 0">MENUGASKAN</p>'
-  +'<p style="margin:0 0 4px">Kepada :</p>'
-  +'<table class="b"><tr><th class="no">No</th><th>Nama</th><th>NIP</th><th>Pangkat/Gol</th><th>Jabatan</th></tr>'+rows+'</table>'
-  +'<table style="width:100%;margin-top:10px">'
-  +'<tr><td style="width:34%;vertical-align:top">Untuk</td><td style="vertical-align:top">: '+f(data.maksud)+'</td></tr>'
-  +'<tr><td style="vertical-align:top">Tempat tujuan</td><td style="vertical-align:top">: '+f(data.tujuan)+'</td></tr>'
-  +'<tr><td style="vertical-align:top">Lama</td><td style="vertical-align:top">: '+f((+data.jumlahHari>0)?(data.jumlahHari+' (……) hari'):'')+'</td></tr>'
-  +'<tr><td style="vertical-align:top">Tanggal</td><td style="vertical-align:top">: '+fd(data.tglMulai)+' s.d. '+fd(data.tglSelesai)+'</td></tr>'
-  +'<tr><td style="vertical-align:top">Sumber dana</td><td style="vertical-align:top">: '+esc(INST.namaWP)+(data.akun?(' — Akun '+esc(data.akun)):'')+'</td></tr>'
-  +'</table>'
-  +'<p style="margin:14px 0">Surat tugas ini dibuat untuk dipergunakan sebagaimana mestinya.</p>'
-  +'<table class="sig2"><tr><td></td><td>'+esc(INST.kota)+', '+fd(data.tglSurat||data.tglMulai)
-  +'<br>'+(data.kpaJab?esc(data.kpaJab):('Direktur selaku<br>Kuasa Pengguna Anggaran'))
-  +'<div class="nmc">'+f(kpa.nama)+'</div>NIP. '+f(kpa.nip)+'</td></tr></table>';
-  return _docWrap('Surat Tugas '+(data.nomor||''), '<div class="page">'+body+'</div>');
+  kepadaHtml+='</ol>';
+  var periode=fd(data.tglMulai)+((data.tglSelesai&&data.tglSelesai!==data.tglMulai)?(' s.d. '+fd(data.tglSelesai)):'');
+  var sumberDana=esc(INST.dipa||INST.namaWP)+(data.akun?(' (Akun '+esc(data.akun)+')'):'');
+  var untukHtml='<ol class="num">'
+    +'<li>Melaksanakan perjalanan dinas dalam rangka '+(data.maksud?esc(data.maksud):d)+(data.tujuan?(' di '+esc(data.tujuan)):'')+' pada tanggal '+periode+'.</li>'
+    +'<li>Segala biaya yang timbul akibat pelaksanaan tugas ini dibebankan pada '+sumberDana+'.</li>'
+    +'<li>Membuat laporan secara tertulis kepada atasan langsung setelah pelaksanaan tugas selesai.</li>'
+    +'</ol>';
+  var ttdNama=data.ttdNama||INST.direktur, ttdJab=data.ttdJab||INST.jabatanDirektur, ttdNip=data.ttdNip||INST.nipDirektur;
+  return ''
+    +_docKopResmi()
+    +'<h1>SURAT TUGAS</h1>'
+    +'<div style="text-align:center;margin:-2px 0 14px">NOMOR '+f(data.nomor)+'</div>'
+    +'<table class="st"><tr><td class="lblst">Menimbang</td><td class="sep">:</td><td>'+menimbang+'</td></tr>'
+    +'<tr><td class="lblst">Dasar</td><td class="sep">:</td><td>'+dasarHtml+'</td></tr></table>'
+    +'<p style="text-align:center;font-weight:bold;letter-spacing:3px;margin:12px 0 8px">MEMBERI TUGAS</p>'
+    +'<table class="st"><tr><td class="lblst">Kepada</td><td class="sep">:</td><td>'+kepadaHtml+'</td></tr>'
+    +'<tr><td class="lblst">Untuk</td><td class="sep">:</td><td>'+untukHtml+'</td></tr></table>'
+    +'<p style="margin:14px 0 28px">Demikian Surat Tugas ini dibuat untuk dilaksanakan sebaik-baiknya dengan penuh tanggung jawab.</p>'
+    +'<table class="sig2"><tr><td></td><td>'+esc(INST.kota)+', '+fd(data.tglSurat||data.tglMulai)
+      +'<br>'+esc(ttdJab)+'<div class="nmc">'+f(ttdNama)+'</div>NIP. '+f(ttdNip)+'</td></tr></table>'
+    +'<div class="grat">Terima kasih untuk tidak memberikan sesuatu atau janji yang dapat mengakibatkan KKN, gratifikasi, dan benturan kepentingan.</div>';
+}
+function _renderSuratTugasHtml(data){
+  return _docWrap('Surat Tugas '+((data&&data.nomor)||''), '<div class="page">'+_suratTugasBody(data)+'</div>');
 }
 /* 5.3 RINCIAN BIAYA (Kuitansi Rampung) — per pegawai */
 function cetakRincianBiaya(){ _bukaPopup(_renderRincianHtml(_gatherSpd())); }
