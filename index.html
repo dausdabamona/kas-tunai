@@ -52,10 +52,21 @@
 
   /* Filters */
   .filters{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px}
-  .filters button{flex:1 0 auto;border:1px solid var(--c-line);background:#fff;border-radius:10px;
-    padding:11px 14px;font-size:13px;color:var(--c-text);font-weight:600;white-space:nowrap}
-  .filters button.active{background:var(--c-purple);color:#fff;border-color:var(--c-purple)}
-  .filters button.active.warn{background:var(--c-warn);border-color:var(--c-warn)}
+  .filters button{flex:1 0 auto;border:1px solid var(--c-line);border-left-width:4px;background:#fff;
+    border-radius:10px;padding:11px 14px;font-size:13px;color:var(--c-text);font-weight:600;white-space:nowrap}
+  .filters button[data-f="all"]{border-left-color:#16456e}
+  .filters button[data-f="belum"]{border-left-color:#dc2626}
+  .filters button[data-f="sudah"]{border-left-color:#16a34a}
+  .filters button[data-f="belumlunas"]{border-left-color:#ea7317}
+  .filters button[data-f="belumfoto"]{border-left-color:#2563eb}
+  .filters button[data-f="spby"]{border-left-color:#7c3aed}
+  .filters button.active{color:#fff}
+  .filters button.active[data-f="all"]{background:#16456e;border-color:#16456e}
+  .filters button.active[data-f="belum"]{background:#dc2626;border-color:#dc2626}
+  .filters button.active[data-f="sudah"]{background:#16a34a;border-color:#16a34a}
+  .filters button.active[data-f="belumlunas"]{background:#ea7317;border-color:#ea7317}
+  .filters button.active[data-f="belumfoto"]{background:#2563eb;border-color:#2563eb}
+  .filters button.active[data-f="spby"]{background:#7c3aed;border-color:#7c3aed}
 
   /* Daftar transaksi + kolom */
   .daftar-head{background:#16456e;color:#fff;border-radius:10px 10px 0 0;padding:10px 14px;
@@ -85,6 +96,11 @@
 
   /* Kartu transaksi */
   .tcard{border:1px solid var(--c-line);border-radius:12px;padding:11px;margin-bottom:10px;background:#fff}
+  .tcard.st-spby{border-left:5px solid #7c3aed;background:#faf5ff}
+  .tcard.st-sudah{border-left:5px solid #16a34a;background:#f0fdf4}
+  .tcard.st-belumlunas{border-left:5px solid #ea7317;background:#fff7ed}
+  .tcard.st-belumfoto{border-left:5px solid #2563eb;background:#eff6ff}
+  .tcard.st-belum{border-left:5px solid #dc2626;background:#fef2f2}
   .tcard .top{display:flex;justify-content:space-between;gap:8px}
   .tcard .jd{font-weight:700;font-size:14px}
   .tcard .sb{font-size:12px;color:var(--c-muted);margin-top:2px}
@@ -104,7 +120,7 @@
   .acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
   .acts button{border:0;border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:700;color:#fff;flex:1 0 auto}
   .b-orange{background:#ea7317} .b-purple{background:var(--c-purple)} .b-gray{background:#e5e7eb;color:#374151}
-  .b-dark{background:#1f3a5f} .b-green{background:var(--c-ok)}
+  .b-dark{background:#1f3a5f} .b-green{background:var(--c-ok)} .b-spby{background:#0d9488}
   .mini{border:0;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;color:#fff}
 
   /* Galeri foto */
@@ -203,6 +219,7 @@
     <button data-f="sudah">Sudah SPJ</button>
     <button data-f="belumlunas">&#9888; Belum Lunas</button>
     <button data-f="belumfoto" class="active">&#129534; Belum Foto</button>
+    <button data-f="spby">&#128203; SPBY</button>
   </div>
 
   <div class="daftar-head">
@@ -339,6 +356,18 @@
       <input type="file" id="kwFile" accept="image/*" capture="environment"></div>
     <button class="btn" style="background:var(--c-ok)" onclick="submitUploadKuitansi()">Upload Kuitansi TTD</button>
     <button class="btn ghost" onclick="closeModal('modalKuitansi')">Tutup</button>
+  </div>
+</div>
+
+<!-- ================= MODAL SPBY ================= -->
+<div class="modal" id="modalSpby">
+  <div class="sheet">
+    <h2>Input SPBY <span id="spTxLabel"></span></h2>
+    <div class="field"><label>Nomor SPBY</label><input type="text" id="spNo" placeholder="mis. 045/SPBY/2026"></div>
+    <div class="field"><label>Tanggal SPBY</label><input type="date" id="spTgl"></div>
+    <button class="btn" onclick="submitSpby()">Simpan SPBY</button>
+    <button class="btn ghost" id="spHapusBtn" onclick="hapusSpbyTx()" style="background:#fee2e2;color:#991b1b">Hapus SPBY</button>
+    <button class="btn ghost" onclick="closeModal('modalSpby')">Tutup</button>
   </div>
 </div>
 
@@ -608,7 +637,12 @@ function _cardHtml(t, mode){
   var fnJml=fotoCount(t), lunas=isNotaLunas(t);
   var pj=hitungPajak(t.kegiatan,t.kredit);
   var sisa=t.kredit-t.notaTotal; if(sisa<0) sisa=0;
-  var h='<div class="tcard">'+head
+  var st = t.noSpby ? 'st-spby'
+    : (t.statusSpj==='Lunas'||lunas) ? 'st-sudah'
+    : (t.kredit>0 && t.notaTotal<t.kredit) ? 'st-belumlunas'
+    : (t.kredit>0 && fnJml===0) ? 'st-belumfoto'
+    : 'st-belum';
+  var h='<div class="tcard '+st+'">'+head
     +'<div class="amt">-'+rupiah(t.kredit)+'<span class="dt">'+esc(t.tanggal)+'</span></div></div>';
   // baris keluar / nota lunas
   h+= lunas
@@ -637,7 +671,8 @@ function _cardHtml(t, mode){
   h+='<div class="acts">'
     +'<button class="b-orange" onclick="openModalNota('+t.no+')">Kelola Nota</button>'
     +'<button class="b-gray" onclick="openFoto('+t.no+')">Foto</button>'
-    +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">Kuitansi</button>';
+    +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">Kuitansi</button>'
+    +'<button class="b-spby" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+(t.noSpby?'SPBY &#10003;':'SPBY')+'</button>';
   if(lunas) h+='<button class="b-dark" onclick="cetakSPJ('+t.no+')">Cetak SPJ</button>';
   h+='</div></div>';
   return h;
@@ -673,6 +708,37 @@ function renderList(){
   box.innerHTML=html;
 }
 function onSearch(){ currentSearch=(document.getElementById('searchBox').value||'').toLowerCase().trim(); renderList(); }
+
+/* ============== SPBY (input nomor + tanggal) ============== */
+var _spTarget=null, _spRow=null;
+function openModalSpby(no,rowIndex){
+  _spTarget=no; _spRow=rowIndex;
+  var t=_cariTransaksi(no);
+  document.getElementById('spTxLabel').textContent='No '+no;
+  document.getElementById('spNo').value=(t&&t.noSpby)?t.noSpby:'';
+  document.getElementById('spTgl').value=(t&&t.tglSpby)?t.tglSpby:todayISO();
+  document.getElementById('spHapusBtn').style.display=(t&&t.noSpby)?'block':'none';
+  openModal('modalSpby');
+}
+function submitSpby(){
+  var no=document.getElementById('spNo').value.trim();
+  if(!no){ toast('Nomor SPBY wajib diisi','error'); return; }
+  showLoading(true,'Menyimpan SPBY...');
+  google.script.run
+    .withSuccessHandler(function(){ showLoading(false); toast('SPBY tersimpan','success');
+      closeModal('modalSpby'); loadAll(); })
+    .withFailureHandler(fail)
+    .serverSimpanSpby(_spRow, no, document.getElementById('spTgl').value);
+}
+function hapusSpbyTx(){
+  if(!confirm('Hapus nomor SPBY transaksi ini?')) return;
+  showLoading(true,'Menghapus SPBY...');
+  google.script.run
+    .withSuccessHandler(function(){ showLoading(false); toast('SPBY dihapus','success');
+      closeModal('modalSpby'); loadAll(); })
+    .withFailureHandler(fail)
+    .serverHapusSpby(_spRow);
+}
 function cetakSPJ(no){
   var t=_cariTransaksi(no);
   if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
@@ -1037,17 +1103,6 @@ function hapusKb(no,urutan){
     .withFailureHandler(fail).serverHapusPengembalian(no,urutan);
 }
 
-/* ============== SPBY ============== */
-function promptSpby(no,rowIndex){
-  var noSpby=prompt('Nomor SPBY untuk transaksi No '+no+':');
-  if(noSpby===null)return;
-  var tgl=prompt('Tanggal SPBY (YYYY-MM-DD):',todayISO());
-  if(tgl===null)return;
-  showLoading(true,'Menyimpan SPBY...');
-  google.script.run.withSuccessHandler(function(){showLoading(false);
-    toast('SPBY tersimpan','success');loadAll();})
-    .withFailureHandler(fail).serverSimpanSpby(rowIndex,noSpby.trim(),tgl.trim());
-}
 
 /* ============== Rekap ============== */
 function loadRekap(){
@@ -1461,9 +1516,8 @@ function _bukaPopup(html){
   for(var i=0;i<btns.length;i++){
     btns[i].addEventListener('click',function(){
       currentFilter=this.getAttribute('data-f');
-      for(var j=0;j<btns.length;j++)btns[j].classList.remove('active','warn');
+      for(var j=0;j<btns.length;j++)btns[j].classList.remove('active');
       this.classList.add('active');
-      if(currentFilter==='belumlunas') this.classList.add('warn');
       renderList();
     });
   }
