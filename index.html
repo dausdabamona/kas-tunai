@@ -812,6 +812,8 @@ function statusOf(t){
   if(fnJml>0) return 'foto-ok';
   return 'belum';
 }
+/** false untuk baris Pindah Dana antar kas (REF_TRANSFER 'TF-...') agar tak tampil di daftar. */
+function _notTransfer(t){ return String(t.refTransfer||'').indexOf('TF-')!==0; }
 function passFilter(t){
   switch(currentFilter){
     case 'all': return true;
@@ -1017,8 +1019,8 @@ function renderList(){
   var cmp = currentSort==='nilai'    ? function(a,b){return _nilai(b)-_nilai(a);}   // nilai tertinggi
           : currentSort==='nilaiasc' ? function(a,b){return _nilai(a)-_nilai(b);}   // nilai terendah
           : byNoDesc;
-  var keluar=allTransaksi.filter(function(t){return t.kredit>0;}).filter(passFilter).filter(_matchSearch).filter(_matchMonth).filter(_matchPenjab).sort(cmp);
-  var masuk =allTransaksi.filter(function(t){return t.debet>0;}).filter(_matchSearch).filter(_matchMonth).filter(_matchPenjab).sort(cmp);
+  var keluar=allTransaksi.filter(function(t){return t.kredit>0;}).filter(_notTransfer).filter(passFilter).filter(_matchSearch).filter(_matchMonth).filter(_matchPenjab).sort(cmp);
+  var masuk =allTransaksi.filter(function(t){return t.debet>0;}).filter(_notTransfer).filter(_matchSearch).filter(_matchMonth).filter(_matchPenjab).sort(cmp);
   var belum =keluar.filter(function(t){return t.notaJml===0;});
   var sudah =keluar.filter(function(t){return t.notaJml>0;});
 
