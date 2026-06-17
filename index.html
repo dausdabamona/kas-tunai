@@ -120,7 +120,7 @@
   .acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
   .acts button{border:0;border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:700;color:#fff;flex:1 0 auto}
   .b-orange{background:#ea7317} .b-purple{background:var(--c-purple)} .b-gray{background:#e5e7eb;color:#374151}
-  .b-dark{background:#1f3a5f} .b-green{background:var(--c-ok)} .b-spby{background:#0d9488}
+  .b-dark{background:#1f3a5f} .b-green{background:var(--c-ok)} .b-spby{background:#0d9488} .b-spd{background:#0369a1}
   .mini{border:0;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;color:#fff}
 
   /* Galeri foto */
@@ -680,7 +680,8 @@ function _cardHtml(t, mode){
     +'<button class="b-orange" onclick="openModalNota('+t.no+')">Kelola Nota</button>'
     +'<button class="b-gray" onclick="openFoto('+t.no+')">Foto</button>'
     +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">Kuitansi</button>'
-    +'<button class="b-spby" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+(t.noSpby?'SPBY &#10003;':'SPBY')+'</button>';
+    +'<button class="b-spby" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+(t.noSpby?'SPBY &#10003;':'SPBY')+'</button>'
+    +'<button class="b-spd" onclick="cetakSpd('+t.no+')">SPD</button>';
   if(lunas) h+='<button class="b-dark" onclick="cetakSPJ('+t.no+')">Cetak SPJ</button>';
   h+='</div></div>';
   return h;
@@ -847,6 +848,60 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
   +'<div class="total">Total Nota: '+rupiah(totalNota)
   +(dikembalikan>0?(' &nbsp;|&nbsp; Dikembalikan: '+rupiah(dikembalikan)+' &nbsp;|&nbsp; Total PJ: '+rupiah(totalNota+dikembalikan)):'')
   +'</div>'
+  +'</body></html>';
+}
+
+/* ============== Surat Perjalanan Dinas Dalam Kota ============== */
+function cetakSpd(no){
+  var t=_cariTransaksi(no);
+  if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
+  _bukaPopup(_renderSpdHtml(t));
+}
+function _renderSpdHtml(t){
+  var d='..................................';
+  var biaya=(+t.kredit||0);
+  var tgl=_tglPanjang(t.tanggal);
+  function R(n,l,v){return '<tr><td class="no">'+n+'</td><td class="lbl">'+l+'</td><td>'+v+'</td></tr>';}
+  return ''
+  +'<html><head><meta charset="utf-8"><title>SPD Dalam Kota No '+t.no+'</title><style>'
+  +'@page{size:A4 portrait;margin:0} *{font-family:Arial,sans-serif;box-sizing:border-box}'
+  +'body{font-size:12px;color:#000;margin:0;padding:15mm}'
+  +'h1{text-align:center;font-size:15px;margin:0 0 14px;text-transform:uppercase}'
+  +'table.b{width:100%;border-collapse:collapse} table.b td{border:1px solid #000;padding:6px 8px;vertical-align:top}'
+  +'.no{width:26px;text-align:center} .lbl{width:42%}'
+  +'table.sig{width:100%;border-collapse:collapse;margin-top:2px} table.sig td{width:50%;border:1px solid #000;padding:8px;vertical-align:top}'
+  +'.ttl{text-align:center;font-weight:bold} .nm{margin-top:54px}'
+  +'.noprint{text-align:right;margin-bottom:8px}@media print{.noprint{display:none}}'
+  +'</style></head><body>'
+  +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button></div>'
+  +'<div style="text-align:center;font-weight:bold">'+esc(INST.namaWP).toUpperCase()+'</div>'
+  +'<h1>Surat Perjalanan Dinas Dalam Kota</h1>'
+  +'<table class="b">'
+  +R(1,'Pejabat berwenang yang memberikan perintah', esc(INST.ppk))
+  +R(2,'Nama/NIP Pegawai yang diperintahkan','Nama : '+esc(t.penjab||d)+'<br>NIP &nbsp;&nbsp;: '+d)
+  +R(3,'a.&nbsp; Pangkat dan Golongan<br>b.&nbsp; Jabatan / Instansi','a.&nbsp; '+d+'<br>b.&nbsp; '+d)
+  +R(4,'Maksud tujuan perjalanan', esc(t.kegiatan||d))
+  +R(5,'Alat angkutan yang digunakan','Kendaraan Roda Dua')
+  +R(6,'a.&nbsp; Tempat berangkat<br>b.&nbsp; Tempat Tujuan','a.&nbsp; Kampus Politeknik KP Sorong<br>b.&nbsp; '+d)
+  +R(7,'a.&nbsp; Lamanya pelaksanaan pekerjaan<br>b.&nbsp; Tanggal berangkat<br>c.&nbsp; Tanggal kembali','a.&nbsp; Satu Hari<br>b.&nbsp; '+tgl+'<br>c.&nbsp; '+tgl)
+  +R(8,'Pembebanan Anggaran<br>a.&nbsp; Instansi<br>b.&nbsp; Akun<br>c.&nbsp; Besar Biaya<br>d.&nbsp; Terbilang',
+       'a.&nbsp; '+esc(INST.namaWP)+'<br>b.&nbsp; '+d+'<br>c.&nbsp; Rp '+biaya.toLocaleString('id-ID')+',-<br>d.&nbsp; <i>'+_terbilangTitle(biaya)+'</i>')
+  +'</table>'
+  +'<table class="sig"><tr>'
+  +'<td><div class="ttl">PEGAWAI YANG DIPERINTAHKAN,</div>'
+  +'<div class="nm">Nama : '+esc(t.penjab||d)+'</div>NIP &nbsp;&nbsp;: '+d+'</td>'
+  +'<td><div class="ttl">PEJABAT YANG MEMBERIKAN PERINTAH,</div>'
+  +'a.n. Kuasa Pengguna Anggaran<br>Pejabat Pembuat Komitmen '+esc(INST.namaWP)
+  +'<div class="nm">Nama : '+esc(INST.ppk)+'</div>NIP &nbsp;&nbsp;: '+esc(INST.nipPpk)+'</td>'
+  +'</tr></table>'
+  +'<table class="sig"><tr>'
+  +'<td><div class="ttl">MENGETAHUI INSTANSI DI LOKASI PEKERJAAN</div>'
+  +'Nama Kota : '+esc(INST.kota)+'<br>Tanggal &nbsp;&nbsp;: '+d
+  +'<div class="nm">Nama &nbsp;&nbsp;&nbsp;: '+d+'</div>Jabatan : '+d+'</td>'
+  +'<td><div class="ttl">TELAH DILAKSANAKAN PEKERJAAN</div>'
+  +'Nama Kota : '+esc(INST.kota)+'<br>Tanggal &nbsp;&nbsp;: '+tgl
+  +'<div class="nm">Nama &nbsp;&nbsp;&nbsp;: '+d+'</div>Jabatan : '+d+'</td>'
+  +'</tr></table>'
   +'</body></html>';
 }
 
