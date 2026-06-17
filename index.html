@@ -478,6 +478,15 @@
       <div class="keg" id="pjKategori" style="font-size:14px"></div>
       <div class="tgl" id="pjNominal"></div>
     </div>
+    <div class="field"><label>Penyedia / Rekanan</label>
+      <input type="text" id="pjPenyedia" list="pjPenyediaList" oninput="onPajakPenyediaInput()" autocomplete="off" placeholder="nama rekanan (Wajib Pajak)">
+      <datalist id="pjPenyediaList"></datalist>
+    </div>
+    <div class="row2">
+      <div class="field"><label>NPWP Penyedia (WP)</label><input type="text" id="pjNpwpPenyedia" oninput="_pjNpwpChanged()" placeholder="kosongkan bila non-NPWP"></div>
+      <div class="field"><label>NPWP Poltek (Pemungut)</label><input type="text" id="pjNpwpPoltek" onchange="_simpanNpwpPoltek()" placeholder="diingat browser"></div>
+    </div>
+    <div class="field"><label>Alamat Penyedia</label><input type="text" id="pjAlamatPenyedia"></div>
     <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:14px">
       <input type="checkbox" id="pjTermasukPPN" checked onchange="recalcPajak()"> Nilai sudah termasuk PPN
     </label>
@@ -2288,6 +2297,35 @@ function _muatPenyedia(cb){
     .serverGetAllPenyedia();
 }
 /* ============== Kalkulator Pajak ============== */
+function _isiDatalistPajak(){
+  var dl=document.getElementById('pjPenyediaList'); if(!dl) return; dl.innerHTML='';
+  if(!_allPenyedia) return;
+  for(var i=0;i<_allPenyedia.length;i++){
+    var o=document.createElement('option'); o.value=_allPenyedia[i].nama; dl.appendChild(o);
+  }
+}
+function onPajakPenyediaInput(){
+  var v=document.getElementById('pjPenyedia').value;
+  if(_allPenyedia){
+    for(var i=0;i<_allPenyedia.length;i++){
+      if(_allPenyedia[i].nama===v){
+        document.getElementById('pjNpwpPenyedia').value=_allPenyedia[i].npwp||'';
+        document.getElementById('pjAlamatPenyedia').value=_allPenyedia[i].alamat||'';
+        break;
+      }
+    }
+  }
+  _pjNpwpChanged();
+}
+function _pjNpwpChanged(){
+  document.getElementById('pjAdaNpwp').checked=!!document.getElementById('pjNpwpPenyedia').value.trim();
+  recalcPajak();
+}
+function _simpanNpwpPoltek(){
+  var v=document.getElementById('pjNpwpPoltek').value.trim();
+  try{ localStorage.setItem('kt_npwp_poltek', v); }catch(e){}
+  INST.npwpWP=v;
+}
 function openModalPajak(noTransaksi){
   var t=_cariTransaksi(noTransaksi);
   if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
@@ -2296,6 +2334,30 @@ function openModalPajak(noTransaksi){
   document.getElementById('pjNominal').textContent='Nilai transaksi: '+rupiah(t.kredit);
   document.getElementById('pjTermasukPPN').checked=true;
   document.getElementById('pjAdaNpwp').checked=true;
+  // NPWP Poltek (pemungut) — diingat browser
+  var npwpPoltek=''; try{ npwpPoltek=localStorage.getItem('kt_npwp_poltek')||''; }catch(e){}
+  document.getElementById('pjNpwpPoltek').value=npwpPoltek||INST.npwpWP||'';
+  // kosongkan dulu field penyedia
+  document.getElementById('pjPenyedia').value='';
+  document.getElementById('pjNpwpPenyedia').value='';
+  document.getElementById('pjAlamatPenyedia').value='';
+  // datalist master penyedia + prefill penyedia dari nota transaksi
+  _muatPenyedia(_isiDatalistPajak);
+  google.script.run
+    .withSuccessHandler(function(list){
+      list=list||[];
+      for(var i=0;i<list.length;i++){
+        if(list[i].namaPenyedia){
+          document.getElementById('pjPenyedia').value=list[i].namaPenyedia||'';
+          document.getElementById('pjNpwpPenyedia').value=list[i].npwp||'';
+          document.getElementById('pjAlamatPenyedia').value=list[i].alamat||'';
+          break;
+        }
+      }
+      _pjNpwpChanged();
+    })
+    .withFailureHandler(function(){ recalcPajak(); })
+    .serverGetMultiNota(noTransaksi);
   recalcPajak();
   openModal('modalPajak');
 }
@@ -2545,7 +2607,18 @@ function cetakSSP(jenis){
     document.getElementById('pjAdaNpwp').checked);
   if(jenis==='pph' && !pj.pph){ toast('Tidak ada PPh untuk transaksi ini','info'); return; }
   if(jenis==='ppn' && !pj.ppn){ toast('Tidak ada PPN untuk transaksi ini','info'); return; }
-  _bukaPopup(_renderSspHtml(t, pj, jenis)); // WP = instansi, penyetor = Bendahara
+  var wp={
+    nama:   document.getElementById('pjPenyedia').value.trim(),
+    npwp:   document.getElementById('pjNpwpPenyedia').value.trim(),
+    alamat: document.getElementById('pjAlamatPenyedia').value.trim(),
+    npwpPemungut: document.getElementById('pjNpwpPoltek').value.trim()
+  };
+  // Simpan/segarkan NPWP penyedia ke Master Penyedia (silent)
+  if(wp.nama){
+    google.script.run.serverSimpanPenyedia({nama:wp.nama, npwp:wp.npwp, alamat:wp.alamat});
+    _allPenyedia=null; // paksa muat ulang berikutnya
+  }
+  _bukaPopup(_renderSspHtml(t, pj, jenis, wp)); // WP = penyedia, pemungut/penyetor = Bendahara Poltek
 }
 // Peruntukan 5 lembar SSP (format F.2.0.32.01)
 var SSP_LEMBAR = [
@@ -2574,9 +2647,14 @@ function _npwpBoxes(val){
   return h;
 }
 
-function _renderSspHtml(t, pj, jenis){
+function _renderSspHtml(t, pj, jenis, wp){
   var isPph=(jenis==='pph');
+  wp=wp||{};
   var info={
+    wpNpwp:  wp.npwp||'',
+    wpNama:  wp.nama||INST.namaWpPajak,
+    wpAlamat:wp.alamat||INST.alamatWpPajak,
+    npwpPemungut: wp.npwpPemungut||INST.npwpWP||'',
     map:    isPph ? pj.mapPPh : '411211',
     kjs:    isPph ? pj.kjsPPh : '900',
     jumlah: isPph ? pj.pph : pj.ppn,
@@ -2653,10 +2731,10 @@ function _sspLembar(t, info, lembarNo, untuk, notLast){
 
   // ---- NPWP / Nama / Alamat WP
   +'<div class="sec">'
-  +'<div class="r"><span class="l">NPWP</span><span class="c">:</span><span>'+_npwpBoxes(INST.npwpWP)+'</span></div>'
+  +'<div class="r"><span class="l">NPWP</span><span class="c">:</span><span>'+_npwpBoxes(info.wpNpwp)+'</span></div>'
   +'<div class="note">Diisi sesuai dengan Nomor Pokok Wajib Pajak yang dimiliki</div>'
-  +'<div class="r"><span class="l">NAMA WP</span><span class="c">:</span><span>'+esc(INST.namaWpPajak)+'</span></div>'
-  +'<div class="r"><span class="l">ALAMAT WP</span><span class="c">:</span><span>'+esc(INST.alamatWpPajak)+'</span></div>'
+  +'<div class="r"><span class="l">NAMA WP</span><span class="c">:</span><span>'+esc(info.wpNama)+'</span></div>'
+  +'<div class="r"><span class="l">ALAMAT WP</span><span class="c">:</span><span>'+esc(info.wpAlamat)+'</span></div>'
   +'</div>'
 
   // ---- NOP / Alamat OP (kosong)
@@ -2707,9 +2785,11 @@ function _sspLembar(t, info, lembarNo, untuk, notLast){
   +'<div class="sig">'
   +'<div class="col"><div class="ttl">Diterima oleh Kantor Penerima Pembayaran</div>Tanggal'
   +'<div class="it" style="margin-top:46px;text-align:center">Cap dan tanda tangan dan Nama</div></div>'
-  +'<div class="col rr"><div class="ttl">Wajib Pajak/Penyetor</div>'
+  +'<div class="col rr"><div class="ttl">Penyetor / Pemungut (Bendahara)</div>'
   +esc(INST.kota)+' , &nbsp; '+_tglPanjang(t.tanggal)+'<div class="it">Cap dan tanda tangan</div>'
-  +'<div class="nm">'+esc(INST.bendahara)+'</div></div>'
+  +'<div class="nm">'+esc(INST.bendahara)+'</div>'
+  +'<div style="font-size:9px;margin-top:2px">Bendahara Pengeluaran Poltek KP Sorong'
+  +(info.npwpPemungut?('<br>NPWP: '+esc(info.npwpPemungut)):'')+'</div></div>'
   +'</div>'
 
   // ---- footer validasi
