@@ -235,15 +235,6 @@
   <div class="daftar-head" style="border-radius:10px">&#9992; Surat Perjalanan Dinas Dalam Kota</div>
   <div class="listbox" style="border-top:1px solid var(--c-line);border-radius:10px;margin-top:10px">
     <div class="field"><label>Nomor Surat Tugas</label><input type="text" id="spdNomor" placeholder="mis. 094/ST/2026"></div>
-    <div class="row2">
-      <div class="field"><label>Nama Pegawai</label><input type="text" id="spdPegawai"></div>
-      <div class="field"><label>NIP Pegawai</label><input type="text" id="spdNip"></div>
-    </div>
-    <div class="row2">
-      <div class="field"><label>Pangkat / Golongan</label><input type="text" id="spdPangkat"></div>
-      <div class="field"><label>Jabatan / Instansi</label><input type="text" id="spdJabatan"></div>
-    </div>
-    <div class="field"><label>Maksud tujuan perjalanan</label><input type="text" id="spdMaksud"></div>
     <div class="field"><label>Alat angkutan</label><input type="text" id="spdAngkutan"></div>
     <div class="row2">
       <div class="field"><label>Tempat berangkat</label><input type="text" id="spdBerangkat"></div>
@@ -255,8 +246,15 @@
     </div>
     <div class="row2">
       <div class="field"><label>Jumlah hari</label><input type="text" id="spdHari" readonly></div>
-      <div class="field"><label>Besar biaya (Rp)</label><input type="number" id="spdBiaya" value="0"></div>
+      <div class="field"><label>Uang harian (Rp/hari)</label><input type="number" id="spdHarian" value="150000" onchange="hitungSemuaBiaya()"></div>
     </div>
+    <hr>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="font-weight:600">Daftar Pegawai yang Ditugaskan</div>
+      <button type="button" class="btn ghost" style="width:auto;padding:4px 10px;margin:0" onclick="tambahPegawaiRow()">+ Tambah pegawai</button>
+    </div>
+    <div id="spdPegList"></div>
+    <div class="field"><label>Total biaya (Rp)</label><input type="text" id="spdTotal" readonly></div>
     <div class="field"><label>Akun / kode rekening</label><input type="text" id="spdAkun"></div>
     <div class="field"><label>Pejabat pemberi perintah</label><input type="text" id="spdPpk"></div>
     <div class="field"><label>NIP pemberi perintah</label><input type="text" id="spdNipPpk"></div>
@@ -912,35 +910,81 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
 }
 
 /* ============== Surat Perjalanan Dinas (menu Perjalanan Dinas) ============== */
-function resetSpdForm(){
-  var V={spdNomor:'',spdPegawai:'',spdNip:'',spdPangkat:'',spdJabatan:'',spdMaksud:'',
-    spdAngkutan:'Kendaraan Roda Dua',spdBerangkat:'Kampus Politeknik KP Sorong',spdTujuan:'',
-    spdTglB:todayISO(),spdTglS:todayISO(),spdBiaya:0,spdAkun:'',
-    spdPpk:INST.ppk,spdNipPpk:INST.nipPpk,spdLokNama:'',spdLokJab:'',spdKerjaNama:'',spdKerjaJab:''};
-  for(var id in V) document.getElementById(id).value=V[id];
-  hitungHari();
+var SPD_HARIAN_DEFAULT=150000;
+function _attr(v){ return (v==null?'':String(v)).replace(/"/g,'&quot;'); }
+function _pegRowHtml(p){
+  p=p||{};
+  return '<div class="peg-row" style="border:1px solid var(--c-line);border-radius:8px;padding:8px;margin-bottom:8px">'
+   +'<div class="row2"><div class="field"><label>Nama Pegawai</label><input type="text" class="pg-nama" value="'+_attr(p.nama)+'"></div>'
+   +'<div class="field"><label>NIP</label><input type="text" class="pg-nip" value="'+_attr(p.nip)+'"></div></div>'
+   +'<div class="row2"><div class="field"><label>Pangkat / Golongan</label><input type="text" class="pg-pangkat" value="'+_attr(p.pangkat)+'"></div>'
+   +'<div class="field"><label>Jabatan / Instansi</label><input type="text" class="pg-jabatan" value="'+_attr(p.jabatan)+'"></div></div>'
+   +'<div class="row2"><div class="field"><label>Biaya (Rp) = harian &times; hari</label><input type="number" class="pg-biaya" value="'+(+p.biaya||0)+'" readonly></div>'
+   +'<div class="field" style="display:flex;align-items:flex-end"><button type="button" class="btn ghost" style="margin:0;color:var(--c-bad)" onclick="hapusPegawaiRow(this)">Hapus</button></div></div>'
+   +'</div>';
+}
+function tambahPegawaiRow(p){
+  document.getElementById('spdPegList').insertAdjacentHTML('beforeend', _pegRowHtml(p));
+  hitungSemuaBiaya();
+}
+function hapusPegawaiRow(btn){
+  var rows=document.querySelectorAll('#spdPegList .peg-row');
+  if(rows.length<=1){ toast('Minimal 1 pegawai','info'); return; }
+  btn.closest('.peg-row').remove();
+  hitungSemuaBiaya();
+}
+function _hariSPD(){
+  var b=document.getElementById('spdTglB').value, s=document.getElementById('spdTglS').value;
+  var n=1; if(b&&s){ n=Math.round((new Date(s)-new Date(b))/86400000)+1; if(n<1)n=1; }
+  return n;
 }
 function hitungHari(){
-  var b=document.getElementById('spdTglB').value, s=document.getElementById('spdTglS').value;
-  var n=1;
-  if(b&&s){ n=Math.round((new Date(s)-new Date(b))/86400000)+1; if(n<1)n=1; }
-  document.getElementById('spdHari').value=n+' Hari';
+  document.getElementById('spdHari').value=_hariSPD()+' Hari';
+  hitungSemuaBiaya();
+}
+function hitungSemuaBiaya(){
+  var per=(parseFloat(document.getElementById('spdHarian').value)||0)*_hariSPD(), total=0;
+  var rows=document.querySelectorAll('#spdPegList .peg-row');
+  for(var i=0;i<rows.length;i++){ rows[i].querySelector('.pg-biaya').value=per; total+=per; }
+  document.getElementById('spdTotal').value='Rp '+total.toLocaleString('id-ID');
+}
+function resetSpdForm(){
+  var V={spdNomor:'',spdMaksud:'',
+    spdAngkutan:'Kendaraan Roda Dua',spdBerangkat:'Kampus Politeknik KP Sorong',spdTujuan:'',
+    spdTglB:todayISO(),spdTglS:todayISO(),spdHarian:SPD_HARIAN_DEFAULT,spdAkun:'',
+    spdPpk:INST.ppk,spdNipPpk:INST.nipPpk,spdLokNama:'',spdLokJab:'',spdKerjaNama:'',spdKerjaJab:''};
+  for(var id in V) document.getElementById(id).value=V[id];
+  document.getElementById('spdPegList').innerHTML='';
+  tambahPegawaiRow();
+  hitungHari();
 }
 function _gatherSpd(){
   function g(id){return (document.getElementById(id).value||'').trim();}
   var b=g('spdTglB'), s=g('spdTglS');
-  var n=1; if(b&&s){ n=Math.round((new Date(s)-new Date(b))/86400000)+1; if(n<1)n=1; }
-  return { nomor:g('spdNomor'), pegawai:g('spdPegawai'), nip:g('spdNip'), pangkat:g('spdPangkat'),
-    jabatan:g('spdJabatan'), maksud:g('spdMaksud'), angkutan:g('spdAngkutan'),
+  var n=_hariSPD();
+  var rows=document.querySelectorAll('#spdPegList .peg-row'), list=[], total=0;
+  for(var i=0;i<rows.length;i++){
+    var r=rows[i], nama=(r.querySelector('.pg-nama').value||'').trim();
+    if(!nama) continue;
+    var biaya=(parseFloat(r.querySelector('.pg-biaya').value)||0);
+    total+=biaya;
+    list.push({ nama:nama, nip:(r.querySelector('.pg-nip').value||'').trim(),
+      pangkat:(r.querySelector('.pg-pangkat').value||'').trim(),
+      jabatan:(r.querySelector('.pg-jabatan').value||'').trim(), biaya:biaya });
+  }
+  var p0=list[0]||{};
+  return { nomor:g('spdNomor'), pegawaiList:list,
+    pegawai:p0.nama||'', nip:p0.nip||'', pangkat:p0.pangkat||'', jabatan:p0.jabatan||'',
+    maksud:g('spdMaksud'), angkutan:g('spdAngkutan'),
     berangkat:g('spdBerangkat'), tujuan:g('spdTujuan'), tglMulai:b, tglSelesai:s, jumlahHari:n,
-    biaya:(parseFloat(g('spdBiaya'))||0), akun:g('spdAkun'), ppk:g('spdPpk'), nipPpk:g('spdNipPpk'),
+    biaya:total, akun:g('spdAkun'), ppk:g('spdPpk'), nipPpk:g('spdNipPpk'),
     lokNama:g('spdLokNama'), lokJab:g('spdLokJab'), kerjaNama:g('spdKerjaNama'), kerjaJab:g('spdKerjaJab') };
 }
 function cetakSpdForm(){ _bukaPopup(_renderSpdHtml(_gatherSpd())); }
 function simpanPerjalananDinas(){
   var data=_gatherSpd();
-  if(data.biaya<=0){ toast('Besar biaya harus > 0','error'); return; }
-  if(!data.pegawai){ toast('Nama pegawai wajib diisi','error'); return; }
+  if(!data.pegawaiList.length){ toast('Isi minimal 1 nama pegawai','error'); return; }
+  if(data.biaya<=0){ toast('Total biaya harus > 0 (cek tanggal & uang harian)','error'); return; }
   showLoading(true,'Menyimpan ke kas tunai...');
   google.script.run
     .withSuccessHandler(function(res){ showLoading(false);
@@ -962,42 +1006,54 @@ function cetakSpd(no){
 }
 function _renderSpdHtml(data){
   data=data||{};
-  var d='..................................';
-  function f(v){ return (v!=null && String(v).trim()!=='') ? esc(String(v)) : d; }
-  function fd(v){ return v ? _tglPanjang(v) : d; }
-  var biaya=(+data.biaya||0);
-  function R(n,l,v){return '<tr><td class="no">'+n+'</td><td class="lbl">'+l+'</td><td>'+v+'</td></tr>';}
+  var list=(data.pegawaiList&&data.pegawaiList.length)?data.pegawaiList
+          :[{nama:data.pegawai,nip:data.nip,pangkat:data.pangkat,jabatan:data.jabatan,biaya:data.biaya}];
+  var pages=list.map(function(p){return '<div class="page">'+_spdPage(data,p)+'</div>';}).join('');
   return ''
   +'<html><head><meta charset="utf-8"><title>SPD '+(data.nomor||'Dalam Kota')+'</title><style>'
   +'@page{size:A4 portrait;margin:0} *{font-family:Arial,sans-serif;box-sizing:border-box}'
-  +'body{font-size:12px;color:#000;margin:0;padding:15mm}'
+  +'body{font-size:12px;color:#000;margin:0}'
+  +'.page{padding:15mm;page-break-after:always} .page:last-child{page-break-after:auto}'
   +'h1{text-align:center;font-size:15px;margin:0 0 14px;text-transform:uppercase}'
   +'table.b{width:100%;border-collapse:collapse} table.b td{border:1px solid #000;padding:6px 8px;vertical-align:top}'
   +'.no{width:26px;text-align:center} .lbl{width:42%}'
   +'table.sig{width:100%;border-collapse:collapse;margin-top:2px} table.sig td{width:50%;border:1px solid #000;padding:8px;vertical-align:top}'
-  +'.ttl{text-align:center;font-weight:bold} .nm{margin-top:54px}'
-  +'.noprint{text-align:right;margin-bottom:8px}@media print{.noprint{display:none}}'
+  +'.ttl{text-align:center;font-weight:bold;min-height:32px} .nm{margin-top:54px}'
+  +'.noprint{text-align:right;margin:8px 15mm 0}@media print{.noprint{display:none}}'
   +'</style></head><body>'
   +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button></div>'
+  +pages
+  +'</body></html>';
+}
+function _spdPage(data, peg){
+  peg=peg||{};
+  var d='..................................';
+  function f(v){ return (v!=null && String(v).trim()!=='') ? esc(String(v)) : d; }
+  function fd(v){ return v ? _tglPanjang(v) : d; }
+  var biaya=(+peg.biaya||0);
+  var anBlok='a.n. Kuasa Pengguna Anggaran<br>Pejabat Pembuat Komitmen '+esc(INST.namaWP);
+  function R(n,l,v){return '<tr><td class="no">'+n+'</td><td class="lbl">'+l+'</td><td>'+v+'</td></tr>';}
+  return ''
   +'<div style="text-align:center;font-weight:bold">'+esc(INST.namaWP).toUpperCase()+'</div>'
   +'<h1>Surat Perjalanan Dinas Dalam Kota</h1>'
   +(data.nomor?('<div style="text-align:center;margin:-8px 0 12px">Nomor Surat Tugas : '+esc(data.nomor)+'</div>'):'')
   +'<table class="b">'
   +R(1,'Pejabat berwenang yang memberikan perintah', f(data.ppk))
-  +R(2,'Nama/NIP Pegawai yang diperintahkan','Nama : '+f(data.pegawai)+'<br>NIP &nbsp;&nbsp;: '+f(data.nip))
-  +R(3,'a.&nbsp; Pangkat dan Golongan<br>b.&nbsp; Jabatan / Instansi','a.&nbsp; '+f(data.pangkat)+'<br>b.&nbsp; '+f(data.jabatan))
+  +R(2,'Nama/NIP Pegawai yang diperintahkan','Nama : '+f(peg.nama)+'<br>NIP &nbsp;&nbsp;: '+f(peg.nip))
+  +R(3,'a.&nbsp; Pangkat dan Golongan<br>b.&nbsp; Jabatan / Instansi','a.&nbsp; '+f(peg.pangkat)+'<br>b.&nbsp; '+f(peg.jabatan))
   +R(4,'Maksud tujuan perjalanan', f(data.maksud))
   +R(5,'Alat angkutan yang digunakan', f(data.angkutan))
   +R(6,'a.&nbsp; Tempat berangkat<br>b.&nbsp; Tempat Tujuan','a.&nbsp; '+f(data.berangkat)+'<br>b.&nbsp; '+f(data.tujuan))
   +R(7,'a.&nbsp; Lamanya pelaksanaan pekerjaan<br>b.&nbsp; Tanggal berangkat<br>c.&nbsp; Tanggal kembali','a.&nbsp; '+f((+data.jumlahHari>0)?(data.jumlahHari+' Hari'):'')+'<br>b.&nbsp; '+fd(data.tglMulai)+'<br>c.&nbsp; '+fd(data.tglSelesai))
   +R(8,'Pembebanan Anggaran<br>a.&nbsp; Instansi<br>b.&nbsp; Akun<br>c.&nbsp; Besar Biaya<br>d.&nbsp; Terbilang',
-       'a.&nbsp; '+esc(INST.namaWP)+'<br>b.&nbsp; '+f(data.akun)+'<br>c.&nbsp; Rp '+biaya.toLocaleString('id-ID')+',-<br>d.&nbsp; <i>'+_terbilangTitle(biaya)+'</i>')
+       '&nbsp;<br>a.&nbsp; '+esc(INST.namaWP)+'<br>b.&nbsp; '+f(data.akun)+'<br>c.&nbsp; Rp '+biaya.toLocaleString('id-ID')+',-<br>d.&nbsp; <i>'+_terbilangTitle(biaya)+'</i>')
   +'</table>'
   +'<table class="sig"><tr>'
   +'<td><div class="ttl">PEGAWAI YANG DIPERINTAHKAN,</div>'
-  +'<div class="nm">Nama : '+f(data.pegawai)+'</div>NIP &nbsp;&nbsp;: '+f(data.nip)+'</td>'
+  +'<div style="visibility:hidden">'+anBlok+'</div>'
+  +'<div class="nm">Nama : '+f(peg.nama)+'</div>NIP &nbsp;&nbsp;: '+f(peg.nip)+'</td>'
   +'<td><div class="ttl">PEJABAT YANG MEMBERIKAN PERINTAH,</div>'
-  +'a.n. Kuasa Pengguna Anggaran<br>Pejabat Pembuat Komitmen '+esc(INST.namaWP)
+  +anBlok
   +'<div class="nm">Nama : '+f(data.ppk)+'</div>NIP &nbsp;&nbsp;: '+f(data.nipPpk)+'</td>'
   +'</tr></table>'
   +'<table class="sig"><tr>'
@@ -1007,8 +1063,7 @@ function _renderSpdHtml(data){
   +'<td><div class="ttl">TELAH DILAKSANAKAN PEKERJAAN</div>'
   +'Nama Kota : '+esc(INST.kota)+'<br>Tanggal &nbsp;&nbsp;: '+fd(data.tglSelesai)
   +'<div class="nm">Nama &nbsp;&nbsp;&nbsp;: '+f(data.kerjaNama)+'</div>Jabatan : '+f(data.kerjaJab)+'</td>'
-  +'</tr></table>'
-  +'</body></html>';
+  +'</tr></table>';
 }
 
 /* ============== Foto nota (geotagging) ============== */

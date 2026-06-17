@@ -68,12 +68,20 @@ function serverGetDashboard() {
  * ============================================================ */
 function serverSimpanPerjalananDinas(data) {
   return _run(function () {
+    var list = (data.pegawaiList && data.pegawaiList.length) ? data.pegawaiList
+             : [{ nama: data.pegawai || '', biaya: Util.num(data.biaya) }];
+    var total = 0, nama = [];
+    for (var i = 0; i < list.length; i++) {
+      total += Util.num(list[i].biaya);
+      if (list[i].nama) nama.push(list[i].nama);
+    }
     var res = KasTunai.tambahTransaksi({
       tanggal: data.tglMulai,
-      debet: 0, kredit: Util.num(data.biaya),
-      penjab: data.pegawai || '',
+      debet: 0, kredit: total,
+      penjab: nama.join(', '),
       kegiatan: data.maksud || ('Perjalanan Dinas ' + (data.nomor || '')),
-      keterangan: 'Surat Tugas ' + (data.nomor || '') + ' (' + Util.num(data.jumlahHari) + ' hari)'
+      keterangan: 'Surat Tugas ' + (data.nomor || '') + ' (' + Util.num(data.jumlahHari) +
+                  ' hari, ' + list.length + ' pegawai)'
     });
     SuratTugas.simpan(res.no, data);
     return { success: true, no: res.no };
