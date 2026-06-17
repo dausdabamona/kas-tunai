@@ -166,12 +166,14 @@ var KasTunai = (function () {
     var t = getRowByTransactionId(transactionId);
     if (!t) return;
     var kredit = Util.num(t.values[C.KREDIT]);
-    var lunas = (total >= kredit && kredit > 0);
+    var kembali = Util.num(t.values[C.KEMBALIAN_TOTAL]);
+    // Lengkap bila nota + pengembalian menutupi uang muka
+    var lunas = ((total + kembali) >= kredit && kredit > 0);
 
     SheetRepo.setCells(CONFIG.SHEETS.KAS_TUNAI, t.rowIndex, Util.set(
       C.NOTA_JML, notas.length,
       C.NOTA_TOTAL, total,
-      C.STATUS_SPJ, lunas ? 'Lunas' : (t.values[C.STATUS_SPJ] || 'Belum')
+      C.STATUS_SPJ, lunas ? 'Lunas' : 'Belum'
     ));
     DeferredFlush.mark();
   }

@@ -103,10 +103,15 @@ var Pengembalian = (function () {
     var list = getPengembalian(transactionId);
     var total = 0;
     for (var i = 0; i < list.length; i++) total += list[i].nilai;
-    updateByTransactionId(transactionId, Util.set(
-      CONFIG.COLS.KEMBALIAN_JML, list.length,
-      CONFIG.COLS.KEMBALIAN_TOTAL, total
-    ));
+    var u = Util.set(CONFIG.COLS.KEMBALIAN_JML, list.length, CONFIG.COLS.KEMBALIAN_TOTAL, total);
+    // STATUS_SPJ lengkap bila nota + pengembalian menutupi uang muka
+    var t = getRowByTransactionId(transactionId);
+    if (t) {
+      var kredit = Util.num(t.values[CONFIG.COLS.KREDIT]);
+      var notaTotal = Util.num(t.values[CONFIG.COLS.NOTA_TOTAL]);
+      u[CONFIG.COLS.STATUS_SPJ] = ((notaTotal + total) >= kredit && kredit > 0) ? 'Lunas' : 'Belum';
+    }
+    updateByTransactionId(transactionId, u);
   }
 
   return {

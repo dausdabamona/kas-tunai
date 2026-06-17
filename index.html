@@ -551,7 +551,7 @@ function loadAll(){
 
 /* ============== Status & filter ============== */
 function fotoCount(t){return fotoJmlMap[String(t.no)]||0;}
-function isNotaLunas(t){return t.kredit>0 && t.notaTotal>=t.kredit;}
+function isNotaLunas(t){return t.kredit>0 && (t.notaTotal+(+t.kembalianTotal||0))>=t.kredit;}
 
 function statusOf(t){
   var fnJml=fotoCount(t), lunas=isNotaLunas(t);
@@ -564,8 +564,8 @@ function statusOf(t){
 function passFilter(t){
   switch(currentFilter){
     case 'all': return true;
-    case 'belum': return t.statusSpj!=='Lunas';
-    case 'sudah': return t.statusSpj==='Lunas';
+    case 'belum': return !isNotaLunas(t);
+    case 'sudah': return isNotaLunas(t);
     case 'belumlunas': return t.kredit>0 && !isNotaLunas(t);
     case 'belumfoto': return t.kredit>0 && fotoCount(t)===0;
     case 'spby': return !!t.noSpby;
@@ -635,20 +635,24 @@ function _cardHtml(t, mode){
       +'<div class="amt debet">+'+rupiah(t.debet)+'<span class="dt">'+esc(t.tanggal)+'</span></div></div></div>';
   }
   var fnJml=fotoCount(t), lunas=isNotaLunas(t);
+  var kembali=(+t.kembalianTotal||0);
   var pj=hitungPajak(t.kegiatan,t.kredit);
-  var sisa=t.kredit-t.notaTotal; if(sisa<0) sisa=0;
+  var sisa=t.kredit-t.notaTotal-kembali; if(sisa<0) sisa=0;
   var st = t.noSpby ? 'st-spby'
-    : (t.statusSpj==='Lunas'||lunas) ? 'st-sudah'
-    : (t.kredit>0 && t.notaTotal<t.kredit) ? 'st-belumlunas'
-    : (t.kredit>0 && fnJml===0) ? 'st-belumfoto'
-    : 'st-belum';
+    : (lunas && fnJml>0) ? 'st-sudah'
+    : lunas ? 'st-belumfoto'
+    : 'st-belumlunas';
+  var lunasTxt = kembali>0
+    ? ('&#10003; Lengkap (Nota '+rupiah(t.notaTotal)+' + Kembali '+rupiah(kembali)+')')
+    : '&#10003; Nota Lunas';
   var h='<div class="tcard '+st+'">'+head
     +'<div class="amt">-'+rupiah(t.kredit)+'<span class="dt">'+esc(t.tanggal)+'</span></div></div>';
-  // baris keluar / nota lunas
+  // baris keluar / nota lunas (termasuk pengembalian)
   h+= lunas
-    ? '<div class="lrow ok"><span>Keluar: '+rupiah(t.kredit)+' &middot; &#10003; Nota Lunas</span>'
+    ? '<div class="lrow ok"><span>Keluar: '+rupiah(t.kredit)+' &middot; '+lunasTxt+'</span>'
       +'<button class="mini b-purple" onclick="openModalKembali('+t.no+')">Catat Kembali</button></div>'
-    : '<div class="lrow keluar"><span>Keluar: '+rupiah(t.kredit)+' &middot; Sisa nota: '+rupiah(sisa)+'</span>'
+    : '<div class="lrow keluar"><span>Keluar: '+rupiah(t.kredit)+' &middot; Sisa: '+rupiah(sisa)
+      +(kembali>0?(' (nota '+rupiah(t.notaTotal)+' + kembali '+rupiah(kembali)+')'):'')+'</span>'
       +'<button class="mini b-purple" onclick="openModalKembali('+t.no+')">Catat Kembali</button></div>';
   // baris pajak
   if(pj.ref===PAJAK_DEFAULT){
@@ -662,8 +666,9 @@ function _cardHtml(t, mode){
   }
   // chips
   var spjChip=lunas?'<span class="chip ok">&#9989; SPJ Lengkap</span>':'<span class="chip">&#8987; Belum SPJ</span>';
-  var notaChip=lunas?'<span class="chip ok">&#9989; Nota '+rupiah(t.notaTotal)+' (100%)</span>'
-                    :'<span class="chip warn">&#9888; Nota Belum Lunas</span>';
+  var notaChip=lunas
+    ?'<span class="chip ok">&#9989; '+(kembali>0?'Nota+Kembali':('Nota '+rupiah(t.notaTotal)))+' (100%)</span>'
+    :'<span class="chip warn">&#9888; Nota Belum Lunas</span>';
   var fotoChip=fnJml>0?'<span class="chip ok">&#128247; Foto '+fnJml+'</span>':'<span class="chip">&#128247; 0</span>';
   var kwChip=t.kuitansiUrl?'<span class="chip ok">&#129534; TTD &#10003;</span>':'';
   h+='<div class="chips">'+spjChip+notaChip+fotoChip+kwChip+'</div>';
@@ -757,7 +762,8 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
   var nilai=(t.uangDiserahkan&&t.uangDiserahkan>0)?t.uangDiserahkan:t.kredit;
   var totalNota=0, totalFoto=0, i, j;
   for(i=0;i<notas.length;i++){ totalNota+=(+notas[i].nilai||0); totalFoto+=((fotoPerNota[String(notas[i].urutan)]||[]).length); }
-  var lengkap=(totalNota>=t.kredit && t.kredit>0);
+  var dikembalikan=(+t.kembalianTotal||0);
+  var lengkap=((totalNota+dikembalikan)>=t.kredit && t.kredit>0);
 
   var notaHtml='';
   for(i=0;i<notas.length;i++){
@@ -828,11 +834,16 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
   +'<div class="bx"><div class="k">Nilai Diterima PUM</div><div class="v">'+rupiah(nilai)+'</div></div>'
   +'</div>'
   +'<div class="status'+(lengkap?'':' no')+'"><div class="s">'
-  +(lengkap?('&#9989; Nota Lengkap ('+rupiah(totalNota)+')'):('&#9888; Nota Belum Lengkap ('+rupiah(totalNota)+' dari '+rupiah(t.kredit)+')'))
-  +'</div><div class="x">'+notas.length+' nota | '+totalFoto+' foto tagging</div></div>'
+  +(lengkap?('&#9989; Pertanggungjawaban Lengkap ('+rupiah(totalNota+dikembalikan)+')')
+           :('&#9888; Belum Lengkap ('+rupiah(totalNota+dikembalikan)+' dari '+rupiah(t.kredit)+')'))
+  +'</div><div class="x">Nota '+rupiah(totalNota)
+  +(dikembalikan>0?(' + Dikembalikan '+rupiah(dikembalikan)):'')
+  +' &middot; '+notas.length+' nota | '+totalFoto+' foto tagging</div></div>'
   +'<div class="sechead">&#129534; Rincian Nota &amp; Foto Barang</div>'
   +notaHtml
-  +'<div class="total">Total Nota: '+rupiah(totalNota)+'</div>'
+  +'<div class="total">Total Nota: '+rupiah(totalNota)
+  +(dikembalikan>0?(' &nbsp;|&nbsp; Dikembalikan: '+rupiah(dikembalikan)+' &nbsp;|&nbsp; Total PJ: '+rupiah(totalNota+dikembalikan)):'')
+  +'</div>'
   +'</body></html>';
 }
 
