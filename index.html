@@ -1508,6 +1508,17 @@ function recalcPajak(){
 function bukaPdfKuitansi(noTransaksi){
   var t=_cariTransaksi(noTransaksi);
   if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
+  if(suratMap[String(noTransaksi)]){
+    // Perjalanan dinas: kuitansi terpisah per pegawai
+    showLoading(true,'Memuat data pegawai...');
+    google.script.run
+      .withSuccessHandler(function(st){ showLoading(false);
+        var list=(st&&st.pegawaiList&&st.pegawaiList.length)?st.pegawaiList:null;
+        _bukaPopup(_renderKuitansiHtml(t, list)); })
+      .withFailureHandler(fail)
+      .serverGetSuratTugas(noTransaksi);
+    return;
+  }
   _bukaPopup(_renderKuitansiHtml(t));
 }
 var _kwTarget=null;
@@ -1547,17 +1558,23 @@ function hapusKuitansiTtd(){
     .withFailureHandler(fail)
     .serverHapusKuitansi(_kwTarget);
 }
-function _renderKuitansiHtml(t){
-  var jumlah=t.kredit;
-  var parts=String(t.tanggal||'').split('-');
-  var thn=parts[0]||(''+new Date().getFullYear());
-  var noKwt='KT-'+('00'+t.no).slice(-3)+'/'+thn;
-  var penerima=t.penjab||'(…………………)';
-
+function _renderKuitansiHtml(t, list){
+  var thn=(String(t.tanggal||'').split('-')[0])||(''+new Date().getFullYear());
+  var noBase='KT-'+('00'+t.no).slice(-3);
+  var pages;
+  if(list && list.length){
+    pages=list.map(function(p,i){
+      var no=(list.length>1)?(noBase+'-'+(i+1)+'/'+thn):(noBase+'/'+thn);
+      return _kuitansiPage(t,{ penerima:(p.nama||'(…………………)'), jumlah:(+p.biaya||0), noKwt:no });
+    }).join('');
+  } else {
+    pages=_kuitansiPage(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn });
+  }
   return ''
-  +'<html><head><meta charset="utf-8"><title>Kuitansi '+noKwt+'</title><style>'
+  +'<html><head><meta charset="utf-8"><title>Kuitansi '+noBase+'/'+thn+'</title><style>'
   +'@page{size:A4 portrait;margin:0} *{font-family:Arial,sans-serif;box-sizing:border-box}'
-  +'body{font-size:13px;color:#000;margin:0;padding:16mm}'
+  +'body{font-size:13px;color:#000;margin:0}'
+  +'.page{padding:16mm;page-break-after:always} .page:last-child{page-break-after:auto}'
   +'.kop .nm{font-weight:bold;font-size:18px} .kop .ad{font-size:11px;margin-top:2px}'
   +'.hrt{border:0;border-top:2.5px solid #000;margin:5px 0 0}'
   +'.judul{text-align:center;font-weight:bold;font-size:19px;letter-spacing:6px;margin:18px 0 2px}'
@@ -1571,31 +1588,36 @@ function _renderKuitansiHtml(t){
   +'.sig .nm{margin-top:54px;font-weight:bold} .sig .nip{font-size:11px}'
   +'@media print{.noprint{display:none}}'
   +'</style></head><body>'
-  +'<div class="noprint" style="text-align:right;margin-bottom:10px">'
+  +'<div class="noprint" style="text-align:right;padding:10px 16mm 0">'
   +'<button onclick="window.print()">Cetak / Simpan PDF</button></div>'
-
+  +pages
+  +'</body></html>';
+}
+function _kuitansiPage(t, o){
+  return ''
+  +'<div class="page">'
   +'<div class="kop"><div class="nm">'+esc(INST.namaWP).toUpperCase()+'</div>'
   +'<div class="ad">'+esc(INST.alamatKop1)+'</div>'
   +'<div class="ad">'+esc(INST.alamatKop2)+'</div></div>'
   +'<hr class="hrt">'
 
   +'<div class="judul">K U I T A N S I</div>'
-  +'<div class="nomor">Nomor: '+noKwt+'</div>'
+  +'<div class="nomor">Nomor: '+o.noKwt+'</div>'
 
   +'<table class="b">'
   +'<tr><td class="l">Sudah diterima dari</td><td class="c">:</td>'
   +'<td>Bendahara Pengeluaran '+esc(INST.namaWP)+'<br><span class="it">('+esc(INST.bendahara)+')</span></td></tr>'
-  +'<tr><td class="l">Uang sejumlah</td><td class="c">:</td><td class="us">'+rupiah(jumlah)+'</td></tr>'
+  +'<tr><td class="l">Uang sejumlah</td><td class="c">:</td><td class="us">'+rupiah(o.jumlah)+'</td></tr>'
   +'<tr><td class="l">Untuk pembayaran</td><td class="c">:</td><td>'+esc(t.kegiatan)+'</td></tr>'
-  +'<tr><td class="terb" colspan="3">Terbilang : <i>'+_terbilangTitle(jumlah)+'</i></td></tr>'
+  +'<tr><td class="terb" colspan="3">Terbilang : <i>'+_terbilangTitle(o.jumlah)+'</i></td></tr>'
   +'</table>'
 
   +'<table class="sig"><tr>'
-  +'<td>Penerima,<br>'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)+'<div class="nm">'+esc(penerima)+'</div></td>'
+  +'<td>Penerima,<br>'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)+'<div class="nm">'+esc(o.penerima)+'</div></td>'
   +'<td>Bendahara Pengeluaran,<div class="nm">'+esc(INST.bendahara)+'</div><span class="nip">NIP. '+esc(INST.nipBendahara)+'</span></td>'
   +'<td>Mengetahui,<br>PPK Poltek KP Sorong<div class="nm">'+esc(INST.ppk)+'</div><span class="nip">NIP. '+esc(INST.nipPpk)+'</span></td>'
   +'</tr></table>'
-  +'</body></html>';
+  +'</div>';
 }
 
 /* ============== SSP (dasar) ============== */
