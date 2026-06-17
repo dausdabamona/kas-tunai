@@ -105,7 +105,7 @@
   .tcard .jd{font-weight:700;font-size:14px}
   .tcard .sb{font-size:12px;color:var(--c-muted);margin-top:2px}
   .tcard .amt{font-weight:700;color:var(--c-err);white-space:nowrap;text-align:right}
-  .tcard .amt.debet{color:var(--c-ok)}
+  .tcard .amt.debet{color:var(--c-ok)} .tcard .amt.amt-ok{color:var(--c-ok)}
   .tcard .amt .dt{display:block;font-size:11px;color:var(--c-muted);font-weight:400;margin-top:3px}
   .lrow{display:flex;justify-content:space-between;align-items:center;gap:8px;border-radius:8px;
     padding:7px 9px;margin-top:8px;font-size:12.5px}
@@ -646,7 +646,10 @@ function _cardHtml(t, mode){
     ? ('&#10003; Lengkap (Nota '+rupiah(t.notaTotal)+' + Kembali '+rupiah(kembali)+')')
     : '&#10003; Nota Lunas';
   var h='<div class="tcard '+st+'">'+head
-    +'<div class="amt">-'+rupiah(t.kredit)+'<span class="dt">'+esc(t.tanggal)+'</span></div></div>';
+    +(lunas
+       ? '<div class="amt amt-ok">&#10003; Lunas<span class="dt">'+esc(t.tanggal)+'</span></div>'
+       : '<div class="amt">-'+rupiah(sisa)+'<span class="dt">'+esc(t.tanggal)+'</span></div>')
+    +'</div>';
   // baris keluar / nota lunas (termasuk pengembalian)
   h+= lunas
     ? '<div class="lrow ok"><span>Keluar: '+rupiah(t.kredit)+' &middot; '+lunasTxt+'</span>'
