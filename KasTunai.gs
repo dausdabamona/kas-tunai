@@ -159,6 +159,14 @@ var KasTunai = (function () {
     return { success: ok, no: no };
   }
 
+  /** Soft-delete satu transaksi by NO. */
+  function hapusTransaksi(no) {
+    var ok = updateByTransactionId(no, Util.set(
+      C.IS_DELETED, FLAG_DELETED, C.DELETED_AT, new Date(), C.DELETED_BY, getOperator()));
+    if (ok) AuditLog.write('DELETE', CONFIG.SHEETS.KAS_TUNAI, no, 'soft delete');
+    return { success: ok };
+  }
+
   /** Cari NO transaksi (aktif) berdasarkan REF_TRANSFER + sumber tertentu, atau null. */
   function findByRef(ref, sumber) {
     if (!ref) return null;
@@ -342,6 +350,7 @@ var KasTunai = (function () {
     ringkasanSaldo: ringkasanSaldo,
     tambahTransaksi: tambahTransaksi,
     updateTransaksi: updateTransaksi,
+    hapusTransaksi: hapusTransaksi,
     pindahDana: pindahDana,
     findByRef: findByRef,
     getMultiNota: getMultiNota,

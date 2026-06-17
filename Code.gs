@@ -72,34 +72,64 @@ function serverPindahDana(arah, nominal, tanggal, keterangan) {
 /* ============================================================
  * Perjalanan Dinas / Surat Tugas
  * ============================================================ */
-/** Ringkas data SPD → field transaksi kas (total biaya, penjab, kegiatan, keterangan). */
+/** Ringkas data SPD → field transaksi kas (total, penjab, kegiatan, keterangan, porsiBank).
+ * porsiBank = Σ item "dibayar bendahara" (transport ditandai + penginapan ditandai) → dibebankan Kas Bank. */
 function _pdMeta(data) {
   var list = (data.pegawaiList && data.pegawaiList.length) ? data.pegawaiList
            : [{ nama: data.pegawai || '', biaya: Util.num(data.biaya) }];
-  var total = 0, nama = [];
+  var total = 0, nama = [], porsiBank = 0;
   for (var i = 0; i < list.length; i++) {
-    total += Util.num(list[i].biaya);
-    if (list[i].nama) nama.push(list[i].nama);
+    var p = list[i];
+    total += Util.num(p.biaya);
+    if (p.nama) nama.push(p.nama);
+    var tr = p.transport || [];
+    for (var j = 0; j < tr.length; j++) if (tr[j] && tr[j].bendahara) porsiBank += Util.num(tr[j].jumlah);
+    if (p.penginapanBendahara) porsiBank += Util.num(p.penginapan);
   }
+  if (porsiBank > total) porsiBank = total;
   var jenisLbl = (data.jenis === 'LUAR_KOTA') ? 'Luar Kota' : 'Dalam Kota';
   return {
-    tanggal: data.tglMulai, debet: 0, kredit: total,
+    tanggal: data.tglMulai, debet: 0, kredit: total, porsiBank: porsiBank,
     penjab: nama.join(', '),
     kegiatan: data.maksud || ('Perjalanan Dinas ' + (data.nomor || '')),
     keterangan: 'Surat Tugas ' + (data.nomor || '') + ' (' + jenisLbl + ', ' +
                 Util.num(data.jumlahHari) + ' hari, ' + list.length + ' pegawai)'
   };
 }
+/** Data baris BANK (porsi tiket/hotel dibayar bendahara) tertaut ke PD primary No. */
+function _pdBankRow(meta, no) {
+  return { tanggal: meta.tanggal, debet: 0, kredit: meta.porsiBank, sumber: 'BANK',
+    penjab: meta.penjab, kegiatan: 'Tiket/Hotel dibayar Bendahara — ' + meta.kegiatan,
+    keterangan: 'Dibayar bendahara via Kas Bank, ref PD No ' + no };
+}
 function serverSimpanPerjalananDinas(data) {
   return _run(function () {
-    var res = KasTunai.tambahTransaksi(_pdMeta(data));
-    SuratTugas.simpan(res.no, data);
-    return { success: true, no: res.no };
+    var meta = _pdMeta(data);
+    var res = KasTunai.tambahTransaksi({
+      tanggal: meta.tanggal, debet: 0, kredit: meta.kredit - meta.porsiBank, sumber: 'TUNAI',
+      penjab: meta.penjab, kegiatan: meta.kegiatan, keterangan: meta.keterangan });
+    var no = res.no;
+    if (meta.porsiBank > 0) {
+      var bd = _pdBankRow(meta, no); bd.refTransfer = 'PD-' + no;
+      KasTunai.tambahTransaksi(bd);
+    }
+    SuratTugas.simpan(no, data);
+    return { success: true, no: no };
   });
 }
 function serverUpdatePerjalananDinas(no, data) {
   return _run(function () {
-    KasTunai.updateTransaksi(no, _pdMeta(data));
+    var meta = _pdMeta(data);
+    KasTunai.updateTransaksi(no, {
+      tanggal: meta.tanggal, debet: 0, kredit: meta.kredit - meta.porsiBank, sumber: 'TUNAI',
+      penjab: meta.penjab, kegiatan: meta.kegiatan, keterangan: meta.keterangan });
+    var bankNo = KasTunai.findByRef('PD-' + no, 'BANK');
+    if (meta.porsiBank > 0) {
+      if (bankNo) KasTunai.updateTransaksi(bankNo, _pdBankRow(meta, no));
+      else { var bd = _pdBankRow(meta, no); bd.refTransfer = 'PD-' + no; KasTunai.tambahTransaksi(bd); }
+    } else if (bankNo) {
+      KasTunai.hapusTransaksi(bankNo);
+    }
     SuratTugas.update(no, data);
     return { success: true, no: no };
   });

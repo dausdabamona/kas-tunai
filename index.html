@@ -245,7 +245,8 @@
   .peg-sub{border-top:1px dashed var(--c-line);margin-top:8px;padding-top:8px}
   .peg-sub h5{margin:0 0 6px;font-size:12px;color:var(--c-muted);text-transform:uppercase;letter-spacing:.4px}
   .sub-row{display:flex;gap:6px;margin-bottom:6px}
-  .sub-row input.urai{flex:1} .sub-row input.nom{width:38%}
+  .sub-row input.urai{flex:1} .sub-row input.nom{width:30%}
+  .bdhlbl{font-size:11px;display:flex;align-items:center;gap:3px;white-space:nowrap;color:#3730a3;font-weight:600}
   .sub-row button{width:auto;padding:4px 10px;margin:0}
 </style>
 <div id="viewSpd" class="wrap hidden">
@@ -991,17 +992,21 @@ function setSpdJenis(j){
   for(var i=0;i<rs.length;i++) rs[i].checked=(rs[i].value===spdJenis);
   hitungSemuaBiaya();
 }
-/* Baris sub-list (transport / riil) — generik */
-function _subRowHtml(urai, nom){
+/* Baris sub-list (transport / riil) — generik. showBdh: centang "dibayar Bendahara" (khusus transport). */
+function _subRowHtml(urai, nom, bdh, showBdh){
   return '<div class="sub-row"><input type="text" class="urai" placeholder="uraian" value="'+_attr(urai)+'">'
    +'<input type="number" class="nom" placeholder="0" value="'+(+nom||0)+'" oninput="hitungSemuaBiaya()">'
+   +(showBdh?('<label class="bdhlbl" title="Dibayar langsung oleh Bendahara via Kas Bank"><input type="checkbox" class="bdh" '+(bdh?'checked':'')+' onchange="hitungSemuaBiaya()"> Bank</label>'):'')
    +'<button type="button" class="btn ghost" onclick="hapusSubRow(this)">&times;</button></div>';
 }
-function addSub(btn){ btn.closest('.peg-sub').querySelector('.sub-list').insertAdjacentHTML('beforeend', _subRowHtml()); }
+function addSub(btn){
+  var sl=btn.closest('.peg-sub').querySelector('.sub-list');
+  sl.insertAdjacentHTML('beforeend', _subRowHtml('',0,false, sl.classList.contains('pg-transport')));
+}
 function hapusSubRow(btn){ btn.closest('.sub-row').remove(); hitungSemuaBiaya(); }
-function _subListHtml(arr){
+function _subListHtml(arr, showBdh){
   arr=arr||[]; var h='';
-  for(var i=0;i<arr.length;i++) h+=_subRowHtml(arr[i].uraian, arr[i].jumlah);
+  for(var i=0;i<arr.length;i++) h+=_subRowHtml(arr[i].uraian, arr[i].jumlah, arr[i].bendahara, showBdh);
   return h;
 }
 function _pegRowHtml(p){
@@ -1021,12 +1026,13 @@ function _pegRowHtml(p){
    +'<label style="display:block;margin-bottom:6px"><input type="checkbox" class="pg-menginap" '+(p.penginapanMenginap?'checked':'')+' onchange="hitungSemuaBiaya()"> Menginap di hotel (at-cost). Bila tidak: 30% × tarif × malam</label>'
    +'<div class="row2"><div class="field"><label>Jumlah malam</label><input type="number" class="pg-malam" value="'+(+p.penginapanMalam||0)+'" oninput="hitungSemuaBiaya()"></div>'
    +'<div class="field"><label>Tarif (Rp/malam)</label><input type="number" class="pg-hotel" value="'+(+p.penginapanRate||0)+'" oninput="hitungSemuaBiaya()"></div></div>'
+   +'<label style="display:block;margin-bottom:6px"><input type="checkbox" class="pg-pgBdh" '+(p.penginapanBendahara?'checked':'')+' onchange="hitungSemuaBiaya()"> Hotel dibayar langsung oleh Bendahara (via Kas Bank)</label>'
    +'<div class="field"><label>Biaya penginapan</label><input type="text" class="pg-pgTot" readonly></div></div>'
-   +'<div class="peg-sub lk-only"><h5>Transport (at-cost)</h5><div class="sub-list pg-transport">'+_subListHtml(p.transport)+'</div>'
+   +'<div class="peg-sub lk-only"><h5>Transport (at-cost) — centang "Bank" bila dibayar bendahara</h5><div class="sub-list pg-transport">'+_subListHtml(p.transport, true)+'</div>'
    +'<button type="button" class="btn ghost" style="width:auto;padding:4px 10px;margin:0" onclick="addSub(this)">+ transport</button></div>'
    +'<div class="peg-sub lk-only"><h5>Uang representasi</h5>'
    +'<div class="field"><label>Tarif (Rp/hari) — pejabat tertentu, default 0</label><input type="number" class="pg-rep" value="'+(+p.repRate|| (p.representasi&&p.uangHarianHari?Math.round(p.representasi/p.uangHarianHari):0) ||0)+'" oninput="hitungSemuaBiaya()"></div></div>'
-   +'<div class="peg-sub lk-only"><h5>Daftar pengeluaran riil (tanpa bukti)</h5><div class="sub-list pg-riil">'+_subListHtml(p.riil)+'</div>'
+   +'<div class="peg-sub lk-only"><h5>Daftar pengeluaran riil (tanpa bukti)</h5><div class="sub-list pg-riil">'+_subListHtml(p.riil, false)+'</div>'
    +'<button type="button" class="btn ghost" style="width:auto;padding:4px 10px;margin:0" onclick="addSub(this)">+ pengeluaran riil</button></div>'
    // ---- Total + hapus ----
    +'<div class="row2"><div class="field"><label>Biaya pegawai (Rp)</label><input type="number" class="pg-biaya" value="'+(+p.biaya||0)+'" readonly></div>'
@@ -1132,7 +1138,8 @@ function _gatherSub(r, sel){
   for(var i=0;i<rows.length;i++){
     var u=(rows[i].querySelector('.urai').value||'').trim();
     var j=parseFloat(rows[i].querySelector('.nom').value)||0;
-    if(u||j) out.push({ uraian:u, jumlah:j });
+    var bEl=rows[i].querySelector('.bdh');
+    if(u||j) out.push({ uraian:u, jumlah:j, bendahara: !!(bEl&&bEl.checked) });
   }
   return out;
 }
@@ -1163,6 +1170,7 @@ function _gatherSpd(){
       base.uangHarianRate=_v(r,'.pg-uhRate'); base.uangHarianHari=hari; base.uangHarian=uangHarian;
       base.transport=transport; base.penginapanMalam=malam; base.penginapanRate=hotel;
       base.penginapanMenginap=menginap; base.penginapan=penginapan;
+      base.penginapanBendahara=!!(r.querySelector('.pg-pgBdh')&&r.querySelector('.pg-pgBdh').checked);
       base.repRate=repRate; base.representasi=representasi; base.riil=riil; base.biaya=grand;
     } else {
       base.biaya=(parseFloat(r.querySelector('.pg-biaya').value)||0);
@@ -1416,16 +1424,21 @@ function _rincianPage(data, peg){
   }
   var uhHari=(+peg.uangHarianHari||+data.jumlahHari||0), uhRate=(+peg.uangHarianRate||0);
   rincian+=row('Uang harian '+uhHari+' hari &times; '+rupiah(uhRate), (+peg.uangHarian|| (uhRate*uhHari)), 'Lumpsum');
-  var trans=peg.transport||[];
-  for(var i=0;i<trans.length;i++) rincian+=row('Transport: '+esc(trans[i].uraian||'-'), trans[i].jumlah, 'At-cost');
+  var trans=peg.transport||[], dibayarBank=0;
+  for(var i=0;i<trans.length;i++){
+    var tBdh=!!trans[i].bendahara; if(tBdh) dibayarBank+=(+trans[i].jumlah||0);
+    rincian+=row('Transport: '+esc(trans[i].uraian||'-'), trans[i].jumlah, tBdh?'Dibayar Bendahara (Kas Bank)':'At-cost');
+  }
   if((+peg.penginapan||0)>0 || (+peg.penginapanMalam||0)>0){
     var ketP=peg.penginapanMenginap? ((+peg.penginapanMalam||0)+' malam &times; '+rupiah(+peg.penginapanRate||0))
                                     : ('30% &times; '+rupiah(+peg.penginapanRate||0)+' &times; '+(+peg.penginapanMalam||0)+' malam (tidak menginap)');
+    if(peg.penginapanBendahara){ ketP+=' — Dibayar Bendahara (Kas Bank)'; dibayarBank+=(+peg.penginapan||0); }
     rincian+=row('Biaya penginapan', (+peg.penginapan||0), ketP);
   }
   if((+peg.representasi||0)>0) rincian+=row('Uang representasi', (+peg.representasi||0), 'Lumpsum');
   var riil=peg.riil||[];
   for(var k=0;k<riil.length;k++) rincian+=row('Pengeluaran riil: '+esc(riil[k].uraian||'-'), riil[k].jumlah, 'Daftar pengeluaran riil');
+  if(dibayarBank>total) dibayarBank=total;
   var um=(+data.uangMuka||0), sisa=total-um;
   var lblSisa = sisa>=0 ? 'Sisa KURANG dibayar' : 'Sisa LEBIH (dikembalikan)';
   return ''
@@ -1438,6 +1451,8 @@ function _rincianPage(data, peg){
   +'<tr><td></td><td class="rt"><b>Jumlah</b></td><td class="rt"><b>'+rupiah(total)+'</b></td><td></td></tr>'
   +'</table>'
   +'<div class="terb">Terbilang : <i>'+_terbilangTitle(total)+'</i></div>'
+  +(dibayarBank>0 ? ('<table class="b" style="margin-top:10px"><tr><td class="lbl">Dibayar langsung oleh Bendahara via Kas Bank (tiket/hotel)</td><td class="rt">'+rupiah(dibayarBank)+'</td></tr>'
+    +'<tr><td class="lbl">Dibayarkan tunai kepada Pelaksana</td><td class="rt">'+rupiah(total-dibayarBank)+'</td></tr></table>') : '')
   +'<table class="b" style="margin-top:10px"><tr><td class="lbl">Telah dibayar sejumlah</td><td class="rt">'+rupiah(um)+'</td></tr>'
   +'<tr><td class="lbl">'+lblSisa+'</td><td class="rt">'+rupiah(Math.abs(sisa))+'</td></tr></table>'
   +'<table class="sign"><tr>'
