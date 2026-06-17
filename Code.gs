@@ -56,9 +56,9 @@ function serverGetTransaksi() {
 function serverGetDashboard() {
   return _run(function () {
     // Perbaiki label header kolom yang kosong (sekali per TTL cache; idempotent).
-    if (!AppCache.get('hdr_fixed_v1')) {
+    if (!AppCache.get('hdr_fixed_v2')) {
       try { SheetRepo.ensureHeaders(); } catch (e) { Logger.log('[ensureHeaders] ' + e.message); }
-      AppCache.put('hdr_fixed_v1', 1);
+      AppCache.put('hdr_fixed_v2', 1);
     }
     return {
       transaksi: KasTunai.getTransaksi(),
@@ -308,8 +308,8 @@ function serverCariPenyedia(keyword) {
 /* ============================================================
  * SPBY
  * ============================================================ */
-function serverSimpanSpby(rowIndex, noSpby, tglSpby) {
-  return _run(function () { return KasTunai.simpanSpby(rowIndex, noSpby, tglSpby); });
+function serverSimpanSpby(rowIndex, noSpby, tglSpby, nilaiSpby) {
+  return _run(function () { return KasTunai.simpanSpby(rowIndex, noSpby, tglSpby, nilaiSpby); });
 }
 function serverHapusSpby(rowIndex) {
   return _run(function () { return KasTunai.hapusSpby(rowIndex); });

@@ -37,6 +37,7 @@ var KasTunai = (function () {
       kembalianTotal:  Util.num(row[C.KEMBALIAN_TOTAL]),
       noSpby:          row[C.NO_SPBY],
       tglSpby:         Util.fmtDate(row[C.TGL_SPBY]),
+      nilaiSpby:       Util.num(row[C.NILAI_SPBY]),
       kuitansiFileId:  row[C.KUITANSI_FILE_ID],
       kuitansiUrl:     row[C.KUITANSI_URL],
       sumber:          (String(row[C.SUMBER]||'').toUpperCase()==='BANK') ? 'BANK' : 'TUNAI',
@@ -252,8 +253,11 @@ var KasTunai = (function () {
     if (!t) return;
     var kredit = Util.num(t.values[C.KREDIT]);
     var kembali = Util.num(t.values[C.KEMBALIAN_TOTAL]);
-    // Lengkap bila nota + pengembalian menutupi uang muka
-    var lunas = ((total + kembali) >= kredit && kredit > 0);
+    var nilaiSpby = Util.num(t.values[C.NILAI_SPBY]);
+    // Target pertanggungjawaban = Nilai SPBY bila diisi, selain itu nilai pengeluaran.
+    var target = nilaiSpby > 0 ? nilaiSpby : kredit;
+    // Lengkap bila nota + pengembalian menutupi target (SPBY/uang muka)
+    var lunas = ((total + kembali) >= target && target > 0);
 
     SheetRepo.setCells(CONFIG.SHEETS.KAS_TUNAI, t.rowIndex, Util.set(
       C.NOTA_JML, notas.length,
@@ -291,17 +295,18 @@ var KasTunai = (function () {
   /* -------------------------------------------------------- *
    * SPBY
    * -------------------------------------------------------- */
-  function simpanSpby(rowIndex, noSpby, tglSpby) {
+  function simpanSpby(rowIndex, noSpby, tglSpby, nilaiSpby) {
     SheetRepo.setCells(CONFIG.SHEETS.KAS_TUNAI, rowIndex, Util.set(
       C.NO_SPBY, noSpby || '',
-      C.TGL_SPBY, tglSpby ? new Date(tglSpby) : ''
+      C.TGL_SPBY, tglSpby ? new Date(tglSpby) : '',
+      C.NILAI_SPBY, Util.num(nilaiSpby)
     ));
     DeferredFlush.mark();
     return { success: true };
   }
 
   function hapusSpby(rowIndex) {
-    return simpanSpby(rowIndex, '', '');
+    return simpanSpby(rowIndex, '', '', 0);
   }
 
   /* -------------------------------------------------------- *

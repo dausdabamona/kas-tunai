@@ -109,7 +109,9 @@ var Pengembalian = (function () {
     if (t) {
       var kredit = Util.num(t.values[CONFIG.COLS.KREDIT]);
       var notaTotal = Util.num(t.values[CONFIG.COLS.NOTA_TOTAL]);
-      u[CONFIG.COLS.STATUS_SPJ] = ((notaTotal + total) >= kredit && kredit > 0) ? 'Lunas' : 'Belum';
+      var nilaiSpby = Util.num(t.values[CONFIG.COLS.NILAI_SPBY]);
+      var target = nilaiSpby > 0 ? nilaiSpby : kredit;
+      u[CONFIG.COLS.STATUS_SPJ] = ((notaTotal + total) >= target && target > 0) ? 'Lunas' : 'Belum';
     }
     updateByTransactionId(transactionId, u);
   }

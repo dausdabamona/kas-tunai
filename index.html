@@ -553,6 +553,8 @@
     <h2>Input SPBY <span id="spTxLabel"></span></h2>
     <div class="field"><label>Nomor SPBY</label><input type="text" id="spNo" placeholder="mis. 045/SPBY/2026"></div>
     <div class="field"><label>Tanggal SPBY</label><input type="date" id="spTgl"></div>
+    <div class="field"><label>Nilai SPBY (Rp)</label><input type="text" class="numfmt" id="spNilai" inputmode="numeric" value="0" oninput="_spbyRecon()"></div>
+    <div id="spRecon" style="font-size:12px;line-height:1.5;background:#f8fafc;border:1px solid var(--c-line);border-radius:8px;padding:8px;margin-bottom:10px"></div>
     <button class="btn" onclick="submitSpby()">Simpan SPBY</button>
     <button class="btn ghost" id="spHapusBtn" onclick="hapusSpbyTx()" style="background:#fee2e2;color:#991b1b">Hapus SPBY</button>
     <button class="btn ghost" onclick="closeModal('modalSpby')">Tutup</button>
@@ -789,7 +791,9 @@ function loadAll(){
 
 /* ============== Status & filter ============== */
 function fotoCount(t){return fotoJmlMap[String(t.no)]||0;}
-function isNotaLunas(t){return t.kredit>0 && (t.notaTotal+(+t.kembalianTotal||0))>=t.kredit;}
+/* Target pertanggungjawaban = Nilai SPBY bila diisi, selain itu nilai pengeluaran. */
+function _spbyTarget(t){ return (+t.nilaiSpby>0)?(+t.nilaiSpby):(+t.kredit||0); }
+function isNotaLunas(t){ var tg=_spbyTarget(t); return tg>0 && (t.notaTotal+(+t.kembalianTotal||0))>=tg; }
 
 function statusOf(t){
   var fnJml=fotoCount(t), lunas=isNotaLunas(t);
@@ -921,7 +925,7 @@ function _cardHtml(t, mode){
   var fnJml=fotoCount(t), lunas=isNotaLunas(t);
   var kembali=(+t.kembalianTotal||0);
   var pj=hitungPajak(t.kegiatan,t.kredit);
-  var sisa=t.kredit-t.notaTotal-kembali; if(sisa<0) sisa=0;
+  var sisa=_spbyTarget(t)-t.notaTotal-kembali; if(sisa<0) sisa=0;
   var st = t.noSpby ? 'st-spby'
     : (lunas && fnJml>0) ? 'st-sudah'
     : lunas ? 'st-belumfoto'
@@ -941,6 +945,18 @@ function _cardHtml(t, mode){
     : '<div class="lrow keluar"><span>Keluar: '+rupiah(t.kredit)+' &middot; Sisa: '+rupiah(sisa)
       +(kembali>0?(' (nota '+rupiah(t.notaTotal)+' + kembali '+rupiah(kembali)+')'):'')+'</span>'
       +'<button class="mini b-purple" onclick="openModalKembali('+t.no+')">Catat Kembali</button></div>';
+  // baris rekonsiliasi SPBY vs SPJ (bila Nilai SPBY diisi)
+  if(+t.nilaiSpby>0){
+    var sel=t.nilaiSpby-t.notaTotal-kembali;
+    var selTxt = sel>0 ? ('Selisih perlu disetor/kembali: '+rupiah(sel))
+               : sel<0 ? ('Nota melebihi SPBY: '+rupiah(-sel))
+               : '&#10003; Sesuai SPBY';
+    h+='<div class="lrow '+(sel>0?'keluar':'ok')+'"><span>SPBY '+rupiah(t.nilaiSpby)
+      +' &middot; SPJ(nota) '+rupiah(t.notaTotal)+(kembali>0?(' + kembali '+rupiah(kembali)):'')
+      +' &middot; '+selTxt+'</span>'
+      +(sel>0?'<button class="mini b-purple" onclick="openModalKembali('+t.no+')">Setor/Kembali</button>':'')
+      +'</div>';
+  }
   // baris pajak
   if(pj.ref===PAJAK_DEFAULT){
     h+='<div class="lrow pajak"><span>&#9888; Cek pajak manual</span>'
@@ -1019,7 +1035,7 @@ function renderList(){
 }
 function onSearch(){ currentSearch=(document.getElementById('searchBox').value||'').toLowerCase().trim(); renderList(); }
 
-/* ============== SPBY (input nomor + tanggal) ============== */
+/* ============== SPBY (nomor + tanggal + nilai + rekonsiliasi SPJ) ============== */
 var _spTarget=null, _spRow=null;
 function openModalSpby(no,rowIndex){
   _spTarget=no; _spRow=rowIndex;
@@ -1027,18 +1043,36 @@ function openModalSpby(no,rowIndex){
   document.getElementById('spTxLabel').textContent='No '+no;
   document.getElementById('spNo').value=(t&&t.noSpby)?t.noSpby:'';
   document.getElementById('spTgl').value=(t&&t.tglSpby)?t.tglSpby:todayISO();
+  var nilai=(t&&+t.nilaiSpby>0)?t.nilaiSpby:(t?t.kredit:0);
+  document.getElementById('spNilai').value=_grp(nilai);
   document.getElementById('spHapusBtn').style.display=(t&&t.noSpby)?'block':'none';
+  _spbyRecon();
   openModal('modalSpby');
+}
+/* Hitung & tampilkan rekonsiliasi Nilai SPBY vs Nilai SPJ (total nota) + pengembalian */
+function _spbyRecon(){
+  var el=document.getElementById('spRecon'); if(!el) return;
+  var t=_cariTransaksi(_spTarget); if(!t){ el.innerHTML=''; return; }
+  var nilai=unfmt(document.getElementById('spNilai').value);
+  var nota=(+t.notaTotal||0), kembali=(+t.kembalianTotal||0);
+  var selisih=nilai-nota-kembali;
+  var s='<div>Nilai SPBY: <b>'+rupiah(nilai)+'</b></div>'
+    +'<div>Nilai SPJ (total nota): <b>'+rupiah(nota)+'</b>'+(kembali>0?(' + dikembalikan '+rupiah(kembali)):'')+'</div>';
+  if(selisih>0) s+='<div style="color:#991b1b;margin-top:4px">&#9888; Selisih kurang <b>'+rupiah(selisih)+'</b> → harus <b>disetor/dikembalikan</b> sebesar itu (catat lewat "Catat Kembali"), atau lengkapi nota.</div>';
+  else if(selisih<0) s+='<div style="color:#92400e;margin-top:4px">&#9888; Nota melebihi SPBY sebesar <b>'+rupiah(-selisih)+'</b> — periksa kembali nilai SPBY/nota.</div>';
+  else s+='<div style="color:#166534;margin-top:4px">&#10003; Sesuai — SPJ + pengembalian = Nilai SPBY (lunas).</div>';
+  el.innerHTML=s;
 }
 function submitSpby(){
   var no=document.getElementById('spNo').value.trim();
   if(!no){ toast('Nomor SPBY wajib diisi','error'); return; }
+  var nilai=unfmt(document.getElementById('spNilai').value);
   showLoading(true,'Menyimpan SPBY...');
   google.script.run
     .withSuccessHandler(function(){ showLoading(false); toast('SPBY tersimpan','success');
       closeModal('modalSpby'); loadAll(); })
     .withFailureHandler(fail)
-    .serverSimpanSpby(_spRow, no, document.getElementById('spTgl').value);
+    .serverSimpanSpby(_spRow, no, document.getElementById('spTgl').value, nilai);
 }
 function hapusSpbyTx(){
   if(!confirm('Hapus nomor SPBY transaksi ini?')) return;
@@ -1068,7 +1102,9 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
   var totalNota=0, totalFoto=0, i, j;
   for(i=0;i<notas.length;i++){ totalNota+=(+notas[i].nilai||0); totalFoto+=((fotoPerNota[String(notas[i].urutan)]||[]).length); }
   var dikembalikan=(+t.kembalianTotal||0);
-  var lengkap=((totalNota+dikembalikan)>=t.kredit && t.kredit>0);
+  var targetSpj=(+t.nilaiSpby>0)?(+t.nilaiSpby):t.kredit;
+  var selisihSpj=targetSpj-totalNota-dikembalikan;
+  var lengkap=((totalNota+dikembalikan)>=targetSpj && targetSpj>0);
 
   var notaHtml='';
   for(i=0;i<notas.length;i++){
@@ -1140,10 +1176,13 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
   +'</div>'
   +'<div class="status'+(lengkap?'':' no')+'"><div class="s">'
   +(lengkap?('&#9989; Pertanggungjawaban Lengkap ('+rupiah(totalNota+dikembalikan)+')')
-           :('&#9888; Belum Lengkap ('+rupiah(totalNota+dikembalikan)+' dari '+rupiah(t.kredit)+')'))
+           :('&#9888; Belum Lengkap ('+rupiah(totalNota+dikembalikan)+' dari '+rupiah(targetSpj)+')'))
   +'</div><div class="x">Nota '+rupiah(totalNota)
   +(dikembalikan>0?(' + Dikembalikan '+rupiah(dikembalikan)):'')
-  +' &middot; '+notas.length+' nota | '+totalFoto+' foto tagging</div></div>'
+  +' &middot; '+notas.length+' nota | '+totalFoto+' foto tagging'
+  +(t.noSpby?(' &middot; SPBY '+esc(t.noSpby)+(t.nilaiSpby>0?(' = '+rupiah(t.nilaiSpby)):'')):'')
+  +(selisihSpj>0?(' &middot; selisih disetor '+rupiah(selisihSpj)):'')
+  +'</div></div>'
   +'<div class="sechead">&#129534; Rincian Nota &amp; Foto Barang</div>'
   +notaHtml
   +'<div class="total">Total Nota: '+rupiah(totalNota)
