@@ -55,6 +55,11 @@ function serverGetTransaksi() {
 /** Muat data dashboard awal dalam satu round-trip: transaksi + jumlah foto + surat tugas. */
 function serverGetDashboard() {
   return _run(function () {
+    // Perbaiki label header kolom yang kosong (sekali per TTL cache; idempotent).
+    if (!AppCache.get('hdr_fixed_v1')) {
+      try { SheetRepo.ensureHeaders(); } catch (e) { Logger.log('[ensureHeaders] ' + e.message); }
+      AppCache.put('hdr_fixed_v1', 1);
+    }
     return {
       transaksi: KasTunai.getTransaksi(),
       fotoMap: FotoNota.getJmlFotoPerTransaksi(),
@@ -62,6 +67,16 @@ function serverGetDashboard() {
       saldo: KasTunai.ringkasanSaldo()
     };
   });
+}
+
+/** Perbaiki header kolom kosong secara manual (dari frontend bila perlu). */
+function serverPerbaikiHeader() {
+  return _run(function () { return SheetRepo.ensureHeaders(); });
+}
+
+/** Jalankan langsung dari editor Apps Script untuk mengisi header kosong sekarang juga. */
+function perbaikiHeader() {
+  return SheetRepo.ensureHeaders();
 }
 
 /** Pindah dana antar kas (Bank <-> Tunai). arah: 'BANK_TUNAI' | 'TUNAI_BANK'. */

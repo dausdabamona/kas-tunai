@@ -149,6 +149,46 @@ var SheetRepo = (function () {
     _ExecCache.del('__data__' + name);
   }
 
+  // Akronim yang tetap huruf besar saat membuat label header ramah-baca.
+  var _HDR_ACRONYM = { ID:1, URL:1, NPWP:1, NIP:1, SPBY:1, SPJ:1, PPK:1, KPA:1,
+                       JSON:1, LAT:1, LNG:1, PD:1, DIPA:1 };
+
+  /** Ubah token CONFIG.HEADERS (mis. 'KUITANSI_FILE_ID') jadi label rapi ('Kuitansi File ID'). */
+  function _friendlyHeader(token) {
+    var parts = String(token || '').split('_');
+    for (var i = 0; i < parts.length; i++) {
+      var w = parts[i];
+      if (!w) continue;
+      parts[i] = _HDR_ACRONYM[w] ? w
+               : (w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+    }
+    return parts.join(' ');
+  }
+
+  /**
+   * Isi label header yang KOSONG pada baris 1 tiap sheet (sesuai CONFIG.HEADERS),
+   * tanpa menimpa label yang sudah ada. Idempotent. Kembalikan jumlah sheet diperbaiki.
+   */
+  function ensureHeaders() {
+    var changed = 0;
+    for (var key in CONFIG.SHEETS) {
+      var name = CONFIG.SHEETS[key];
+      var hdr = CONFIG.HEADERS[key];
+      if (!hdr || !hdr.length) continue;
+      var sh = ss().getSheetByName(name);
+      if (!sh) continue; // jangan buat sheet baru di sini
+      var range = sh.getRange(1, 1, 1, hdr.length);
+      var row = range.getValues()[0];
+      var dirty = false;
+      for (var i = 0; i < hdr.length; i++) {
+        if (row[i] === '' || row[i] === null) { row[i] = _friendlyHeader(hdr[i]); dirty = true; }
+      }
+      if (dirty) { range.setValues([row]); sh.setFrozenRows(1); changed++; }
+    }
+    if (changed) SpreadsheetApp.flush();
+    return changed;
+  }
+
   return {
     ss: ss,
     sheet: sheet,
@@ -156,7 +196,8 @@ var SheetRepo = (function () {
     appendRow: appendRow,
     setRow: setRow,
     setCells: setCells,
-    invalidate: invalidate
+    invalidate: invalidate,
+    ensureHeaders: ensureHeaders
   };
 })();
 
