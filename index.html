@@ -220,6 +220,12 @@
     <input type="text" id="searchBox" placeholder="Cari kegiatan atau penjab..." oninput="onSearch()">
   </div>
 
+  <div class="search" style="margin-top:8px">&#128197;
+    <select id="filterBulan" onchange="onFilterBulan()" style="flex:1;border:none;background:transparent;font:inherit;color:inherit;outline:none">
+      <option value="">Semua Bulan</option>
+    </select>
+  </div>
+
   <div class="filters" id="filterBar">
     <button data-f="all">Semua</button>
     <button data-f="belum">Belum SPJ</button>
@@ -553,7 +559,9 @@ var IS_ADMIN      = <?= appData.isAdmin ? 'true' : 'false' ?>;
 var allTransaksi  = [];
 var currentFilter = 'belumfoto';
 var currentSearch = '';        // kata kunci pencarian (kegiatan/penjab)
+var currentMonth  = '';        // filter bulan 'YYYY-MM' ('' = semua bulan)
 var _txMode       = 'keluar';  // mode form transaksi: 'masuk' | 'keluar'
+var _txEditNo     = null;      // null = tambah baru; berisi NO saat mengedit transaksi
 var fotoJmlMap    = {};      // {noTransaksi: jumlahFotoNota}
 var suratMap      = {};      // {noTransaksi: nomorSurat} penanda perjalanan dinas
 var saldoInfo     = null;    // {saldoTunai, saldoBank, saldoTotal} dari server
@@ -811,6 +819,27 @@ function _matchSearch(t){
   return String(t.kegiatan||'').toLowerCase().indexOf(currentSearch)!==-1
       || String(t.penjab||'').toLowerCase().indexOf(currentSearch)!==-1;
 }
+function _matchMonth(t){
+  return !currentMonth || String(t.tanggal||'').slice(0,7)===currentMonth;
+}
+var _NAMA_BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+function _labelBulan(ym){ var p=ym.split('-'); return (_NAMA_BULAN[(+p[1]||1)-1]||'')+' '+p[0]; }
+function onFilterBulan(){ currentMonth=document.getElementById('filterBulan').value; renderList(); }
+/* Isi dropdown bulan dari bulan yang tersedia di data (terbaru di atas) */
+function _populateBulan(){
+  var sel=document.getElementById('filterBulan'); if(!sel) return;
+  var seen={}, months=[];
+  for(var i=0;i<allTransaksi.length;i++){
+    var ym=String(allTransaksi[i].tanggal||'').slice(0,7);
+    if(ym && !seen[ym]){ seen[ym]=1; months.push(ym); }
+  }
+  months.sort().reverse();
+  if(currentMonth && !seen[currentMonth]) currentMonth='';
+  var html='<option value="">Semua Bulan</option>';
+  for(var j=0;j<months.length;j++) html+='<option value="'+months[j]+'">'+_labelBulan(months[j])+'</option>';
+  sel.innerHTML=html;
+  sel.value=currentMonth;
+}
 function _sum(list,f){var s=0;for(var i=0;i<list.length;i++)s+=(+list[i][f]||0);return s;}
 function _initial(s){s=String(s||'?').trim();return (s.charAt(0)||'?').toUpperCase();}
 function _avatarColor(s){var h=0;s=String(s||'');for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))&0xffffff;
@@ -849,7 +878,8 @@ function _cardHtml(t, mode){
     +'<div class="sb">&#128100; '+esc(t.penjab||'-')+(t.keterangan?(' &middot; '+esc(t.keterangan)):'')+'</div></div>';
   if(mode==='masuk'){
     return '<div class="tcard">'+head
-      +'<div class="amt debet">+'+rupiah(t.debet)+'<span class="dt">'+esc(t.tanggal)+'</span></div></div></div>';
+      +'<div class="amt debet">+'+rupiah(t.debet)+'<span class="dt">'+esc(t.tanggal)+'</span></div></div>'
+      +'<div class="acts"><button class="b-edit" onclick="editTransaksi('+t.no+')">&#9998; Edit</button></div></div>';
   }
   var fnJml=fotoCount(t), lunas=isNotaLunas(t);
   var kembali=(+t.kembalianTotal||0);
@@ -905,7 +935,8 @@ function _cardHtml(t, mode){
       +'<button class="b-gray" onclick="openModalBukti('+t.no+')">&#128206; Bukti</button>'
       +'<button class="b-dark" onclick="cetakSpjPd('+t.no+')">&#129534; Cetak SPJ</button>';
   } else {
-    h+='<button class="b-orange" onclick="openModalNota('+t.no+')">Kelola Nota</button>'
+    h+='<button class="b-edit" onclick="editTransaksi('+t.no+')">&#9998; Edit</button>'
+      +'<button class="b-orange" onclick="openModalNota('+t.no+')">Kelola Nota</button>'
       +'<button class="b-gray" onclick="openFoto('+t.no+')">Foto</button>'
       +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">Kuitansi</button>'
       +'<button class="b-spby" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+(t.noSpby?'SPBY &#10003;':'SPBY')+'</button>';
@@ -917,10 +948,11 @@ function _cardHtml(t, mode){
 
 function renderList(){
   updateSaldoBar();
+  _populateBulan();
   var box=document.getElementById('listTransaksi');
   var byNoDesc=function(a,b){return (+b.no||0)-(+a.no||0);}; // terbaru (No terbesar) di atas
-  var keluar=allTransaksi.filter(function(t){return t.kredit>0;}).filter(passFilter).filter(_matchSearch).sort(byNoDesc);
-  var masuk =allTransaksi.filter(function(t){return t.debet>0;}).filter(_matchSearch).sort(byNoDesc);
+  var keluar=allTransaksi.filter(function(t){return t.kredit>0;}).filter(passFilter).filter(_matchSearch).filter(_matchMonth).sort(byNoDesc);
+  var masuk =allTransaksi.filter(function(t){return t.debet>0;}).filter(_matchSearch).filter(_matchMonth).sort(byNoDesc);
   var belum =keluar.filter(function(t){return t.notaJml===0;});
   var sudah =keluar.filter(function(t){return t.notaJml>0;});
 
@@ -1732,20 +1764,44 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 
 /* ============== Tambah transaksi ============== */
+/* Atur label/judul modal sesuai mode masuk/keluar */
+function _txSetLabels(masuk){
+  document.getElementById('txNilaiLbl').textContent=masuk?'Nilai Masuk / Debet (Rp)':'Nilai Keluar / Kredit (Rp)';
+  document.getElementById('txPenjabLbl').textContent=masuk?'Sumber Dana / Penyetor':'Penanggung Jawab (PUM)';
+  document.getElementById('txSimpan').style.background=masuk?'var(--c-ok)':'var(--c-err)';
+}
 function openModalTransaksi(mode){
+  _txEditNo=null;
   _txMode=(mode==='masuk')?'masuk':'keluar';
   closeModal('modalPilihTx');
   var masuk=(_txMode==='masuk');
   document.getElementById('txTitle').textContent=masuk?'⬇ Transaksi Masuk (Uang Diterima)':'⬆ Transaksi Keluar (Pengeluaran)';
-  document.getElementById('txNilaiLbl').textContent=masuk?'Nilai Masuk / Debet (Rp)':'Nilai Keluar / Kredit (Rp)';
-  document.getElementById('txPenjabLbl').textContent=masuk?'Sumber Dana / Penyetor':'Penanggung Jawab (PUM)';
-  document.getElementById('txSimpan').style.background=masuk?'var(--c-ok)':'var(--c-err)';
+  document.getElementById('txSimpan').textContent='Simpan';
+  _txSetLabels(masuk);
   document.getElementById('txSumber').value='TUNAI';
   document.getElementById('txTanggal').value=todayISO();
   document.getElementById('txKegiatan').value='';
   document.getElementById('txPenjab').value=masuk?'':(NAMA_USER||'');
   document.getElementById('txNilai').value=0;
   document.getElementById('txKeterangan').value='';
+  openModal('modalTransaksi');
+}
+/* Edit transaksi yang sudah ada (prefill modal yang sama) */
+function editTransaksi(no){
+  var t=_cariTransaksi(no);
+  if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
+  _txEditNo=no;
+  _txMode=((+t.debet||0)>0)?'masuk':'keluar';
+  var masuk=(_txMode==='masuk');
+  document.getElementById('txTitle').textContent=(masuk?'✏ Edit Transaksi Masuk':'✏ Edit Transaksi Keluar')+' (No '+no+')';
+  document.getElementById('txSimpan').textContent='Perbarui';
+  _txSetLabels(masuk);
+  document.getElementById('txSumber').value=t.sumber||'TUNAI';
+  document.getElementById('txTanggal').value=t.tanggal||todayISO();
+  document.getElementById('txKegiatan').value=t.kegiatan||'';
+  document.getElementById('txPenjab').value=t.penjab||'';
+  document.getElementById('txNilai').value=_grp(masuk?t.debet:t.kredit);
+  document.getElementById('txKeterangan').value=t.keterangan||'';
   openModal('modalTransaksi');
 }
 function openModalPindah(){
@@ -1910,6 +1966,16 @@ function submitTransaksi(){
   };
   if(!data.kegiatan){toast('Kegiatan/uraian wajib diisi','error');return;}
   if(nilai<=0){toast('Nilai harus lebih dari 0','error');return;}
+  if(_txEditNo!=null){
+    var no=_txEditNo;
+    showLoading(true,'Memperbarui...');
+    google.script.run
+      .withSuccessHandler(function(){showLoading(false);closeModal('modalTransaksi');
+        _txEditNo=null; toast('Transaksi No '+no+' diperbarui','success');loadAll();})
+      .withFailureHandler(fail)
+      .serverUpdateTransaksi(no, data);
+    return;
+  }
   showLoading(true,'Menyimpan...');
   google.script.run
     .withSuccessHandler(function(){showLoading(false);closeModal('modalTransaksi');

@@ -140,6 +140,9 @@ function serverGetSuratTugas(noTransaksi) {
 function serverTambahTransaksi(data) {
   return _run(function () { return KasTunai.tambahTransaksi(data); });
 }
+function serverUpdateTransaksi(no, data) {
+  return _run(function () { return KasTunai.updateTransaksi(no, data); });
+}
 
 /* ============================================================
  * Impor Rekening Koran (Bank) — .xlsx via Advanced Drive Service
