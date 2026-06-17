@@ -235,6 +235,7 @@
   <div class="daftar-head" style="border-radius:10px">&#9992; Surat Perjalanan Dinas Dalam Kota</div>
   <div class="listbox" style="border-top:1px solid var(--c-line);border-radius:10px;margin-top:10px">
     <div class="field"><label>Nomor Surat Tugas</label><input type="text" id="spdNomor" placeholder="mis. 094/ST/2026"></div>
+    <div class="field"><label>Maksud tujuan perjalanan</label><input type="text" id="spdMaksud"></div>
     <div class="field"><label>Alat angkutan</label><input type="text" id="spdAngkutan"></div>
     <div class="row2">
       <div class="field"><label>Tempat berangkat</label><input type="text" id="spdBerangkat"></div>
@@ -949,8 +950,8 @@ function hitungSemuaBiaya(){
   document.getElementById('spdTotal').value='Rp '+total.toLocaleString('id-ID');
 }
 function resetSpdForm(){
-  var V={spdNomor:'',spdMaksud:'',
-    spdAngkutan:'Kendaraan Roda Dua',spdBerangkat:'Kampus Politeknik KP Sorong',spdTujuan:'',
+  var V={spdNomor:'',spdMaksud:'',spdAngkutan:'Kendaraan Roda Dua',
+    spdBerangkat:'Kampus Politeknik KP Sorong',spdTujuan:'',
     spdTglB:todayISO(),spdTglS:todayISO(),spdHarian:SPD_HARIAN_DEFAULT,spdAkun:'',
     spdPpk:INST.ppk,spdNipPpk:INST.nipPpk,spdLokNama:'',spdLokJab:'',spdKerjaNama:'',spdKerjaJab:''};
   for(var id in V) document.getElementById(id).value=V[id];
