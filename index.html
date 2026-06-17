@@ -958,6 +958,12 @@ function _cardHtml(t, mode){
       +'<button class="mini b-purple" onclick="openModalKembali('+t.no+')">Catat Kembali</button></div>';
   // baris rekonsiliasi SPBY vs SPJ (bila Nilai SPBY diisi)
   if(+t.nilaiSpby>0){
+    // Selisih SPBY (bruto) vs pembayaran via rekening = pajak yang dipotong/disetor
+    if(+t.nilaiSpby > +t.kredit){
+      var pajakSel=(+t.nilaiSpby)-(+t.kredit);
+      h+='<div class="lrow pajak"><span>&#128181; Bruto SPBY '+rupiah(t.nilaiSpby)+' = Bayar rekening '+rupiah(t.kredit)
+        +' + Pajak (selisih) <b>'+rupiah(pajakSel)+'</b></span></div>';
+    }
     var sel=t.nilaiSpby-t.notaTotal-kembali;
     var selTxt = sel>0 ? ('Selisih perlu disetor/kembali: '+rupiah(sel))
                : sel<0 ? ('Nota melebihi SPBY: '+rupiah(-sel))
@@ -1066,9 +1072,12 @@ function _spbyRecon(){
   var t=_cariTransaksi(_spTarget); if(!t){ el.innerHTML=''; return; }
   var nilai=unfmt(document.getElementById('spNilai').value);
   var nota=(+t.notaTotal||0), kembali=(+t.kembalianTotal||0);
+  var kredit=(+t.kredit||0);
   var selisih=nilai-nota-kembali;
-  var s='<div>Nilai SPBY: <b>'+rupiah(nilai)+'</b></div>'
-    +'<div>Nilai SPJ (total nota): <b>'+rupiah(nota)+'</b>'+(kembali>0?(' + dikembalikan '+rupiah(kembali)):'')+'</div>';
+  var s='<div>Nilai SPBY (bruto): <b>'+rupiah(nilai)+'</b></div>'
+    +'<div>Dibayar via rekening: <b>'+rupiah(kredit)+'</b></div>';
+  if(nilai>kredit) s+='<div style="color:#1d4ed8;margin-top:2px">&#128181; Selisih = pajak dipotong/disetor (SSP): <b>'+rupiah(nilai-kredit)+'</b></div>';
+  s+='<div style="margin-top:4px">Nilai SPJ (total nota): <b>'+rupiah(nota)+'</b>'+(kembali>0?(' + dikembalikan '+rupiah(kembali)):'')+'</div>';
   if(selisih>0) s+='<div style="color:#991b1b;margin-top:4px">&#9888; Selisih kurang <b>'+rupiah(selisih)+'</b> → harus <b>disetor/dikembalikan</b> sebesar itu (catat lewat "Catat Kembali"), atau lengkapi nota.</div>';
   else if(selisih<0) s+='<div style="color:#92400e;margin-top:4px">&#9888; Nota melebihi SPBY sebesar <b>'+rupiah(-selisih)+'</b> — periksa kembali nilai SPBY/nota.</div>';
   else s+='<div style="color:#166534;margin-top:4px">&#10003; Sesuai — SPJ + pengembalian = Nilai SPBY (lunas).</div>';
