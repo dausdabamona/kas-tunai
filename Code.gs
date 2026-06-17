@@ -75,12 +75,13 @@ function _pdMeta(data) {
     total += Util.num(list[i].biaya);
     if (list[i].nama) nama.push(list[i].nama);
   }
+  var jenisLbl = (data.jenis === 'LUAR_KOTA') ? 'Luar Kota' : 'Dalam Kota';
   return {
     tanggal: data.tglMulai, debet: 0, kredit: total,
     penjab: nama.join(', '),
     kegiatan: data.maksud || ('Perjalanan Dinas ' + (data.nomor || '')),
-    keterangan: 'Surat Tugas ' + (data.nomor || '') + ' (' + Util.num(data.jumlahHari) +
-                ' hari, ' + list.length + ' pegawai)'
+    keterangan: 'Surat Tugas ' + (data.nomor || '') + ' (' + jenisLbl + ', ' +
+                Util.num(data.jumlahHari) + ' hari, ' + list.length + ' pegawai)'
   };
 }
 function serverSimpanPerjalananDinas(data) {

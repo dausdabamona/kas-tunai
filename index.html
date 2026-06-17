@@ -231,10 +231,30 @@
 </div>
 
 <!-- ================= TAB PERJALANAN DINAS ================= -->
+<style>
+  #viewSpd:not(.jenis-lk) .lk-only{display:none}
+  #viewSpd.jenis-lk .dk-only{display:none}
+  .jenis-seg{display:flex;gap:8px;margin:10px 0 0}
+  .jenis-seg label{flex:1;text-align:center;border:1px solid var(--c-line);border-radius:8px;padding:9px;font-weight:600;cursor:pointer}
+  .jenis-seg input{margin-right:5px}
+  .peg-sub{border-top:1px dashed var(--c-line);margin-top:8px;padding-top:8px}
+  .peg-sub h5{margin:0 0 6px;font-size:12px;color:var(--c-muted);text-transform:uppercase;letter-spacing:.4px}
+  .sub-row{display:flex;gap:6px;margin-bottom:6px}
+  .sub-row input.urai{flex:1} .sub-row input.nom{width:38%}
+  .sub-row button{width:auto;padding:4px 10px;margin:0}
+</style>
 <div id="viewSpd" class="wrap hidden">
-  <div class="daftar-head" style="border-radius:10px">&#9992; Surat Perjalanan Dinas Dalam Kota</div>
+  <div id="spdHead" class="daftar-head" style="border-radius:10px">&#9992; Surat Perjalanan Dinas Dalam Kota</div>
+  <div class="jenis-seg">
+    <label><input type="radio" name="spdJenis" value="DALAM_KOTA" checked onchange="setSpdJenis('DALAM_KOTA')">Dalam Kota</label>
+    <label><input type="radio" name="spdJenis" value="LUAR_KOTA" onchange="setSpdJenis('LUAR_KOTA')">Luar Kota</label>
+  </div>
   <div class="listbox" style="border-top:1px solid var(--c-line);border-radius:10px;margin-top:10px">
     <div class="field"><label>Nomor Surat Tugas</label><input type="text" id="spdNomor" placeholder="mis. 094/ST/2026"></div>
+    <div class="row2 lk-only">
+      <div class="field"><label>Dasar Surat</label><input type="text" id="spdDasar" placeholder="DIPA/POK / nomor undangan"></div>
+      <div class="field"><label>Tanggal Surat</label><input type="date" id="spdTglSurat"></div>
+    </div>
     <div class="field"><label>Maksud tujuan perjalanan</label><input type="text" id="spdMaksud"></div>
     <div class="field"><label>Alat angkutan</label><input type="text" id="spdAngkutan"></div>
     <div class="row2">
@@ -247,7 +267,10 @@
     </div>
     <div class="row2">
       <div class="field"><label>Jumlah hari</label><input type="text" id="spdHari" readonly></div>
-      <div class="field"><label>Uang harian (Rp/hari)</label><input type="number" id="spdHarian" value="150000" onchange="hitungSemuaBiaya()"></div>
+      <div class="field dk-only"><label>Uang harian (Rp/hari)</label><input type="number" id="spdHarian" value="150000" onchange="hitungSemuaBiaya()"></div>
+    </div>
+    <div class="lk-only" style="font-size:11px;color:var(--c-muted);margin:-2px 0 6px">
+      Tarif mengacu SBM yang berlaku (PMK 32/2025 TA 2026); sesuaikan lampiran provinsi Papua Barat Daya. Semua nilai bisa diubah.
     </div>
     <hr>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -256,9 +279,21 @@
     </div>
     <div id="spdPegList"></div>
     <div class="field"><label>Total biaya (Rp)</label><input type="text" id="spdTotal" readonly></div>
+    <div class="row2 lk-only">
+      <div class="field"><label>Uang Muka (Rp)</label><input type="number" id="spdUangMuka" value="0" oninput="hitungSemuaBiaya()"></div>
+      <div class="field"><label>Sisa kurang/lebih</label><input type="text" id="spdSisaLk" readonly></div>
+    </div>
     <div class="field"><label>Akun / kode rekening</label><input type="text" id="spdAkun"></div>
     <div class="field"><label>Pejabat pemberi perintah</label><input type="text" id="spdPpk"></div>
     <div class="field"><label>NIP pemberi perintah</label><input type="text" id="spdNipPpk"></div>
+    <div class="lk-only">
+      <div style="font-size:12px;color:var(--c-muted);margin:6px 0">Penanda tangan Surat Tugas (KPA) — opsional, kosong = pakai pejabat pemberi perintah</div>
+      <div class="row2">
+        <div class="field"><label>KPA: Nama</label><input type="text" id="spdKpaNama"></div>
+        <div class="field"><label>KPA: NIP</label><input type="text" id="spdKpaNip"></div>
+      </div>
+      <div class="field"><label>KPA: Jabatan</label><input type="text" id="spdKpaJab" placeholder="mis. Direktur selaku Kuasa Pengguna Anggaran"></div>
+    </div>
     <hr>
     <div style="font-size:12px;color:var(--c-muted);margin-bottom:6px">Mengetahui (opsional)</div>
     <div class="row2">
@@ -271,6 +306,9 @@
     </div>
     <div id="spdEditNote" style="display:none;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:8px;padding:8px;margin-bottom:8px;font-size:13px"></div>
     <button class="btn" style="background:#0369a1" onclick="cetakSpdForm()">&#128424; Cetak SPD (pratinjau)</button>
+    <button class="btn lk-only" style="background:#1f3a5f;margin-top:8px" onclick="cetakSuratTugas()">&#128221; Cetak Surat Tugas</button>
+    <button class="btn lk-only" style="background:#7c3aed;margin-top:8px" onclick="cetakRincianBiaya()">&#129534; Cetak Rincian Biaya (Kuitansi Rampung)</button>
+    <button class="btn lk-only" style="background:#0d9488;margin-top:8px" onclick="cetakPengeluaranRiil()">&#128203; Cetak Daftar Pengeluaran Riil</button>
     <button id="btnSimpanSpd" class="btn" style="background:var(--c-ok);margin-top:8px" onclick="simpanPerjalananDinas()">Simpan ke Kas Tunai</button>
     <button class="btn ghost" style="margin-top:8px" onclick="resetSpdForm()">Reset</button>
   </div>
@@ -915,7 +953,31 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
 /* ============== Surat Perjalanan Dinas (menu Perjalanan Dinas) ============== */
 var SPD_HARIAN_DEFAULT=150000;
 var _spdEditNo=null;   // null = mode buat baru; berisi NO transaksi saat mengedit SPD tersimpan
+var spdJenis='DALAM_KOTA';
 function _attr(v){ return (v==null?'':String(v)).replace(/"/g,'&quot;'); }
+/* Toggle Dalam Kota / Luar Kota */
+function setSpdJenis(j){
+  spdJenis=(j==='LUAR_KOTA')?'LUAR_KOTA':'DALAM_KOTA';
+  var v=document.getElementById('viewSpd');
+  v.classList.toggle('jenis-lk', spdJenis==='LUAR_KOTA');
+  document.getElementById('spdHead').innerHTML='&#9992; Surat Perjalanan Dinas '+(spdJenis==='LUAR_KOTA'?'Luar Kota':'Dalam Kota');
+  var rs=document.getElementsByName('spdJenis');
+  for(var i=0;i<rs.length;i++) rs[i].checked=(rs[i].value===spdJenis);
+  hitungSemuaBiaya();
+}
+/* Baris sub-list (transport / riil) — generik */
+function _subRowHtml(urai, nom){
+  return '<div class="sub-row"><input type="text" class="urai" placeholder="uraian" value="'+_attr(urai)+'">'
+   +'<input type="number" class="nom" placeholder="0" value="'+(+nom||0)+'" oninput="hitungSemuaBiaya()">'
+   +'<button type="button" class="btn ghost" onclick="hapusSubRow(this)">&times;</button></div>';
+}
+function addSub(btn){ btn.closest('.peg-sub').querySelector('.sub-list').insertAdjacentHTML('beforeend', _subRowHtml()); }
+function hapusSubRow(btn){ btn.closest('.sub-row').remove(); hitungSemuaBiaya(); }
+function _subListHtml(arr){
+  arr=arr||[]; var h='';
+  for(var i=0;i<arr.length;i++) h+=_subRowHtml(arr[i].uraian, arr[i].jumlah);
+  return h;
+}
 function _pegRowHtml(p){
   p=p||{};
   return '<div class="peg-row" style="border:1px solid var(--c-line);border-radius:8px;padding:8px;margin-bottom:8px">'
@@ -923,8 +985,26 @@ function _pegRowHtml(p){
    +'<div class="field"><label>NIP</label><input type="text" class="pg-nip" value="'+_attr(p.nip)+'"></div></div>'
    +'<div class="row2"><div class="field"><label>Pangkat / Golongan</label><input type="text" class="pg-pangkat" value="'+_attr(p.pangkat)+'"></div>'
    +'<div class="field"><label>Jabatan / Instansi</label><input type="text" class="pg-jabatan" value="'+_attr(p.jabatan)+'"></div></div>'
-   +'<div class="row2"><div class="field"><label>Biaya (Rp) = harian &times; hari</label><input type="number" class="pg-biaya" value="'+(+p.biaya||0)+'" readonly></div>'
-   +'<div class="field" style="display:flex;align-items:flex-end"><button type="button" class="btn ghost" style="margin:0;color:var(--c-bad)" onclick="hapusPegawaiRow(this)">Hapus</button></div></div>'
+   +'<div class="field lk-only"><label>Tingkat Biaya Perjalanan Dinas (A/B/C/D)</label><input type="text" class="pg-tingkat" value="'+_attr(p.tingkatBiaya)+'"></div>'
+   // ---- Komponen Luar Kota ----
+   +'<div class="peg-sub lk-only"><h5>Uang harian (lumpsum)</h5>'
+   +'<div class="row2"><div class="field"><label>Tarif (Rp/hari)</label><input type="number" class="pg-uhRate" value="'+(+p.uangHarianRate||0)+'" oninput="hitungSemuaBiaya()"></div>'
+   +'<div class="field"><label>Jumlah hari</label><input type="number" class="pg-uhHari" value="'+(p.uangHarianHari!=null?(+p.uangHarianHari||0):'')+'" oninput="hitungSemuaBiaya()"></div></div>'
+   +'<div class="field"><label>Uang harian</label><input type="text" class="pg-uhTot" readonly></div></div>'
+   +'<div class="peg-sub lk-only"><h5>Penginapan</h5>'
+   +'<label style="display:block;margin-bottom:6px"><input type="checkbox" class="pg-menginap" '+(p.penginapanMenginap?'checked':'')+' onchange="hitungSemuaBiaya()"> Menginap di hotel (at-cost). Bila tidak: 30% × tarif × malam</label>'
+   +'<div class="row2"><div class="field"><label>Jumlah malam</label><input type="number" class="pg-malam" value="'+(+p.penginapanMalam||0)+'" oninput="hitungSemuaBiaya()"></div>'
+   +'<div class="field"><label>Tarif (Rp/malam)</label><input type="number" class="pg-hotel" value="'+(+p.penginapanRate||0)+'" oninput="hitungSemuaBiaya()"></div></div>'
+   +'<div class="field"><label>Biaya penginapan</label><input type="text" class="pg-pgTot" readonly></div></div>'
+   +'<div class="peg-sub lk-only"><h5>Transport (at-cost)</h5><div class="sub-list pg-transport">'+_subListHtml(p.transport)+'</div>'
+   +'<button type="button" class="btn ghost" style="width:auto;padding:4px 10px;margin:0" onclick="addSub(this)">+ transport</button></div>'
+   +'<div class="peg-sub lk-only"><h5>Uang representasi</h5>'
+   +'<div class="field"><label>Tarif (Rp/hari) — pejabat tertentu, default 0</label><input type="number" class="pg-rep" value="'+(+p.repRate|| (p.representasi&&p.uangHarianHari?Math.round(p.representasi/p.uangHarianHari):0) ||0)+'" oninput="hitungSemuaBiaya()"></div></div>'
+   +'<div class="peg-sub lk-only"><h5>Daftar pengeluaran riil (tanpa bukti)</h5><div class="sub-list pg-riil">'+_subListHtml(p.riil)+'</div>'
+   +'<button type="button" class="btn ghost" style="width:auto;padding:4px 10px;margin:0" onclick="addSub(this)">+ pengeluaran riil</button></div>'
+   // ---- Total + hapus ----
+   +'<div class="row2"><div class="field"><label>Biaya pegawai (Rp)</label><input type="number" class="pg-biaya" value="'+(+p.biaya||0)+'" readonly></div>'
+   +'<div class="field" style="display:flex;align-items:flex-end"><button type="button" class="btn ghost" style="margin:0;color:var(--c-bad)" onclick="hapusPegawaiRow(this)">Hapus pegawai</button></div></div>'
    +'</div>';
 }
 function tambahPegawaiRow(p){
@@ -946,20 +1026,49 @@ function hitungHari(){
   document.getElementById('spdHari').value=_hariSPD()+' Hari';
   hitungSemuaBiaya();
 }
+function _v(r,sel){ var e=r.querySelector(sel); return e?(parseFloat(e.value)||0):0; }
+function _sumSub(r,sel){ var s=0, ns=r.querySelectorAll(sel+' .nom'); for(var i=0;i<ns.length;i++) s+=parseFloat(ns[i].value)||0; return s; }
+/* Hitung grand total satu baris pegawai (mode Luar Kota) */
+function _pegHitungLK(r, hariDefault){
+  var hariEl=r.querySelector('.pg-uhHari');
+  if(hariEl && !hariEl.value) hariEl.value=hariDefault;
+  var hari=_v(r,'.pg-uhHari');
+  var uangHarian=_v(r,'.pg-uhRate')*hari;
+  r.querySelector('.pg-uhTot').value=rupiah(uangHarian);
+  var menginap=r.querySelector('.pg-menginap').checked;
+  var malam=_v(r,'.pg-malam'), hotel=_v(r,'.pg-hotel');
+  var penginapan=menginap?(malam*hotel):(0.30*hotel*malam);
+  r.querySelector('.pg-pgTot').value=rupiah(penginapan);
+  var grand=uangHarian+penginapan+_sumSub(r,'.pg-transport')+(_v(r,'.pg-rep')*hari)+_sumSub(r,'.pg-riil');
+  r.querySelector('.pg-biaya').value=grand;
+  return grand;
+}
 function hitungSemuaBiaya(){
-  var per=(parseFloat(document.getElementById('spdHarian').value)||0)*_hariSPD(), total=0;
-  var rows=document.querySelectorAll('#spdPegList .peg-row');
-  for(var i=0;i<rows.length;i++){ rows[i].querySelector('.pg-biaya').value=per; total+=per; }
+  var rows=document.querySelectorAll('#spdPegList .peg-row'), total=0, hari=_hariSPD();
+  if(spdJenis==='LUAR_KOTA'){
+    for(var i=0;i<rows.length;i++) total+=_pegHitungLK(rows[i], hari);
+  } else {
+    var per=(parseFloat(document.getElementById('spdHarian').value)||0)*hari;
+    for(var j=0;j<rows.length;j++){ rows[j].querySelector('.pg-biaya').value=per; total+=per; }
+  }
   document.getElementById('spdTotal').value='Rp '+total.toLocaleString('id-ID');
+  var sisaEl=document.getElementById('spdSisaLk');
+  if(sisaEl){
+    var um=parseFloat(document.getElementById('spdUangMuka').value)||0, sisa=total-um;
+    sisaEl.value = sisa>=0 ? ('KURANG dibayar Rp '+sisa.toLocaleString('id-ID'))
+                           : ('LEBIH (dikembalikan) Rp '+Math.abs(sisa).toLocaleString('id-ID'));
+  }
 }
 function resetSpdForm(){
-  var V={spdNomor:'',spdMaksud:'',spdAngkutan:'Kendaraan Roda Dua',
+  var V={spdNomor:'',spdDasar:'',spdTglSurat:'',spdMaksud:'',spdAngkutan:'Kendaraan Roda Dua',
     spdBerangkat:'Kampus Politeknik KP Sorong',spdTujuan:'',
-    spdTglB:todayISO(),spdTglS:todayISO(),spdHarian:SPD_HARIAN_DEFAULT,spdAkun:'',
-    spdPpk:INST.ppk,spdNipPpk:INST.nipPpk,spdLokNama:'',spdLokJab:'',spdKerjaNama:'',spdKerjaJab:''};
+    spdTglB:todayISO(),spdTglS:todayISO(),spdHarian:SPD_HARIAN_DEFAULT,spdUangMuka:0,spdAkun:'',
+    spdPpk:INST.ppk,spdNipPpk:INST.nipPpk,spdKpaNama:'',spdKpaNip:'',spdKpaJab:'',
+    spdLokNama:'',spdLokJab:'',spdKerjaNama:'',spdKerjaJab:''};
   for(var id in V) document.getElementById(id).value=V[id];
   document.getElementById('spdPegList').innerHTML='';
   tambahPegawaiRow();
+  setSpdJenis('DALAM_KOTA');
   hitungHari();
   _spdEditNo=null; _setSpdMode(false);
 }
@@ -974,41 +1083,75 @@ function _setSpdMode(edit){
 function _fillSpdForm(d){
   d=d||{};
   function set(id,v){ var e=document.getElementById(id); if(e) e.value=(v==null?'':v); }
-  set('spdNomor',d.nomor); set('spdMaksud',d.maksud); set('spdAngkutan',d.angkutan);
+  setSpdJenis(d.jenis||'DALAM_KOTA');
+  set('spdNomor',d.nomor); set('spdDasar',d.dasarSurat); set('spdTglSurat',d.tglSurat||'');
+  set('spdMaksud',d.maksud); set('spdAngkutan',d.angkutan);
   set('spdBerangkat',d.berangkat); set('spdTujuan',d.tujuan);
   set('spdTglB',d.tglMulai||todayISO()); set('spdTglS',d.tglSelesai||todayISO());
-  set('spdAkun',d.akun); set('spdPpk',d.ppk); set('spdNipPpk',d.nipPpk);
+  set('spdUangMuka',(+d.uangMuka||0)); set('spdAkun',d.akun); set('spdPpk',d.ppk); set('spdNipPpk',d.nipPpk);
   set('spdLokNama',d.lokNama); set('spdLokJab',d.lokJab);
   set('spdKerjaNama',d.kerjaNama); set('spdKerjaJab',d.kerjaJab);
   var list=(d.pegawaiList&&d.pegawaiList.length)?d.pegawaiList:[{nama:d.pegawai,nip:d.nip,pangkat:d.pangkat,jabatan:d.jabatan,biaya:d.biaya}];
-  var hari=(+d.jumlahHari>0)?(+d.jumlahHari):_hariSPD();
-  var harian=Math.round((+(list[0]&&list[0].biaya)||0)/(hari||1));
-  set('spdHarian',harian);
+  if((d.jenis||'DALAM_KOTA')!=='LUAR_KOTA'){
+    var hari=(+d.jumlahHari>0)?(+d.jumlahHari):_hariSPD();
+    set('spdHarian',Math.round((+(list[0]&&list[0].biaya)||0)/(hari||1)));
+  }
   document.getElementById('spdPegList').innerHTML='';
   for(var i=0;i<list.length;i++) tambahPegawaiRow(list[i]);
   if(!list.length) tambahPegawaiRow();
   hitungHari();
 }
+function _gatherSub(r, sel){
+  var out=[], rows=r.querySelectorAll(sel+' .sub-row');
+  for(var i=0;i<rows.length;i++){
+    var u=(rows[i].querySelector('.urai').value||'').trim();
+    var j=parseFloat(rows[i].querySelector('.nom').value)||0;
+    if(u||j) out.push({ uraian:u, jumlah:j });
+  }
+  return out;
+}
+function _sumArr(a){ var s=0; for(var i=0;i<a.length;i++) s+=(+a[i].jumlah||0); return s; }
 function _gatherSpd(){
   function g(id){return (document.getElementById(id).value||'').trim();}
   var b=g('spdTglB'), s=g('spdTglS');
   var n=_hariSPD();
+  var luar=(spdJenis==='LUAR_KOTA');
   var rows=document.querySelectorAll('#spdPegList .peg-row'), list=[], total=0;
   for(var i=0;i<rows.length;i++){
     var r=rows[i], nama=(r.querySelector('.pg-nama').value||'').trim();
     if(!nama) continue;
-    var biaya=(parseFloat(r.querySelector('.pg-biaya').value)||0);
-    total+=biaya;
-    list.push({ nama:nama, nip:(r.querySelector('.pg-nip').value||'').trim(),
+    var base={ nama:nama, nip:(r.querySelector('.pg-nip').value||'').trim(),
       pangkat:(r.querySelector('.pg-pangkat').value||'').trim(),
-      jabatan:(r.querySelector('.pg-jabatan').value||'').trim(), biaya:biaya });
+      jabatan:(r.querySelector('.pg-jabatan').value||'').trim() };
+    if(luar){
+      var hari=_v(r,'.pg-uhHari')||n;
+      var uangHarian=_v(r,'.pg-uhRate')*hari;
+      var menginap=r.querySelector('.pg-menginap').checked;
+      var malam=_v(r,'.pg-malam'), hotel=_v(r,'.pg-hotel');
+      var penginapan=menginap?(malam*hotel):(0.30*hotel*malam);
+      var transport=_gatherSub(r,'.pg-transport'), riil=_gatherSub(r,'.pg-riil');
+      var repRate=_v(r,'.pg-rep'), representasi=repRate*hari;
+      var grand=uangHarian+penginapan+_sumArr(transport)+representasi+_sumArr(riil);
+      var tEl=r.querySelector('.pg-tingkat');
+      base.tingkatBiaya=(tEl&&tEl.value||'').trim();
+      base.uangHarianRate=_v(r,'.pg-uhRate'); base.uangHarianHari=hari; base.uangHarian=uangHarian;
+      base.transport=transport; base.penginapanMalam=malam; base.penginapanRate=hotel;
+      base.penginapanMenginap=menginap; base.penginapan=penginapan;
+      base.repRate=repRate; base.representasi=representasi; base.riil=riil; base.biaya=grand;
+    } else {
+      base.biaya=(parseFloat(r.querySelector('.pg-biaya').value)||0);
+    }
+    total+=base.biaya;
+    list.push(base);
   }
   var p0=list[0]||{};
-  return { nomor:g('spdNomor'), pegawaiList:list,
+  return { jenis:spdJenis, nomor:g('spdNomor'), dasarSurat:g('spdDasar'), tglSurat:g('spdTglSurat'),
+    uangMuka:(parseFloat(g('spdUangMuka'))||0), pegawaiList:list,
     pegawai:p0.nama||'', nip:p0.nip||'', pangkat:p0.pangkat||'', jabatan:p0.jabatan||'',
     maksud:g('spdMaksud'), angkutan:g('spdAngkutan'),
     berangkat:g('spdBerangkat'), tujuan:g('spdTujuan'), tglMulai:b, tglSelesai:s, jumlahHari:n,
     biaya:total, akun:g('spdAkun'), ppk:g('spdPpk'), nipPpk:g('spdNipPpk'),
+    kpaNama:g('spdKpaNama'), kpaNip:g('spdKpaNip'), kpaJab:g('spdKpaJab'),
     lokNama:g('spdLokNama'), lokJab:g('spdLokJab'), kerjaNama:g('spdKerjaNama'), kerjaJab:g('spdKerjaJab') };
 }
 function cetakSpdForm(){ _bukaPopup(_renderSpdHtml(_gatherSpd())); }
@@ -1058,29 +1201,52 @@ function cetakSpd(no){
     .withFailureHandler(fail)
     .serverGetSuratTugas(no);
 }
-function _renderSpdHtml(data){
-  data=data||{};
-  var list=(data.pegawaiList&&data.pegawaiList.length)?data.pegawaiList
-          :[{nama:data.pegawai,nip:data.nip,pangkat:data.pangkat,jabatan:data.jabatan,biaya:data.biaya}];
-  var pages=list.map(function(p){return '<div class="page">'+_spdPage(data,p)+'</div>';}).join('');
-  return ''
-  +'<html><head><meta charset="utf-8"><title>SPD '+(data.nomor||'Dalam Kota')+'</title><style>'
-  +'@page{size:A4 portrait;margin:0} *{font-family:Arial,sans-serif;box-sizing:border-box}'
+/* CSS bersama semua dokumen cetak PD */
+function _docCss(){
+  return '@page{size:A4 portrait;margin:0} *{font-family:Arial,sans-serif;box-sizing:border-box}'
   +'body{font-size:12px;color:#000;margin:0}'
   +'.page{padding:15mm;page-break-after:always} .page:last-child{page-break-after:auto}'
-  +'h1{text-align:center;font-size:15px;margin:0 0 14px;text-transform:uppercase}'
-  +'table.b{width:100%;border-collapse:collapse} table.b td{border:1px solid #000;padding:6px 8px;vertical-align:top}'
-  +'.no{width:26px;text-align:center} .lbl{width:42%}'
+  +'h1{text-align:center;font-size:15px;margin:0 0 4px;text-transform:uppercase}'
+  +'.kop{text-align:center;font-weight:bold;font-size:15px} .kopad{text-align:center;font-size:10px;font-weight:normal}'
+  +'.hrt{border:0;border-top:2.5px solid #000;margin:4px 0 12px}'
+  +'table.b{width:100%;border-collapse:collapse} table.b td,table.b th{border:1px solid #000;padding:6px 8px;vertical-align:top}'
+  +'.no{width:26px;text-align:center} .lbl{width:42%} .rt{text-align:right} .ct{text-align:center}'
   +'table.sig{width:100%;border-collapse:collapse;margin-top:2px} table.sig td{width:50%;border:1px solid #000;padding:8px;vertical-align:top}'
-  +'.ttl{text-align:center;font-weight:bold;min-height:32px} .nm{margin-top:54px}'
-  +'.noprint{text-align:right;margin:8px 15mm 0}@media print{.noprint{display:none}}'
-  +'</style></head><body>'
-  +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button></div>'
-  +pages
-  +'</body></html>';
+  +'.sign{width:100%;margin-top:10px} .sign td{width:33.33%;text-align:center;vertical-align:top;padding:6px}'
+  +'.sig2{width:100%;margin-top:10px} .sig2 td{width:50%;text-align:center;vertical-align:top;padding:6px}'
+  +'.ttl{text-align:center;font-weight:bold;min-height:32px} .nm{margin-top:54px} .nmc{margin-top:60px;font-weight:bold}'
+  +'.terb{background:#dcdcdc;font-style:italic;padding:7px 9px;border:1px solid #000;border-top:0}'
+  +'.noprint{text-align:right;margin:8px 15mm 0}@media print{.noprint{display:none}}';
+}
+function _docKop(){
+  return '<div class="kop">'+esc(INST.namaWP).toUpperCase()+'</div>'
+   +'<div class="kopad">'+esc(INST.alamatKop1)+'</div>'
+   +'<div class="kopad">'+esc(INST.alamatKop2)+'</div><hr class="hrt">';
+}
+function _docWrap(title, pages){
+  return '<html><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>'+_docCss()+'</style></head><body>'
+   +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button></div>'+pages+'</body></html>';
+}
+function _spdList(data){
+  return (data.pegawaiList&&data.pegawaiList.length)?data.pegawaiList
+        :[{nama:data.pegawai,nip:data.nip,pangkat:data.pangkat,jabatan:data.jabatan,biaya:data.biaya}];
+}
+function _kpa(data){ return { nama:(data.kpaNama||data.ppk||''), nip:(data.kpaNip||data.nipPpk||''),
+  jab:(data.kpaJab||('a.n. Kuasa Pengguna Anggaran<br>Pejabat Pembuat Komitmen '+esc(INST.namaWP))) }; }
+function _renderSpdHtml(data){
+  data=data||{};
+  var luar=(data.jenis==='LUAR_KOTA');
+  var list=_spdList(data);
+  var pages=list.map(function(p){
+    var h='<div class="page">'+_spdPage(data,p)+'</div>';
+    if(luar) h+='<div class="page">'+_spdPengesahanPage(data,p)+'</div>';
+    return h;
+  }).join('');
+  return _docWrap('SPD '+(data.nomor||''), pages);
 }
 function _spdPage(data, peg){
   peg=peg||{};
+  if(data.jenis==='LUAR_KOTA') return _spdPageLK(data, peg);
   var d='..................................';
   function f(v){ return (v!=null && String(v).trim()!=='') ? esc(String(v)) : d; }
   function fd(v){ return v ? _tglPanjang(v) : d; }
@@ -1117,6 +1283,168 @@ function _spdPage(data, peg){
   +'<td><div class="ttl">TELAH DILAKSANAKAN PEKERJAAN</div>'
   +'Nama Kota : '+esc(INST.kota)+'<br>Tanggal &nbsp;&nbsp;: '+fd(data.tglSelesai)
   +'<div class="nm">Nama &nbsp;&nbsp;&nbsp;: '+f(data.kerjaNama)+'</div>Jabatan : '+f(data.kerjaJab)+'</td>'
+  +'</tr></table>';
+}
+/* Halaman 1 SPD Luar Kota — format SPD nasional (KKP) */
+function _spdPageLK(data, peg){
+  var d='..............................';
+  function f(v){ return (v!=null&&String(v).trim()!=='')?esc(String(v)):d; }
+  function fd(v){ return v?_tglPanjang(v):d; }
+  function R(n,l,v){return '<tr><td class="no">'+n+'</td><td class="lbl">'+l+'</td><td>'+v+'</td></tr>';}
+  var pengikut='';
+  for(var i=1;i<=4;i++) pengikut+='<tr><td style="border:1px solid #000;padding:4px">'+i+'. -</td>'
+    +'<td style="border:1px solid #000;padding:4px;width:28%">-</td><td style="border:1px solid #000;padding:4px;width:28%">-</td></tr>';
+  return ''
+  +'<table style="width:100%;margin-bottom:6px;font-size:11px"><tr>'
+  +'<td style="vertical-align:top">Kementerian Negara/Lembaga<br><b>Kementerian Kelautan dan Perikanan</b></td>'
+  +'<td style="vertical-align:top;width:40%">Lembar ke&nbsp;&nbsp;: <br>Kode No.&nbsp;&nbsp;&nbsp;: <br>Nomor&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: '+esc(data.nomor||'')+'</td>'
+  +'</tr></table>'
+  +'<h1>Surat Perjalanan Dinas (SPD)</h1><div style="height:8px"></div>'
+  +'<table class="b">'
+  +R(1,'Pejabat Pembuat Komitmen', f(data.ppk))
+  +R(2,'Nama/NIP Pegawai yang diperintahkan', f(peg.nama)+' / '+f(peg.nip))
+  +R(3,'a.&nbsp; Pangkat dan Golongan Ruang Gaji<br>b.&nbsp; Jabatan/Instansi<br>c.&nbsp; Tingkat Biaya Perjalanan Dinas','a.&nbsp; '+f(peg.pangkat)+'<br>b.&nbsp; '+f(peg.jabatan)+'<br>c.&nbsp; '+f(peg.tingkatBiaya))
+  +R(4,'Maksud Perjalanan Dinas', f(data.maksud))
+  +R(5,'Alat Angkutan yang dipergunakan', f(data.angkutan))
+  +R(6,'a.&nbsp; Tempat Berangkat<br>b.&nbsp; Tempat Tujuan','a.&nbsp; '+f(data.berangkat)+'<br>b.&nbsp; '+f(data.tujuan))
+  +R(7,'a.&nbsp; Lamanya Perjalanan Dinas<br>b.&nbsp; Tanggal Berangkat<br>c.&nbsp; Tanggal harus kembali','a.&nbsp; '+f((+data.jumlahHari>0)?(data.jumlahHari+' Hari'):'')+'<br>b.&nbsp; '+fd(data.tglMulai)+'<br>c.&nbsp; '+fd(data.tglSelesai))
+  +'<tr><td class="no">8</td><td class="lbl">Pengikut</td><td style="padding:0">'
+  +'<table style="width:100%;border-collapse:collapse"><tr><td style="border:1px solid #000;padding:4px">Nama</td><td style="border:1px solid #000;padding:4px">Tanggal Lahir</td><td style="border:1px solid #000;padding:4px">Keterangan</td></tr>'+pengikut+'</table></td></tr>'
+  +R(9,'Pembebanan Anggaran<br>a.&nbsp; Instansi<br>b.&nbsp; Akun','a.&nbsp; '+esc(INST.namaWP)+'<br>b.&nbsp; '+f(data.akun))
+  +R(10,'Keterangan Lain-lain','')
+  +'</table>'
+  +'<table class="sig2" style="margin-top:8px"><tr><td></td><td>'
+  +'Dikeluarkan di : '+esc(INST.kota)+'<br>Tanggal : '+fd(data.tglSurat||data.tglMulai)
+  +'<br>Pejabat Pembuat Komitmen,<div class="nmc">'+f(data.ppk)+'</div>NIP. '+f(data.nipPpk)+'</td></tr></table>';
+}
+/* Halaman 2 SPD Luar Kota: Pengesahan tiba/berangkat (bagian I–VIII, format KKP) */
+function _spdPengesahanPage(data, peg){
+  function fd(v){ return v?_tglPanjang(v):''; }
+  var kpa=_kpa(data);
+  var dir='Direktur,<div class="nmc">'+esc(kpa.nama||'')+'</div>NIP. '+esc(kpa.nip||'');
+  var blank='<br><br><br>(……………………………………)<br>NIP.';
+  function pair(no){
+    return '<tr><td class="no">'+no+'</td>'
+      +'<td style="width:48%">Tiba di&nbsp;: <br>Pada Tanggal&nbsp;: <br>Kepala,'+blank+'</td>'
+      +'<td>Berangkat dari&nbsp;: <br>Ke&nbsp;: <br>Pada Tanggal&nbsp;: <br>Kepala,'+blank+'</td></tr>';
+  }
+  return ''
+  +_docKop()
+  +'<h1>Pengesahan SPD a.n. '+esc(peg.nama||'')+'</h1>'
+  +'<table class="b">'
+  +'<tr><td class="no">I.</td><td colspan="2">Berangkat dari : '+esc(INST.kota)+' (Tempat Kedudukan)<br>Pada Tanggal : '+fd(data.tglMulai)+'<br><br>'+dir+'</td></tr>'
+  +pair('II.')+pair('III.')+pair('IV.')+pair('V.')
+  +'<tr><td class="no">VI.</td><td style="width:48%">Tiba di : '+esc(INST.kota)+' (Tempat Kedudukan)<br>Pada Tanggal : '+fd(data.tglSelesai)+'<br><br>'+dir+'</td>'
+  +'<td>Telah diperiksa dengan keterangan bahwa perjalanan tersebut atas perintahnya dan semata-mata untuk kepentingan jabatan dalam waktu yang sesingkat-singkatnya.</td></tr>'
+  +'<tr><td class="no">VII.</td><td colspan="2">Catatan Lain-lain :</td></tr>'
+  +'<tr><td class="no">VIII.</td><td colspan="2"><b>PERHATIAN :</b><br>PPK yang menerbitkan SPD, Pegawai yang melakukan Perjalanan Dinas, Para Pejabat yang mengesahkan tanggal berangkat/tiba, serta Bendahara Pengeluaran bertanggung jawab berdasarkan peraturan-peraturan Keuangan Negara apabila negara menderita rugi akibat kesalahan/kelalaian dan kealpaannya.</td></tr>'
+  +'</table>';
+}
+/* 5.1 SURAT TUGAS — satu dokumen untuk semua pegawai */
+function cetakSuratTugas(){ _bukaPopup(_renderSuratTugasHtml(_gatherSpd())); }
+function _renderSuratTugasHtml(data){
+  var d='..............................';
+  function f(v){ return (v!=null&&String(v).trim()!=='')?esc(String(v)):d; }
+  function fd(v){ return v?_tglPanjang(v):d; }
+  var list=_spdList(data), kpa=_kpa(data);
+  var rows='';
+  for(var i=0;i<list.length;i++){ var p=list[i];
+    rows+='<tr><td class="ct">'+(i+1)+'</td><td>'+f(p.nama)+'</td><td>'+f(p.nip)
+      +'</td><td>'+f(p.pangkat)+'</td><td>'+f(p.jabatan)+'</td></tr>';
+  }
+  var body=''
+  +_docKop()
+  +'<h1>Surat Tugas</h1>'
+  +(data.nomor?('<div style="text-align:center;margin-bottom:12px">Nomor : '+esc(data.nomor)+'</div>'):'<div style="height:8px"></div>')
+  +'<p style="margin:0 0 6px"><b>Dasar :</b> '+f(data.dasarSurat)+'</p>'
+  +'<p style="text-align:center;font-weight:bold;letter-spacing:2px;margin:12px 0">MENUGASKAN</p>'
+  +'<p style="margin:0 0 4px">Kepada :</p>'
+  +'<table class="b"><tr><th class="no">No</th><th>Nama</th><th>NIP</th><th>Pangkat/Gol</th><th>Jabatan</th></tr>'+rows+'</table>'
+  +'<table style="width:100%;margin-top:10px">'
+  +'<tr><td style="width:34%;vertical-align:top">Untuk</td><td style="vertical-align:top">: '+f(data.maksud)+'</td></tr>'
+  +'<tr><td style="vertical-align:top">Tempat tujuan</td><td style="vertical-align:top">: '+f(data.tujuan)+'</td></tr>'
+  +'<tr><td style="vertical-align:top">Lama</td><td style="vertical-align:top">: '+f((+data.jumlahHari>0)?(data.jumlahHari+' (……) hari'):'')+'</td></tr>'
+  +'<tr><td style="vertical-align:top">Tanggal</td><td style="vertical-align:top">: '+fd(data.tglMulai)+' s.d. '+fd(data.tglSelesai)+'</td></tr>'
+  +'<tr><td style="vertical-align:top">Sumber dana</td><td style="vertical-align:top">: '+esc(INST.namaWP)+(data.akun?(' — Akun '+esc(data.akun)):'')+'</td></tr>'
+  +'</table>'
+  +'<p style="margin:14px 0">Surat tugas ini dibuat untuk dipergunakan sebagaimana mestinya.</p>'
+  +'<table class="sig2"><tr><td></td><td>'+esc(INST.kota)+', '+fd(data.tglSurat||data.tglMulai)
+  +'<br>'+(data.kpaJab?esc(data.kpaJab):('Direktur selaku<br>Kuasa Pengguna Anggaran'))
+  +'<div class="nmc">'+f(kpa.nama)+'</div>NIP. '+f(kpa.nip)+'</td></tr></table>';
+  return _docWrap('Surat Tugas '+(data.nomor||''), '<div class="page">'+body+'</div>');
+}
+/* 5.3 RINCIAN BIAYA (Kuitansi Rampung) — per pegawai */
+function cetakRincianBiaya(){ _bukaPopup(_renderRincianHtml(_gatherSpd())); }
+function _renderRincianHtml(data){
+  var list=_spdList(data);
+  var pages=list.map(function(p){return '<div class="page">'+_rincianPage(data,p)+'</div>';}).join('');
+  return _docWrap('Rincian Biaya '+(data.nomor||''), pages);
+}
+function _rincianPage(data, peg){
+  function fd(v){ return v?_tglPanjang(v):'…'; }
+  var no=1, rincian='', total=(+peg.biaya||0);
+  function row(uraian, jumlah, ket){
+    return '<tr><td class="ct">'+(no++)+'</td><td>'+uraian+'</td><td class="rt">'+rupiah(jumlah||0)+'</td><td>'+(ket||'')+'</td></tr>';
+  }
+  var uhHari=(+peg.uangHarianHari||+data.jumlahHari||0), uhRate=(+peg.uangHarianRate||0);
+  rincian+=row('Uang harian '+uhHari+' hari &times; '+rupiah(uhRate), (+peg.uangHarian|| (uhRate*uhHari)), 'Lumpsum');
+  var trans=peg.transport||[];
+  for(var i=0;i<trans.length;i++) rincian+=row('Transport: '+esc(trans[i].uraian||'-'), trans[i].jumlah, 'At-cost');
+  if((+peg.penginapan||0)>0 || (+peg.penginapanMalam||0)>0){
+    var ketP=peg.penginapanMenginap? ((+peg.penginapanMalam||0)+' malam &times; '+rupiah(+peg.penginapanRate||0))
+                                    : ('30% &times; '+rupiah(+peg.penginapanRate||0)+' &times; '+(+peg.penginapanMalam||0)+' malam (tidak menginap)');
+    rincian+=row('Biaya penginapan', (+peg.penginapan||0), ketP);
+  }
+  if((+peg.representasi||0)>0) rincian+=row('Uang representasi', (+peg.representasi||0), 'Lumpsum');
+  var riil=peg.riil||[];
+  for(var k=0;k<riil.length;k++) rincian+=row('Pengeluaran riil: '+esc(riil[k].uraian||'-'), riil[k].jumlah, 'Daftar pengeluaran riil');
+  var um=(+data.uangMuka||0), sisa=total-um;
+  var lblSisa = sisa>=0 ? 'Sisa KURANG dibayar' : 'Sisa LEBIH (dikembalikan)';
+  return ''
+  +_docKop()
+  +'<h1>Rincian Biaya Perjalanan Dinas</h1>'
+  +'<div style="text-align:center;margin:0 0 12px">Lampiran SPD'+(data.nomor?(' Nomor '+esc(data.nomor)):'')
+    +' Tanggal '+fd(data.tglSurat||data.tglMulai)+'<br>a.n. '+esc(peg.nama||'')+'</div>'
+  +'<table class="b"><tr><th class="no">No</th><th>Perincian Biaya</th><th class="rt" style="width:24%">Jumlah</th><th style="width:26%">Keterangan</th></tr>'
+  +rincian
+  +'<tr><td></td><td class="rt"><b>Jumlah</b></td><td class="rt"><b>'+rupiah(total)+'</b></td><td></td></tr>'
+  +'</table>'
+  +'<div class="terb">Terbilang : <i>'+_terbilangTitle(total)+'</i></div>'
+  +'<table class="b" style="margin-top:10px"><tr><td class="lbl">Telah dibayar sejumlah</td><td class="rt">'+rupiah(um)+'</td></tr>'
+  +'<tr><td class="lbl">'+lblSisa+'</td><td class="rt">'+rupiah(Math.abs(sisa))+'</td></tr></table>'
+  +'<table class="sign"><tr>'
+  +'<td>Telah dibayar sejumlah<br>'+rupiah(um)+'<br>Bendahara Pengeluaran,<div class="nmc">'+esc(INST.bendahara)+'</div>NIP. '+esc(INST.nipBendahara)+'</td>'
+  +'<td>Telah menerima jumlah uang sebesar<br>'+rupiah(total)+'<br>Yang menerima / Pelaksana SPD,<div class="nmc">'+esc(peg.nama||'')+'</div>NIP. '+esc(peg.nip||'')+'</td>'
+  +'<td>'+esc(INST.kota)+', '+fd(data.tglSelesai)+'<br>Menyetujui/Mengetahui,<br>Pejabat Pembuat Komitmen,<div class="nmc">'+esc(INST.ppk)+'</div>NIP. '+esc(INST.nipPpk)+'</td>'
+  +'</tr></table>';
+}
+/* 5.4 DAFTAR PENGELUARAN RIIL — per pegawai yang punya isi riil */
+function cetakPengeluaranRiil(){
+  var data=_gatherSpd();
+  var list=_spdList(data).filter(function(p){return (p.riil&&p.riil.length);});
+  if(!list.length){ toast('Tidak ada pengeluaran riil pada pegawai mana pun','info'); return; }
+  var pages=list.map(function(p){return '<div class="page">'+_riilPage(data,p)+'</div>';}).join('');
+  _bukaPopup(_docWrap('Daftar Pengeluaran Riil '+(data.nomor||''), pages));
+}
+function _riilPage(data, peg){
+  function fd(v){ return v?_tglPanjang(v):'…'; }
+  var riil=peg.riil||[], rows='', total=0;
+  for(var i=0;i<riil.length;i++){ total+=(+riil[i].jumlah||0);
+    rows+='<tr><td class="ct">'+(i+1)+'</td><td>'+esc(riil[i].uraian||'-')+'</td><td class="rt">'+rupiah(riil[i].jumlah||0)+'</td></tr>';
+  }
+  return ''
+  +_docKop()
+  +'<h1>Daftar Pengeluaran Riil</h1>'
+  +'<div style="text-align:center;margin:0 0 12px">Lampiran SPD'+(data.nomor?(' Nomor '+esc(data.nomor)):'')+' Tanggal '+fd(data.tglSurat||data.tglMulai)+'</div>'
+  +'<p style="margin:0 0 8px">Yang bertanda tangan di bawah ini:<br>Nama : '+esc(peg.nama||'')+'<br>NIP &nbsp;&nbsp;: '+esc(peg.nip||'')+'</p>'
+  +'<p style="margin:0 0 8px">menyatakan dengan sesungguhnya bahwa biaya perjalanan dinas di bawah ini yang tidak dapat diperoleh bukti-bukti pengeluarannya, meliputi:</p>'
+  +'<table class="b"><tr><th class="no">No</th><th>Uraian</th><th class="rt" style="width:26%">Jumlah (Rp)</th></tr>'
+  +rows
+  +'<tr><td></td><td class="rt"><b>Jumlah</b></td><td class="rt"><b>'+rupiah(total)+'</b></td></tr></table>'
+  +'<p style="margin:12px 0">Jumlah uang tersebut di atas benar-benar dikeluarkan untuk pelaksanaan perjalanan dinas dimaksud dan apabila di kemudian hari terdapat kelebihan atas pembayaran, kami bersedia untuk menyetorkan kelebihan tersebut ke Kas Negara.</p>'
+  +'<table class="sig2"><tr>'
+  +'<td>Mengetahui/Menyetujui,<br>Pejabat Pembuat Komitmen,<div class="nmc">'+esc(INST.ppk)+'</div>NIP. '+esc(INST.nipPpk)+'</td>'
+  +'<td>'+esc(INST.kota)+', '+fd(data.tglSelesai)+'<br>Pelaksana SPD,<div class="nmc">'+esc(peg.nama||'')+'</div>NIP. '+esc(peg.nip||'')+'</td>'
   +'</tr></table>';
 }
 

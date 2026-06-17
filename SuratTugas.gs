@@ -39,7 +39,9 @@ var SuratTugas = (function () {
       Util.num(d.jumlahHari), n.total, d.akun || '',
       d.ppk || '', d.nipPpk || '',
       d.lokNama || '', d.lokJab || '', d.kerjaNama || '', d.kerjaJab || '',
-      createdAt, createdBy, JSON.stringify(n.list)
+      createdAt, createdBy, JSON.stringify(n.list),
+      d.jenis || 'DALAM_KOTA', d.dasarSurat || '', Util.num(d.uangMuka),
+      d.tglSurat ? new Date(d.tglSurat) : ''
     ];
   }
 
@@ -88,6 +90,8 @@ var SuratTugas = (function () {
       jumlahHari: Util.num(r[c.JUMLAH_HARI]), biaya: Util.num(r[c.BIAYA]), akun: r[c.AKUN],
       ppk: r[c.PPK], nipPpk: r[c.NIP_PPK],
       lokNama: r[c.LOK_NAMA], lokJab: r[c.LOK_JAB], kerjaNama: r[c.KERJA_NAMA], kerjaJab: r[c.KERJA_JAB],
+      jenis: r[c.JENIS] || 'DALAM_KOTA', dasarSurat: r[c.DASAR_SURAT] || '',
+      uangMuka: Util.num(r[c.UANG_MUKA]), tglSurat: Util.fmtDate(r[c.TGL_SURAT]),
       pegawaiList: list
     };
   }
