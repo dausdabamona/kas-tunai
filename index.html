@@ -120,7 +120,7 @@
   .acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
   .acts button{border:0;border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:700;color:#fff;flex:1 0 auto}
   .b-orange{background:#ea7317} .b-purple{background:var(--c-purple)} .b-gray{background:#e5e7eb;color:#374151}
-  .b-dark{background:#1f3a5f} .b-green{background:var(--c-ok)} .b-spby{background:#0d9488} .b-spd{background:#0369a1}
+  .b-dark{background:#1f3a5f} .b-green{background:var(--c-ok)} .b-spby{background:#0d9488} .b-spd{background:#0369a1} .b-edit{background:#7c3aed}
   .mini{border:0;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;color:#fff}
 
   /* Galeri foto */
@@ -269,8 +269,9 @@
       <div class="field"><label>Pekerjaan: Nama</label><input type="text" id="spdKerjaNama"></div>
       <div class="field"><label>Pekerjaan: Jabatan</label><input type="text" id="spdKerjaJab"></div>
     </div>
+    <div id="spdEditNote" style="display:none;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:8px;padding:8px;margin-bottom:8px;font-size:13px"></div>
     <button class="btn" style="background:#0369a1" onclick="cetakSpdForm()">&#128424; Cetak SPD (pratinjau)</button>
-    <button class="btn" style="background:var(--c-ok);margin-top:8px" onclick="simpanPerjalananDinas()">Simpan ke Kas Tunai</button>
+    <button id="btnSimpanSpd" class="btn" style="background:var(--c-ok);margin-top:8px" onclick="simpanPerjalananDinas()">Simpan ke Kas Tunai</button>
     <button class="btn ghost" style="margin-top:8px" onclick="resetSpdForm()">Reset</button>
   </div>
 </div>
@@ -734,7 +735,8 @@ function _cardHtml(t, mode){
     h+='<button class="b-gray" onclick="openFoto('+t.no+')">Foto</button>'
       +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">Kuitansi</button>'
       +'<button class="b-spby" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+(t.noSpby?'SPBY &#10003;':'SPBY')+'</button>'
-      +'<button class="b-spd" onclick="cetakSpd('+t.no+')">SPD</button>';
+      +'<button class="b-spd" onclick="cetakSpd('+t.no+')">SPD</button>'
+      +'<button class="b-edit" onclick="editSpd('+t.no+')">Edit SPD</button>';
   } else {
     h+='<button class="b-orange" onclick="openModalNota('+t.no+')">Kelola Nota</button>'
       +'<button class="b-gray" onclick="openFoto('+t.no+')">Foto</button>'
@@ -912,6 +914,7 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
 
 /* ============== Surat Perjalanan Dinas (menu Perjalanan Dinas) ============== */
 var SPD_HARIAN_DEFAULT=150000;
+var _spdEditNo=null;   // null = mode buat baru; berisi NO transaksi saat mengedit SPD tersimpan
 function _attr(v){ return (v==null?'':String(v)).replace(/"/g,'&quot;'); }
 function _pegRowHtml(p){
   p=p||{};
@@ -958,6 +961,33 @@ function resetSpdForm(){
   document.getElementById('spdPegList').innerHTML='';
   tambahPegawaiRow();
   hitungHari();
+  _spdEditNo=null; _setSpdMode(false);
+}
+/* Atur tampilan mode: buat-baru vs edit SPD tersimpan */
+function _setSpdMode(edit){
+  var btn=document.getElementById('btnSimpanSpd'), note=document.getElementById('spdEditNote');
+  if(btn) btn.innerHTML = edit ? 'Perbarui SPD &amp; Kas' : 'Simpan ke Kas Tunai';
+  if(note){ note.style.display = edit?'block':'none';
+    note.textContent = edit ? ('Mode edit: SPD transaksi No '+_spdEditNo) : ''; }
+}
+/* Isi form dari data SPD tersimpan (untuk edit) */
+function _fillSpdForm(d){
+  d=d||{};
+  function set(id,v){ var e=document.getElementById(id); if(e) e.value=(v==null?'':v); }
+  set('spdNomor',d.nomor); set('spdMaksud',d.maksud); set('spdAngkutan',d.angkutan);
+  set('spdBerangkat',d.berangkat); set('spdTujuan',d.tujuan);
+  set('spdTglB',d.tglMulai||todayISO()); set('spdTglS',d.tglSelesai||todayISO());
+  set('spdAkun',d.akun); set('spdPpk',d.ppk); set('spdNipPpk',d.nipPpk);
+  set('spdLokNama',d.lokNama); set('spdLokJab',d.lokJab);
+  set('spdKerjaNama',d.kerjaNama); set('spdKerjaJab',d.kerjaJab);
+  var list=(d.pegawaiList&&d.pegawaiList.length)?d.pegawaiList:[{nama:d.pegawai,nip:d.nip,pangkat:d.pangkat,jabatan:d.jabatan,biaya:d.biaya}];
+  var hari=(+d.jumlahHari>0)?(+d.jumlahHari):_hariSPD();
+  var harian=Math.round((+(list[0]&&list[0].biaya)||0)/(hari||1));
+  set('spdHarian',harian);
+  document.getElementById('spdPegList').innerHTML='';
+  for(var i=0;i<list.length;i++) tambahPegawaiRow(list[i]);
+  if(!list.length) tambahPegawaiRow();
+  hitungHari();
 }
 function _gatherSpd(){
   function g(id){return (document.getElementById(id).value||'').trim();}
@@ -986,6 +1016,18 @@ function simpanPerjalananDinas(){
   var data=_gatherSpd();
   if(!data.pegawaiList.length){ toast('Isi minimal 1 nama pegawai','error'); return; }
   if(data.biaya<=0){ toast('Total biaya harus > 0 (cek tanggal & uang harian)','error'); return; }
+  if(_spdEditNo!=null){
+    var no=_spdEditNo;
+    showLoading(true,'Memperbarui SPD & kas tunai...');
+    google.script.run
+      .withSuccessHandler(function(res){ showLoading(false);
+        toast('SPD transaksi No '+res.no+' diperbarui','success');
+        _bukaPopup(_renderSpdHtml(data));
+        resetSpdForm(); switchTab('transaksi'); loadAll(); })
+      .withFailureHandler(fail)
+      .serverUpdatePerjalananDinas(no, data);
+    return;
+  }
   showLoading(true,'Menyimpan ke kas tunai...');
   google.script.run
     .withSuccessHandler(function(res){ showLoading(false);
@@ -994,6 +1036,17 @@ function simpanPerjalananDinas(){
       resetSpdForm(); switchTab('transaksi'); loadAll(); })
     .withFailureHandler(fail)
     .serverSimpanPerjalananDinas(data);
+}
+/* Buka tab Perjalanan Dinas dalam mode edit, terisi data SPD tersimpan */
+function editSpd(no){
+  showLoading(true,'Memuat surat tugas...');
+  google.script.run
+    .withSuccessHandler(function(st){ showLoading(false);
+      if(!st){ toast('Data surat tugas tidak ditemukan','error'); return; }
+      switchTab('spd'); _spdEditNo=no; _fillSpdForm(st); _setSpdMode(true);
+      window.scrollTo(0,0); })
+    .withFailureHandler(fail)
+    .serverGetSuratTugas(no);
 }
 /* Cetak ulang SPD dari kartu transaksi perjalanan dinas */
 function cetakSpd(no){

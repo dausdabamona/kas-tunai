@@ -18,30 +18,58 @@ var SuratTugas = (function () {
     return max + 1;
   }
 
+  /** Normalisasi data form → {list, p0, total}. Dipakai simpan & update. */
+  function _norm(d) {
+    var list = (d.pegawaiList && d.pegawaiList.length) ? d.pegawaiList
+             : [{ nama: d.pegawai || '', nip: d.nip || '', pangkat: d.pangkat || '',
+                  jabatan: d.jabatan || '', biaya: Util.num(d.biaya) }];
+    var total = 0;
+    for (var i = 0; i < list.length; i++) total += Util.num(list[i].biaya);
+    return { list: list, p0: list[0] || {}, total: total };
+  }
+
+  /** Bentuk array baris penuh sesuai urutan HEADERS.SURAT_TUGAS. */
+  function _rowArr(noTransaksi, d, no, createdAt, createdBy) {
+    var n = _norm(d), p0 = n.p0;
+    return [
+      no, noTransaksi, d.nomor || '', p0.nama || '', p0.nip || '',
+      p0.pangkat || '', p0.jabatan || '', d.maksud || '', d.angkutan || '',
+      d.berangkat || '', d.tujuan || '',
+      d.tglMulai ? new Date(d.tglMulai) : '', d.tglSelesai ? new Date(d.tglSelesai) : '',
+      Util.num(d.jumlahHari), n.total, d.akun || '',
+      d.ppk || '', d.nipPpk || '',
+      d.lokNama || '', d.lokJab || '', d.kerjaNama || '', d.kerjaJab || '',
+      createdAt, createdBy, JSON.stringify(n.list)
+    ];
+  }
+
   /** Simpan surat tugas yang tertaut ke transaksi kas (noTransaksi).
    * Mendukung banyak pegawai: d.pegawaiList = [{nama,nip,pangkat,jabatan,biaya}, ...].
    * Kolom tunggal (PEGAWAI/NIP/...) diisi pegawai pertama untuk kompatibilitas;
    * BIAYA = total; daftar lengkap disimpan di PEGAWAI_JSON. */
   function simpan(noTransaksi, d) {
     var c = SC();
-    var list = (d.pegawaiList && d.pegawaiList.length) ? d.pegawaiList
-             : [{ nama: d.pegawai || '', nip: d.nip || '', pangkat: d.pangkat || '',
-                  jabatan: d.jabatan || '', biaya: Util.num(d.biaya) }];
-    var p0 = list[0] || {};
-    var total = 0;
-    for (var i = 0; i < list.length; i++) total += Util.num(list[i].biaya);
-    SheetRepo.appendRow(CONFIG.SHEETS.SURAT_TUGAS, [
-      _nextNo(c), noTransaksi, d.nomor || '', p0.nama || '', p0.nip || '',
-      p0.pangkat || '', p0.jabatan || '', d.maksud || '', d.angkutan || '',
-      d.berangkat || '', d.tujuan || '',
-      d.tglMulai ? new Date(d.tglMulai) : '', d.tglSelesai ? new Date(d.tglSelesai) : '',
-      Util.num(d.jumlahHari), total, d.akun || '',
-      d.ppk || '', d.nipPpk || '',
-      d.lokNama || '', d.lokJab || '', d.kerjaNama || '', d.kerjaJab || '',
-      new Date(), getOperator(), JSON.stringify(list)
-    ]);
+    SheetRepo.appendRow(CONFIG.SHEETS.SURAT_TUGAS,
+      _rowArr(noTransaksi, d, _nextNo(c), new Date(), getOperator()));
     DeferredFlush.mark();
     return { success: true };
+  }
+
+  /** Perbarui surat tugas tersimpan (timpa baris terakhir untuk noTransaksi).
+   * NO & CREATED_AT/CREATED_BY dipertahankan. Bila belum ada → fallback simpan. */
+  function update(noTransaksi, d) {
+    var c = SC();
+    var data = SheetRepo.getData(CONFIG.SHEETS.SURAT_TUGAS);
+    for (var i = data.length - 1; i >= 0; i--) {
+      if (String(data[i][c.NO_TRANSAKSI]) === String(noTransaksi)) {
+        var r = data[i];
+        SheetRepo.setRow(CONFIG.SHEETS.SURAT_TUGAS, i + 2,
+          _rowArr(noTransaksi, d, r[c.NO], r[c.CREATED_AT] || new Date(), r[c.CREATED_BY] || getOperator()));
+        DeferredFlush.mark();
+        return { success: true };
+      }
+    }
+    return simpan(noTransaksi, d);
   }
 
   function _row2obj(c, r) {
@@ -86,5 +114,5 @@ var SuratTugas = (function () {
     return map;
   }
 
-  return { simpan: simpan, get: get, getMap: getMap };
+  return { simpan: simpan, update: update, get: get, getMap: getMap };
 })();

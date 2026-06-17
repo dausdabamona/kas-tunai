@@ -95,6 +95,22 @@ var KasTunai = (function () {
   }
 
   /* -------------------------------------------------------- *
+   * Update field inti transaksi (tanggal/kegiatan/penjab/debet/kredit/keterangan).
+   * Saldo otomatis dihitung ulang saat getTransaksi, jadi tak perlu recalc.
+   * -------------------------------------------------------- */
+  function updateTransaksi(no, data) {
+    var ok = updateByTransactionId(no, Util.set(
+      C.TANGGAL,    data.tanggal ? new Date(data.tanggal) : new Date(),
+      C.DEBET,      Util.num(data.debet),
+      C.KREDIT,     Util.num(data.kredit),
+      C.PENJAB,     data.penjab || '',
+      C.KEGIATAN,   data.kegiatan || '',
+      C.KETERANGAN, data.keterangan || ''));
+    if (ok) AuditLog.write('UPDATE', CONFIG.SHEETS.KAS_TUNAI, no, 'kegiatan: ' + (data.kegiatan || ''));
+    return { success: ok, no: no };
+  }
+
+  /* -------------------------------------------------------- *
    * Multi Nota
    * -------------------------------------------------------- */
   function getMultiNota(transactionId) {
@@ -263,6 +279,7 @@ var KasTunai = (function () {
   return {
     getTransaksi: getTransaksi,
     tambahTransaksi: tambahTransaksi,
+    updateTransaksi: updateTransaksi,
     getMultiNota: getMultiNota,
     tambahNota: tambahNota,
     hapusNotaItem: hapusNotaItem,

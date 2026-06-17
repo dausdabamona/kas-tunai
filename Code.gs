@@ -66,25 +66,35 @@ function serverGetDashboard() {
 /* ============================================================
  * Perjalanan Dinas / Surat Tugas
  * ============================================================ */
+/** Ringkas data SPD → field transaksi kas (total biaya, penjab, kegiatan, keterangan). */
+function _pdMeta(data) {
+  var list = (data.pegawaiList && data.pegawaiList.length) ? data.pegawaiList
+           : [{ nama: data.pegawai || '', biaya: Util.num(data.biaya) }];
+  var total = 0, nama = [];
+  for (var i = 0; i < list.length; i++) {
+    total += Util.num(list[i].biaya);
+    if (list[i].nama) nama.push(list[i].nama);
+  }
+  return {
+    tanggal: data.tglMulai, debet: 0, kredit: total,
+    penjab: nama.join(', '),
+    kegiatan: data.maksud || ('Perjalanan Dinas ' + (data.nomor || '')),
+    keterangan: 'Surat Tugas ' + (data.nomor || '') + ' (' + Util.num(data.jumlahHari) +
+                ' hari, ' + list.length + ' pegawai)'
+  };
+}
 function serverSimpanPerjalananDinas(data) {
   return _run(function () {
-    var list = (data.pegawaiList && data.pegawaiList.length) ? data.pegawaiList
-             : [{ nama: data.pegawai || '', biaya: Util.num(data.biaya) }];
-    var total = 0, nama = [];
-    for (var i = 0; i < list.length; i++) {
-      total += Util.num(list[i].biaya);
-      if (list[i].nama) nama.push(list[i].nama);
-    }
-    var res = KasTunai.tambahTransaksi({
-      tanggal: data.tglMulai,
-      debet: 0, kredit: total,
-      penjab: nama.join(', '),
-      kegiatan: data.maksud || ('Perjalanan Dinas ' + (data.nomor || '')),
-      keterangan: 'Surat Tugas ' + (data.nomor || '') + ' (' + Util.num(data.jumlahHari) +
-                  ' hari, ' + list.length + ' pegawai)'
-    });
+    var res = KasTunai.tambahTransaksi(_pdMeta(data));
     SuratTugas.simpan(res.no, data);
     return { success: true, no: res.no };
+  });
+}
+function serverUpdatePerjalananDinas(no, data) {
+  return _run(function () {
+    KasTunai.updateTransaksi(no, _pdMeta(data));
+    SuratTugas.update(no, data);
+    return { success: true, no: no };
   });
 }
 function serverGetSuratTugas(noTransaksi) {
