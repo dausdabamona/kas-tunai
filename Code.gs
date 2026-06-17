@@ -58,9 +58,15 @@ function serverGetDashboard() {
     return {
       transaksi: KasTunai.getTransaksi(),
       fotoMap: FotoNota.getJmlFotoPerTransaksi(),
-      suratMap: SuratTugas.getMap()
+      suratMap: SuratTugas.getMap(),
+      saldo: KasTunai.ringkasanSaldo()
     };
   });
+}
+
+/** Pindah dana antar kas (Bank <-> Tunai). arah: 'BANK_TUNAI' | 'TUNAI_BANK'. */
+function serverPindahDana(arah, nominal, tanggal, keterangan) {
+  return _run(function () { return KasTunai.pindahDana(arah, nominal, tanggal, keterangan); });
 }
 
 /* ============================================================

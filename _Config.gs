@@ -13,6 +13,9 @@ var CONFIG = {
   // Saldo awal kas tunai (saldo sebelum transaksi No.1)
   SALDO_AWAL: 3218000,
 
+  // Saldo awal kas di bank (rekening) — sesuaikan dengan saldo rekening awal
+  SALDO_AWAL_BANK: 0,
+
   // Folder Drive root untuk upload (kosong = root My Drive)
   DRIVE_FOLDER_ID: '',
 
@@ -35,7 +38,8 @@ var CONFIG = {
     TGL_NOTA: 12, FOTO_BARANG_JML: 13, NOTA_JML: 14, NOTA_TOTAL: 15,
     UANG_DISERAHKAN: 16, KEMBALIAN_JML: 17, KEMBALIAN_TOTAL: 18,
     IS_DELETED: 19, DELETED_AT: 20, DELETED_BY: 21, NO_SPBY: 22, TGL_SPBY: 23,
-    KUITANSI_FILE_ID: 24, KUITANSI_NAMA_FILE: 25, KUITANSI_URL: 26
+    KUITANSI_FILE_ID: 24, KUITANSI_NAMA_FILE: 25, KUITANSI_URL: 26,
+    SUMBER: 27, REF_TRANSFER: 28
   },
 
   // Header tiap sheet (urut sesuai kolom FISIK sheet asli)
@@ -46,7 +50,8 @@ var CONFIG = {
       'TGL_NOTA', 'FOTO_BARANG_JML', 'NOTA_JML', 'NOTA_TOTAL',
       'UANG_DISERAHKAN', 'KEMBALIAN_JML', 'KEMBALIAN_TOTAL',
       'IS_DELETED', 'DELETED_AT', 'DELETED_BY', 'NO_SPBY', 'TGL_SPBY',
-      'KUITANSI_FILE_ID', 'KUITANSI_NAMA_FILE', 'KUITANSI_URL'
+      'KUITANSI_FILE_ID', 'KUITANSI_NAMA_FILE', 'KUITANSI_URL',
+      'SUMBER', 'REF_TRANSFER'
     ],
     MULTI_NOTA: [
       'NO_TRANSAKSI', 'ROW_INDEX', 'URUTAN', 'NAMA_NOTA', 'NOMINAL',
@@ -89,7 +94,9 @@ var CONFIG = {
     npwpWP:   '00.000.000.0-000.000',
     alamatWP: 'Jl. Kapitan Pattimura, Tanjung Kasuari, Sorong, Papua Barat Daya',
     bendahara:'',
-    kota:     'Sorong'
+    kota:     'Sorong',
+    namaBank: '',
+    noRekening: ''
   }
 };
 

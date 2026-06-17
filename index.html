@@ -103,6 +103,8 @@
   .tcard.st-belum{border-left:5px solid #dc2626;background:#fef2f2}
   .tcard .top{display:flex;justify-content:space-between;gap:8px}
   .tcard .jd{font-weight:700;font-size:14px}
+  .srcbadge{font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;vertical-align:middle}
+  .srcbadge.bank{background:#e0e7ff;color:#3730a3} .srcbadge.tunai{background:#dcfce7;color:#166534}
   .tcard .sb{font-size:12px;color:var(--c-muted);margin-top:2px}
   .tcard .amt{font-weight:700;color:var(--c-err);white-space:nowrap;text-align:right}
   .tcard .amt.debet{color:var(--c-ok)} .tcard .amt.amt-ok{color:var(--c-ok)}
@@ -200,13 +202,16 @@
 <!-- ================= TAB TRANSAKSI ================= -->
 <div id="viewTransaksi" class="wrap">
   <div class="saldo-sum">
-    <div class="lbl">&#128176; SALDO KAS TUNAI</div>
+    <div class="lbl">&#128176; SALDO GABUNGAN (TUNAI + BANK)</div>
     <div class="big" id="saldoBig">-</div>
     <div class="grid">
+      <div class="gi"><div class="k">💵 Saldo Tunai</div><div class="v" id="sumTunai">-</div></div>
+      <div class="gi"><div class="k">🏦 Saldo Bank</div><div class="v" id="sumBank">-</div></div>
       <div class="gi"><div class="k">Total Masuk</div><div class="v" id="sumMasuk">-</div></div>
       <div class="gi"><div class="k">Total Keluar</div><div class="v" id="sumKeluar">-</div></div>
-      <div class="gi"><div class="k">Dikembalikan</div><div class="v" id="sumKembali">-</div></div>
-      <div class="gi"><div class="k">Transaksi</div><div class="v" id="sumJml">-</div></div>
+    </div>
+    <div style="text-align:right;margin-top:8px">
+      <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0" onclick="openModalPindah()">&#128181; Pindah Dana (Bank&#8596;Tunai)</button>
     </div>
   </div>
 
@@ -339,6 +344,8 @@
 <div class="modal" id="modalTransaksi">
   <div class="sheet">
     <h2 id="txTitle">Tambah Transaksi</h2>
+    <div class="field"><label>Sumber Dana</label>
+      <select id="txSumber"><option value="TUNAI">💵 Kas Tunai</option><option value="BANK">🏦 Kas Bank</option></select></div>
     <div class="field"><label>Tanggal</label><input type="date" id="txTanggal"></div>
     <div class="field"><label>Kegiatan / Uraian</label><input type="text" id="txKegiatan" placeholder="Nama kegiatan"></div>
     <div class="field"><label id="txPenjabLbl">Penanggung Jawab</label><input type="text" id="txPenjab"></div>
@@ -346,6 +353,20 @@
     <div class="field"><label>Keterangan</label><textarea id="txKeterangan" rows="2"></textarea></div>
     <button class="btn" id="txSimpan" onclick="submitTransaksi()">Simpan</button>
     <button class="btn ghost" onclick="closeModal('modalTransaksi')">Batal</button>
+  </div>
+</div>
+
+<!-- ================= MODAL PINDAH DANA ================= -->
+<div class="modal" id="modalPindah">
+  <div class="sheet">
+    <h2>&#128181; Pindah Dana</h2>
+    <div class="field"><label>Arah</label>
+      <select id="pdArah"><option value="BANK_TUNAI">🏦 Bank → 💵 Tunai (Tarik Tunai)</option><option value="TUNAI_BANK">💵 Tunai → 🏦 Bank (Setor)</option></select></div>
+    <div class="field"><label>Tanggal</label><input type="date" id="pdTanggal"></div>
+    <div class="field"><label>Nominal (Rp)</label><input type="number" id="pdNominal" value="0" inputmode="numeric"></div>
+    <div class="field"><label>Keterangan (opsional)</label><input type="text" id="pdKet" placeholder="mis. Tarik tunai untuk operasional"></div>
+    <button class="btn" style="background:#0d9488" onclick="submitPindah()">Simpan Pindah Dana</button>
+    <button class="btn ghost" onclick="closeModal('modalPindah')">Batal</button>
   </div>
 </div>
 
@@ -473,6 +494,7 @@ var currentSearch = '';        // kata kunci pencarian (kegiatan/penjab)
 var _txMode       = 'keluar';  // mode form transaksi: 'masuk' | 'keluar'
 var fotoJmlMap    = {};      // {noTransaksi: jumlahFotoNota}
 var suratMap      = {};      // {noTransaksi: nomorSurat} penanda perjalanan dinas
+var saldoInfo     = null;    // {saldoTunai, saldoBank, saldoTotal} dari server
 var _notaTarget   = null;    // noTransaksi yang sedang dikelola notanya
 var _kbTarget     = null;    // noTransaksi yang sedang dikelola pengembaliannya
 var _allPenyedia  = null;
@@ -632,6 +654,7 @@ function loadAll(){
       allTransaksi=(d&&d.transaksi)||[];
       fotoJmlMap=(d&&d.fotoMap)||{};
       suratMap=(d&&d.suratMap)||{};
+      saldoInfo=(d&&d.saldo)||null;
       showLoading(false);
       renderList();
     })
@@ -664,22 +687,22 @@ function passFilter(t){
 }
 
 function updateSaldoBar(){
-  var masuk=0,keluar=0,kembali=0;
+  var masuk=0,keluar=0;
   for(var i=0;i<allTransaksi.length;i++){
     masuk+=(+allTransaksi[i].debet||0);
     keluar+=(+allTransaksi[i].kredit||0);
-    kembali+=(+allTransaksi[i].kembalianTotal||0);
   }
-  // Saldo = saldo awal + masuk - keluar. Pengembalian yang benar-benar masuk kas
-  // sudah tercatat sebagai transaksi debet sendiri, jadi tidak ditambah dari sini.
-  var saldo=(+SALDO_AWAL_JS||0)+masuk-keluar;
-  document.getElementById('saldoPill').textContent=rupiah(saldo);
+  // Saldo dari server (pisah Tunai/Bank) bila ada; fallback ke saldo awal tunai + masuk - keluar.
+  var tunai = saldoInfo? (+saldoInfo.saldoTunai||0) : ((+SALDO_AWAL_JS||0)+masuk-keluar);
+  var bank  = saldoInfo? (+saldoInfo.saldoBank||0) : 0;
+  var total = saldoInfo? (+saldoInfo.saldoTotal||0) : tunai;
+  document.getElementById('saldoPill').textContent=rupiah(total);
   var big=document.getElementById('saldoBig');
-  big.textContent=rupiah(saldo); big.className='big'+(saldo<0?' neg':'');
+  big.textContent=rupiah(total); big.className='big'+(total<0?' neg':'');
+  document.getElementById('sumTunai').textContent=rupiah(tunai);
+  document.getElementById('sumBank').textContent=rupiah(bank);
   document.getElementById('sumMasuk').textContent=rupiah(masuk);
   document.getElementById('sumKeluar').textContent=rupiah(keluar);
-  document.getElementById('sumKembali').textContent=rupiah(kembali);
-  document.getElementById('sumJml').textContent=allTransaksi.length+' transaksi';
 }
 
 function _matchSearch(t){
@@ -718,7 +741,10 @@ function _renderGroups(list, mode){
 }
 
 function _cardHtml(t, mode){
-  var head='<div class="top"><div><div class="jd">#'+t.no+' '+esc(t.kegiatan||'-')+'</div>'
+  var srcBadge = (t.sumber==='BANK')
+    ? ' <span class="srcbadge bank">&#127974; Bank</span>'
+    : ' <span class="srcbadge tunai">&#128181; Tunai</span>';
+  var head='<div class="top"><div><div class="jd">#'+t.no+' '+esc(t.kegiatan||'-')+srcBadge+'</div>'
     +'<div class="sb">&#128100; '+esc(t.penjab||'-')+(t.keterangan?(' &middot; '+esc(t.keterangan)):'')+'</div></div>';
   if(mode==='masuk'){
     return '<div class="tcard">'+head
@@ -1553,12 +1579,31 @@ function openModalTransaksi(mode){
   document.getElementById('txNilaiLbl').textContent=masuk?'Nilai Masuk / Debet (Rp)':'Nilai Keluar / Kredit (Rp)';
   document.getElementById('txPenjabLbl').textContent=masuk?'Sumber Dana / Penyetor':'Penanggung Jawab (PUM)';
   document.getElementById('txSimpan').style.background=masuk?'var(--c-ok)':'var(--c-err)';
+  document.getElementById('txSumber').value='TUNAI';
   document.getElementById('txTanggal').value=todayISO();
   document.getElementById('txKegiatan').value='';
   document.getElementById('txPenjab').value=masuk?'':(NAMA_USER||'');
   document.getElementById('txNilai').value=0;
   document.getElementById('txKeterangan').value='';
   openModal('modalTransaksi');
+}
+function openModalPindah(){
+  document.getElementById('pdArah').value='BANK_TUNAI';
+  document.getElementById('pdTanggal').value=todayISO();
+  document.getElementById('pdNominal').value=0;
+  document.getElementById('pdKet').value='';
+  openModal('modalPindah');
+}
+function submitPindah(){
+  var nominal=parseFloat(document.getElementById('pdNominal').value)||0;
+  if(nominal<=0){ toast('Nominal harus > 0','error'); return; }
+  showLoading(true,'Memindahkan dana...');
+  google.script.run
+    .withSuccessHandler(function(){ showLoading(false); closeModal('modalPindah');
+      toast('Pindah dana tersimpan','success'); loadAll(); })
+    .withFailureHandler(fail)
+    .serverPindahDana(document.getElementById('pdArah').value, nominal,
+      document.getElementById('pdTanggal').value, document.getElementById('pdKet').value.trim());
 }
 function submitTransaksi(){
   var nilai=parseFloat(document.getElementById('txNilai').value)||0;
@@ -1568,6 +1613,7 @@ function submitTransaksi(){
     penjab:document.getElementById('txPenjab').value.trim(),
     debet:_txMode==='masuk'?nilai:0,
     kredit:_txMode==='keluar'?nilai:0,
+    sumber:document.getElementById('txSumber').value,
     keterangan:document.getElementById('txKeterangan').value.trim()
   };
   if(!data.kegiatan){toast('Kegiatan/uraian wajib diisi','error');return;}

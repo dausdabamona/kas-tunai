@@ -38,8 +38,14 @@ var KasTunai = (function () {
       noSpby:          row[C.NO_SPBY],
       tglSpby:         Util.fmtDate(row[C.TGL_SPBY]),
       kuitansiFileId:  row[C.KUITANSI_FILE_ID],
-      kuitansiUrl:     row[C.KUITANSI_URL]
+      kuitansiUrl:     row[C.KUITANSI_URL],
+      sumber:          (String(row[C.SUMBER]||'').toUpperCase()==='BANK') ? 'BANK' : 'TUNAI',
+      refTransfer:     row[C.REF_TRANSFER] || ''
     };
+  }
+  /** true bila baris adalah pemindahan dana antar kas (Pindah Dana), bukan belanja riil. */
+  function _isTransfer(row) {
+    return String(row[C.REF_TRANSFER] || '').indexOf('TF-') === 0;
   }
 
   /* -------------------------------------------------------- *
@@ -48,20 +54,38 @@ var KasTunai = (function () {
   function getTransaksi() {
     var data = SheetRepo.getData(CONFIG.SHEETS.KAS_TUNAI);
     var out = [];
-    var saldo = CONFIG.SALDO_AWAL;
+    var saldoTunai = CONFIG.SALDO_AWAL;
+    var saldoBank  = Util.num(CONFIG.SALDO_AWAL_BANK);
 
     for (var i = 0; i < data.length; i++) {
       var row = data[i];
       if (isDeleted(row[C.IS_DELETED])) continue;
-      // Saldo kas berjalan = +debet (masuk) - kredit (keluar).
-      // Pengembalian yang benar-benar masuk kas dicatat sebagai transaksi debet
-      // tersendiri, jadi TIDAK ditambahkan lagi dari kolom KEMBALIAN_TOTAL.
-      saldo += Util.num(row[C.DEBET]) - Util.num(row[C.KREDIT]);
       var obj = rowToObj(row, i + 2);
-      obj.saldo = saldo;
+      // Saldo berjalan per SUMBER = +debet (masuk) - kredit (keluar).
+      if (obj.sumber === 'BANK') {
+        saldoBank += obj.debet - obj.kredit;
+        obj.saldo = saldoBank;
+      } else {
+        saldoTunai += obj.debet - obj.kredit;
+        obj.saldo = saldoTunai;
+      }
+      obj.transfer = _isTransfer(row);
       out.push(obj);
     }
     return out;
+  }
+
+  /** Ringkasan saldo untuk header dashboard. */
+  function ringkasanSaldo() {
+    var data = SheetRepo.getData(CONFIG.SHEETS.KAS_TUNAI);
+    var tunai = CONFIG.SALDO_AWAL, bank = Util.num(CONFIG.SALDO_AWAL_BANK);
+    for (var i = 0; i < data.length; i++) {
+      var row = data[i];
+      if (isDeleted(row[C.IS_DELETED])) continue;
+      var d = Util.num(row[C.DEBET]) - Util.num(row[C.KREDIT]);
+      if (String(row[C.SUMBER]||'').toUpperCase()==='BANK') bank += d; else tunai += d;
+    }
+    return { saldoTunai: tunai, saldoBank: bank, saldoTotal: tunai + bank };
   }
 
   /* -------------------------------------------------------- *
@@ -87,6 +111,8 @@ var KasTunai = (function () {
     row[C.KEMBALIAN_JML]   = 0;
     row[C.KEMBALIAN_TOTAL] = 0;
     row[C.IS_DELETED] = FLAG_ACTIVE;
+    row[C.SUMBER]       = (String(data.sumber||'').toUpperCase()==='BANK') ? 'BANK' : 'TUNAI';
+    row[C.REF_TRANSFER] = data.refTransfer || '';
 
     SheetRepo.appendRow(CONFIG.SHEETS.KAS_TUNAI, row);
     DeferredFlush.mark();
@@ -95,19 +121,54 @@ var KasTunai = (function () {
   }
 
   /* -------------------------------------------------------- *
+   * Pindah Dana antar kas (Bank <-> Tunai). Membuat sepasang baris
+   * tertaut (REF_TRANSFER sama): KREDIT di sumber asal, DEBET di tujuan.
+   * arah: 'BANK_TUNAI' (tarik tunai) | 'TUNAI_BANK' (setor).
+   * -------------------------------------------------------- */
+  function pindahDana(arah, nominal, tanggal, keterangan) {
+    var n = Util.num(nominal);
+    if (n <= 0) throw new Error('Nominal pindah dana harus > 0');
+    var dari = (arah === 'TUNAI_BANK') ? 'TUNAI' : 'BANK';
+    var ke   = (arah === 'TUNAI_BANK') ? 'BANK'  : 'TUNAI';
+    var ref  = 'TF-' + (new Date()).getTime();
+    var ket  = keterangan || ((dari==='BANK'?'Tarik tunai dari bank':'Setor tunai ke bank'));
+    // Baris keluar dari sumber asal
+    tambahTransaksi({ tanggal: tanggal, debet: 0, kredit: n, sumber: dari,
+      refTransfer: ref, kegiatan: 'Pindah Dana ('+dari+'→'+ke+')', keterangan: ket });
+    // Baris masuk ke sumber tujuan
+    tambahTransaksi({ tanggal: tanggal, debet: n, kredit: 0, sumber: ke,
+      refTransfer: ref, kegiatan: 'Pindah Dana ('+dari+'→'+ke+')', keterangan: ket });
+    return { success: true, ref: ref };
+  }
+
+  /* -------------------------------------------------------- *
    * Update field inti transaksi (tanggal/kegiatan/penjab/debet/kredit/keterangan).
    * Saldo otomatis dihitung ulang saat getTransaksi, jadi tak perlu recalc.
    * -------------------------------------------------------- */
   function updateTransaksi(no, data) {
-    var ok = updateByTransactionId(no, Util.set(
+    var upd = Util.set(
       C.TANGGAL,    data.tanggal ? new Date(data.tanggal) : new Date(),
       C.DEBET,      Util.num(data.debet),
       C.KREDIT,     Util.num(data.kredit),
       C.PENJAB,     data.penjab || '',
       C.KEGIATAN,   data.kegiatan || '',
-      C.KETERANGAN, data.keterangan || ''));
+      C.KETERANGAN, data.keterangan || '');
+    if (data.sumber) upd[C.SUMBER] = (String(data.sumber).toUpperCase()==='BANK') ? 'BANK' : 'TUNAI';
+    var ok = updateByTransactionId(no, upd);
     if (ok) AuditLog.write('UPDATE', CONFIG.SHEETS.KAS_TUNAI, no, 'kegiatan: ' + (data.kegiatan || ''));
     return { success: ok, no: no };
+  }
+
+  /** Cari NO transaksi (aktif) berdasarkan REF_TRANSFER + sumber tertentu, atau null. */
+  function findByRef(ref, sumber) {
+    if (!ref) return null;
+    var data = SheetRepo.getData(CONFIG.SHEETS.KAS_TUNAI);
+    for (var i = 0; i < data.length; i++) {
+      if (isDeleted(data[i][C.IS_DELETED])) continue;
+      if (String(data[i][C.REF_TRANSFER]) === String(ref) &&
+          (!sumber || String(data[i][C.SUMBER]||'').toUpperCase() === sumber)) return data[i][C.NO];
+    }
+    return null;
   }
 
   /* -------------------------------------------------------- *
@@ -278,8 +339,11 @@ var KasTunai = (function () {
 
   return {
     getTransaksi: getTransaksi,
+    ringkasanSaldo: ringkasanSaldo,
     tambahTransaksi: tambahTransaksi,
     updateTransaksi: updateTransaksi,
+    pindahDana: pindahDana,
+    findByRef: findByRef,
     getMultiNota: getMultiNota,
     tambahNota: tambahNota,
     hapusNotaItem: hapusNotaItem,
