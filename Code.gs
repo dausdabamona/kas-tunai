@@ -175,7 +175,10 @@ function serverImporBank(list) {
       var masuk = Util.num(it.kredit);   // kredit rekening → masuk
       var keluar = Util.num(it.debet);   // debet rekening → keluar
       if (masuk <= 0 && keluar <= 0) continue;
-      var ref = 'RK-' + _rkRef(it.tanggal, masuk - keluar, it.uraian);
+      // Dedup: No Journal BNI dipakai bersama oleh transaksi induk + baris biayanya,
+      // jadi gabungkan ID + nominal agar baris biaya (ATM/Prima) tidak ikut terbuang.
+      var ref = 'RK-' + (it.id ? (String(it.id) + '-' + (masuk - keluar))
+                                : _rkRef(it.tanggal, masuk - keluar, it.uraian));
       if (KasTunai.findByRef(ref)) { hasil.dilewati++; continue; }
       KasTunai.tambahTransaksi({
         tanggal: it.tanggal, debet: masuk, kredit: keluar, sumber: 'BANK', refTransfer: ref,

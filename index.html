@@ -378,6 +378,10 @@
     <h2>&#127974; Impor Rekening Koran (.xlsx)</h2>
     <div class="field"><label>File rekening koran (.xlsx dari BNI)</label>
       <input type="file" id="rkFile" accept=".xlsx,.xls" onchange="rkParse()"></div>
+    <details style="margin-bottom:10px"><summary style="cursor:pointer;font-size:12px;color:var(--c-muted)">atau tempel teks mutasi (salin dari tabel)</summary>
+      <textarea id="rkPaste" rows="4" style="width:100%;font-size:11px" placeholder="Tempel baris mutasi di sini (pemisah Tab), termasuk baris header."></textarea>
+      <button class="btn ghost" style="width:auto;padding:6px 12px" onclick="rkParseText()">Olah Teks</button>
+    </details>
     <div id="rkMap" class="hidden">
       <div style="font-size:12px;color:var(--c-muted);margin-bottom:6px">Cocokkan kolom (otomatis ditebak; ubah bila perlu). Debet rekening = uang keluar, Kredit rekening = uang masuk.</div>
       <div class="row2">
@@ -388,7 +392,10 @@
         <div class="field"><label>Kolom Uraian</label><select id="rkColUrai" onchange="rkRenderPreview()"></select></div>
         <div class="field"><label>Kolom Debet (keluar)</label><select id="rkColDebet" onchange="rkRenderPreview()"></select></div>
       </div>
-      <div class="field"><label>Kolom Kredit (masuk)</label><select id="rkColKredit" onchange="rkRenderPreview()"></select></div>
+      <div class="row2">
+        <div class="field"><label>Kolom Kredit (masuk)</label><select id="rkColKredit" onchange="rkRenderPreview()"></select></div>
+        <div class="field"><label>Kolom ID (anti-duplikat)</label><select id="rkColId" onchange="rkRenderPreview()"></select></div>
+      </div>
       <div id="rkPreview" style="max-height:230px;overflow:auto;font-size:11px;border:1px solid var(--c-line);border-radius:8px;padding:6px;margin-bottom:8px"></div>
       <button class="btn" style="background:var(--c-ok)" onclick="submitImporRk()">Impor ke Kas Bank</button>
     </div>
@@ -1668,6 +1675,16 @@ function rkParse(){
   };
   rd.readAsDataURL(f);
 }
+function rkParseText(){
+  var txt=document.getElementById('rkPaste').value||'';
+  var lines=txt.split(/\r?\n/), rows=[];
+  for(var i=0;i<lines.length;i++){
+    if(lines[i].trim()==='') continue;
+    rows.push(lines[i].indexOf('\t')>=0 ? lines[i].split('\t') : lines[i].split(/\s{2,}/));
+  }
+  if(!rows.length){ toast('Tidak ada teks untuk diolah','error'); return; }
+  _rkRows=rows; _rkBuildMap();
+}
 function _rkBuildMap(){
   if(!_rkRows||!_rkRows.length){ toast('File kosong / tak terbaca','error'); return; }
   _rkCols=0; for(var r=0;r<_rkRows.length;r++) _rkCols=Math.max(_rkCols,_rkRows[r].length);
@@ -1697,31 +1714,41 @@ function _rkGuess(sel, headRow, kws){
 }
 function _rkPopulateCols(){
   var hdr=+document.getElementById('rkHeader').value, headRow=_rkRows[hdr]||[];
-  var defs=[['rkColTgl',['tanggal','date','tgl']],['rkColUrai',['uraian','keterangan','description','remark','berita','transaksi']],
-            ['rkColDebet',['debet','debit']],['rkColKredit',['kredit','credit']]];
+  var defs=[['rkColTgl',['tanggal','date','tgl']],
+            ['rkColUrai',['deskripsi','uraian','keterangan','description','remark','berita']],
+            ['rkColDebet',['debet','debit']],['rkColKredit',['kredit','credit']],
+            ['rkColId',['no journal','journal','id transaksi','referensi','no ref']]];
   for(var d=0;d<defs.length;d++){
-    var sel=document.getElementById(defs[d][0]); sel.innerHTML='';
+    var sel=document.getElementById(defs[d][0]); if(!sel) continue;
+    sel.innerHTML = (defs[d][0]==='rkColId') ? '<option value="-1">(tanpa kolom ID)</option>' : '';
     for(var c=0;c<_rkCols;c++){ var o=document.createElement('option'); o.value=c; o.text=_rkColLabel(c,headRow); sel.appendChild(o); }
     _rkGuess(sel, headRow, defs[d][1]);
   }
 }
 function _rkNum(v){
   if(v==null) return 0; if(typeof v==='number') return v;
-  var s=String(v).replace(/[^0-9.,\-]/g,'');
-  if(s.indexOf('.')>=0 && s.indexOf(',')>=0){ s=s.replace(/\./g,'').replace(',','.'); } // 1.234,56 → 1234.56
-  else if(s.indexOf(',')>=0){ s=s.replace(',', (s.split(',')[1]||'').length===2?'.':''); } // koma desimal vs ribuan
+  var s=String(v).replace(/[^0-9.,\-]/g,''); if(s==='') return 0;
+  if(s.indexOf(',')>=0){ s=s.replace(/\./g,'').replace(',','.'); } // 1.234,56 → 1234.56 (koma desimal)
+  else { s=s.replace(/\./g,''); }                                  // 66.082.921 → 66082921 (titik ribuan)
   return parseFloat(s)||0;
+}
+function _rkMonth(name){
+  var n=String(name).toLowerCase().slice(0,3);
+  var map={jan:'01',feb:'02',mar:'03',apr:'04',may:'05',mei:'05',jun:'06',jul:'07',
+    aug:'08',agt:'08',agu:'08',ags:'08',sep:'09',oct:'10',okt:'10',nov:'11',dec:'12',des:'12'};
+  return map[n]||'';
 }
 function _rkDataRows(){
   var hdr=+document.getElementById('rkHeader').value, out=[];
   var cT=+document.getElementById('rkColTgl').value, cU=+document.getElementById('rkColUrai').value,
-      cD=+document.getElementById('rkColDebet').value, cK=+document.getElementById('rkColKredit').value;
+      cD=+document.getElementById('rkColDebet').value, cK=+document.getElementById('rkColKredit').value,
+      cId=+((document.getElementById('rkColId')||{}).value||-1);
   for(var i=hdr+1;i<_rkRows.length;i++){
     var r=_rkRows[i]; if(!r) continue;
     var tgl=r[cT], deb=_rkNum(r[cD]), kre=_rkNum(r[cK]);
-    if((tgl==null||String(tgl).trim()==='') && deb===0 && kre===0) continue;
     if(deb===0 && kre===0) continue;
-    out.push({ tanggal:_rkToISO(tgl), uraian:String(r[cU]||'').trim(), debet:deb, kredit:kre });
+    out.push({ tanggal:_rkToISO(tgl), uraian:String(r[cU]||'').trim(), debet:deb, kredit:kre,
+      id:(cId>=0?String(r[cId]||'').trim():'') });
   }
   return out;
 }
@@ -1729,7 +1756,9 @@ function _rkToISO(v){
   if(v==null) return '';
   var s=String(v).trim();
   if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
-  var m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/); // dd/mm/yyyy
+  var mm=s.match(/^(\d{1,2})[\s\-]([A-Za-z]{3,})[\s\-](\d{4})/); // 15-Jun-2026 / 29 Mei 2026 (+jam diabaikan)
+  if(mm){ var mo=_rkMonth(mm[2]); if(mo) return mm[3]+'-'+mo+'-'+('0'+mm[1]).slice(-2); }
+  var m=s.match(/^(\d{1,2})[\/](\d{1,2})[\/](\d{2,4})/); // dd/mm/yyyy
   if(m){ var y=m[3].length===2?('20'+m[3]):m[3]; return y+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2); }
   return s;
 }
