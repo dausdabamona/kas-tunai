@@ -473,6 +473,26 @@
   </div>
 </div>
 
+<!-- ================= MODAL BUKTI PERJALANAN DINAS ================= -->
+<div class="modal" id="modalBukti">
+  <div class="sheet">
+    <h2>&#128206; Bukti Perjalanan Dinas <span id="bkLabel"></span></h2>
+    <div id="bkList"><div class="empty">Memuat...</div></div>
+    <hr>
+    <h2 style="font-size:14px">Tambah Bukti (tiket / boarding pass)</h2>
+    <div class="row2">
+      <div class="field"><label>Jenis dokumen</label>
+        <select id="bkJenis"><option>Tiket</option><option>Boarding Pass</option><option>Bukti Hotel</option><option>Bukti Transport</option><option>Lainnya</option></select></div>
+      <div class="field"><label>Keterangan (opsional)</label><input type="text" id="bkKet"></div>
+    </div>
+    <div class="field"><label>File (foto JPG/PNG atau PDF — boleh beberapa)</label>
+      <input type="file" id="bkFile" accept="image/*,application/pdf" multiple></div>
+    <button class="btn" onclick="submitBukti()">Unggah Bukti</button>
+    <button class="btn ghost" onclick="unduhZipBukti(_bkTarget)">&#128476; Unduh ZIP Semua Bukti</button>
+    <button class="btn ghost" onclick="closeModal('modalBukti')">Tutup</button>
+  </div>
+</div>
+
 <!-- ================= MODAL FOTO (geotagging) ================= -->
 <div class="modal" id="modalFoto">
   <div class="sheet">
@@ -859,7 +879,9 @@ function _cardHtml(t, mode){
       +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">Kuitansi</button>'
       +'<button class="b-spby" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+(t.noSpby?'SPBY &#10003;':'SPBY')+'</button>'
       +'<button class="b-spd" onclick="cetakSpd('+t.no+')">SPD</button>'
-      +'<button class="b-edit" onclick="editSpd('+t.no+')">Edit SPD</button>';
+      +'<button class="b-edit" onclick="editSpd('+t.no+')">Edit SPD</button>'
+      +'<button class="b-gray" onclick="openModalBukti('+t.no+')">&#128206; Bukti</button>'
+      +'<button class="b-dark" onclick="cetakSpjPd('+t.no+')">&#129534; Cetak SPJ</button>';
   } else {
     h+='<button class="b-orange" onclick="openModalNota('+t.no+')">Kelola Nota</button>'
       +'<button class="b-gray" onclick="openFoto('+t.no+')">Foto</button>'
@@ -2143,6 +2165,107 @@ function bukaPdfKuitansi(noTransaksi){
   }
   _bukaPopup(_renderKuitansiHtml(t));
 }
+
+/* ====== Bukti Perjalanan Dinas (tiket/boarding) ====== */
+var _bkTarget=null;
+function openModalBukti(no){
+  _bkTarget=no;
+  document.getElementById('bkLabel').textContent='(No '+no+')';
+  document.getElementById('bkFile').value=''; document.getElementById('bkKet').value='';
+  document.getElementById('bkList').innerHTML='<div class="empty">Memuat...</div>';
+  openModal('modalBukti');
+  _muatBuktiList();
+}
+function _muatBuktiList(){
+  google.script.run.withSuccessHandler(renderBuktiList).withFailureHandler(fail).serverGetBuktiPD(_bkTarget,false);
+}
+function renderBuktiList(list){
+  var el=document.getElementById('bkList');
+  if(!list||!list.length){ el.innerHTML='<div class="empty">Belum ada bukti.</div>'; return; }
+  var h='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px">';
+  for(var i=0;i<list.length;i++){ var b=list[i];
+    var thumb=b.isImg?('<img src="'+esc(b.url)+'" style="width:100%;height:70px;object-fit:cover;border-radius:6px">')
+                     :('<div style="height:70px;display:flex;align-items:center;justify-content:center;background:#fee2e2;border-radius:6px;font-size:26px">&#128196;</div>');
+    h+='<div style="font-size:10px;text-align:center">'+thumb
+      +'<div style="margin:2px 0;color:var(--c-muted)">'+esc(b.jenisDok||'')+'</div>'
+      +'<a href="'+esc(b.url)+'" target="_blank">lihat</a> &middot; <a href="#" onclick="hapusBukti('+b.urutan+');return false">hapus</a></div>';
+  }
+  el.innerHTML=h+'</div>';
+}
+function submitBukti(){
+  var fileEl=document.getElementById('bkFile');
+  if(!fileEl.files||!fileEl.files.length){ toast('Pilih file dulu','error'); return; }
+  var jenis=document.getElementById('bkJenis').value, ket=document.getElementById('bkKet').value.trim();
+  var files=fileEl.files, arr=[], done=0, n=files.length;
+  showLoading(true,'Memproses '+n+' file...');
+  for(var i=0;i<n;i++){ (function(idx){
+    var f=files[idx];
+    function push(obj){ obj.jenisDok=jenis; obj.keterangan=ket; arr[idx]=obj; done++; if(done===n) _kirimBukti(arr); }
+    if(/^image\//.test(f.type)) compressImage(f, push);
+    else { var rd=new FileReader(); rd.onload=function(){ push({base64:String(rd.result),mimeType:f.type||'application/pdf',namaFile:f.name}); }; rd.readAsDataURL(f); }
+  })(i); }
+}
+function _kirimBukti(arr){
+  showLoading(true,'Mengunggah '+arr.length+' bukti...');
+  google.script.run.withSuccessHandler(function(){ showLoading(false); toast('Bukti terunggah','success');
+      document.getElementById('bkFile').value=''; _muatBuktiList(); })
+    .withFailureHandler(fail).serverUploadBuktiPD(_bkTarget,arr);
+}
+function hapusBukti(urutan){
+  if(!confirm('Hapus bukti ini?')) return;
+  showLoading(true,'Menghapus...');
+  google.script.run.withSuccessHandler(function(){ showLoading(false); toast('Bukti dihapus','success'); _muatBuktiList(); })
+    .withFailureHandler(fail).serverHapusBuktiPD(_bkTarget,urutan);
+}
+function unduhZipBukti(no){
+  if(!no){ toast('Buka bukti sebuah transaksi dulu','error'); return; }
+  showLoading(true,'Membuat ZIP...');
+  google.script.run.withSuccessHandler(function(res){ showLoading(false);
+      toast('ZIP siap ('+res.jml+' file)','success'); window.open(res.url,'_blank'); })
+    .withFailureHandler(fail).serverZipBuktiPD(no,'SPJ-PD-'+no+'.zip');
+}
+
+/* ====== Cetak SPJ Perjalanan Dinas (bundel semua dokumen + lampiran bukti foto) ====== */
+function cetakSpjPd(no){
+  var t=_cariTransaksi(no); if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
+  showLoading(true,'Menyiapkan SPJ Perjalanan Dinas...');
+  google.script.run.withSuccessHandler(function(st){
+    google.script.run.withSuccessHandler(function(bukti){ showLoading(false);
+        _bukaPopup(_renderSpjPdHtml(t, st||{}, bukti||[])); })
+      .withFailureHandler(fail).serverGetBuktiPD(no,true);
+  }).withFailureHandler(fail).serverGetSuratTugas(no);
+}
+function _renderSpjPdHtml(t, data, bukti){
+  var luar=(data.jenis==='LUAR_KOTA'), list=_spdList(data), pages='', i;
+  pages+='<div class="page">'+_suratTugasBody(data)+'</div>';                       // 1. Surat Tugas
+  for(i=0;i<list.length;i++){                                                        // 2. SPD (+pengesahan LK)
+    pages+='<div class="page'+(luar?' spdpg':'')+'">'+_spdPage(data,list[i])+'</div>';
+    if(luar) pages+='<div class="page spdpg">'+_spdPengesahanPage(data,list[i])+'</div>';
+  }
+  if(luar){
+    for(i=0;i<list.length;i++) pages+='<div class="page">'+_rincianPage(data,list[i])+'</div>';   // 3. Rincian
+    for(i=0;i<list.length;i++) if(list[i].riil&&list[i].riil.length)                              // 4. Riil
+      pages+='<div class="page">'+_riilPage(data,list[i])+'</div>';
+  }
+  var thn=(String(t.tanggal||'').split('-')[0])||(''+new Date().getFullYear());        // 5. Kuitansi
+  var noBase='KT-'+('00'+t.no).slice(-3);
+  for(i=0;i<list.length;i++){
+    var nk=(list.length>1)?(noBase+'-'+(i+1)+'/'+thn):(noBase+'/'+thn);
+    pages+=_kuitansiPage(t,{penerima:(list[i].nama||'(…………………)'), jumlah:(+list[i].biaya||0), noKwt:nk});
+  }
+  var imgs=(bukti||[]).filter(function(b){return b.isImg && b.b64;});                   // 6. Lampiran bukti foto
+  for(i=0;i<imgs.length;i++){
+    pages+='<div class="page" style="text-align:center"><h2 style="font-size:13px;margin:0 0 8px">Lampiran Bukti '+(i+1)
+      +(imgs[i].jenisDok?(' &mdash; '+esc(imgs[i].jenisDok)):'')+'</h2>'
+      +'<img src="'+imgs[i].b64+'" style="max-width:100%;max-height:245mm;object-fit:contain">'
+      +(imgs[i].keterangan?('<div style="font-size:11px;margin-top:6px">'+esc(imgs[i].keterangan)+'</div>'):'')+'</div>';
+  }
+  var nPdf=(bukti||[]).length-imgs.length;
+  return '<html><head><meta charset="utf-8"><title>SPJ PD '+esc(data.nomor||t.no)+'</title><style>'+_docCss()+_kuitansiCss()+'</style></head><body>'
+    +'<div class="noprint" style="text-align:right;margin:8px 15mm 0"><button onclick="window.print()">Cetak / Simpan PDF</button>'
+    +(nPdf>0?(' <span style="font-size:12px;color:#b45309">'+nPdf+' bukti PDF tidak tergabung di sini &mdash; gunakan tombol Unduh ZIP.</span>'):'')
+    +'</div>'+pages+'</body></html>';
+}
 var _kwTarget=null;
 function bukaModalKuitansi(no){
   _kwTarget=no;
@@ -2193,8 +2316,15 @@ function _renderKuitansiHtml(t, list){
     pages=_kuitansiPage(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn });
   }
   return ''
-  +'<html><head><meta charset="utf-8"><title>Kuitansi '+noBase+'/'+thn+'</title><style>'
-  +'@page{size:A4 portrait;margin:0} *{font-family:Arial,sans-serif;box-sizing:border-box}'
+  +'<html><head><meta charset="utf-8"><title>Kuitansi '+noBase+'/'+thn+'</title><style>'+_kuitansiCss()
+  +'</style></head><body>'
+  +'<div class="noprint" style="text-align:right;padding:10px 16mm 0">'
+  +'<button onclick="window.print()">Cetak / Simpan PDF</button></div>'
+  +pages
+  +'</body></html>';
+}
+function _kuitansiCss(){
+  return '@page{size:A4 portrait;margin:0} *{font-family:Arial,sans-serif;box-sizing:border-box}'
   +'body{font-size:13px;color:#000;margin:0}'
   +'.page{padding:16mm;page-break-after:always} .page:last-child{page-break-after:auto}'
   +'.kop .nm{font-weight:bold;font-size:18px} .kop .ad{font-size:11px;margin-top:2px}'
@@ -2208,12 +2338,7 @@ function _renderKuitansiHtml(t, list){
   +'.sig{width:100%;border-collapse:collapse;margin-top:18px;font-size:12px;text-align:center}'
   +'.sig td{width:33.33%;padding:6px 8px;vertical-align:top}'
   +'.sig .nm{margin-top:54px;font-weight:bold} .sig .nip{font-size:11px}'
-  +'@media print{.noprint{display:none}}'
-  +'</style></head><body>'
-  +'<div class="noprint" style="text-align:right;padding:10px 16mm 0">'
-  +'<button onclick="window.print()">Cetak / Simpan PDF</button></div>'
-  +pages
-  +'</body></html>';
+  +'@media print{.noprint{display:none}}';
 }
 function _kuitansiPage(t, o){
   return ''

@@ -28,6 +28,7 @@ var CONFIG = {
     FOTO_BARANG:    'Foto Barang',
     MASTER_PENYEDIA:'Master Penyedia',
     SURAT_TUGAS:    'Surat Tugas',
+    BUKTI_PD:       'Bukti Perjalanan',
     AUDIT_LOG:      'Audit Log'
   },
 
@@ -83,6 +84,10 @@ var CONFIG = {
       'LOK_NAMA', 'LOK_JAB', 'KERJA_NAMA', 'KERJA_JAB', 'CREATED_AT', 'CREATED_BY',
       'PEGAWAI_JSON', 'JENIS', 'DASAR_SURAT', 'UANG_MUKA', 'TGL_SURAT',
       'MENIMBANG', 'TTD_NAMA', 'TTD_JAB', 'TTD_NIP'
+    ],
+    BUKTI_PD: [
+      'NO_TRANSAKSI', 'URUTAN', 'FILE_ID', 'NAMA_FILE', 'URL_FILE', 'MIME',
+      'JENIS_DOK', 'WAKTU', 'KETERANGAN', 'IS_DELETED', 'DELETED_AT', 'DELETED_BY'
     ],
     AUDIT_LOG: [
       'TIMESTAMP', 'ACTION', 'SHEET', 'ROW_REF', 'DETAIL', 'OPERATOR'

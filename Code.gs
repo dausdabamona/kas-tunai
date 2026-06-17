@@ -189,6 +189,22 @@ function serverImporBank(list) {
     return hasil;
   });
 }
+/* ============================================================
+ * Bukti Perjalanan Dinas (tiket/boarding) + SPJ bundel
+ * ============================================================ */
+function serverGetBuktiPD(no, withB64) {
+  return _run(function () { return BuktiPD.getBukti(no, withB64); });
+}
+function serverUploadBuktiPD(no, fileArr) {
+  return _run(function () { return BuktiPD.uploadBukti(no, fileArr); });
+}
+function serverHapusBuktiPD(no, urutan) {
+  return _run(function () { return BuktiPD.hapusBukti(no, urutan); });
+}
+function serverZipBuktiPD(no, namaZip) {
+  return _run(function () { return BuktiPD.zipBukti(no, namaZip); });
+}
+
 /** Penanda unik baris rekening koran untuk anti-duplikat. */
 function _rkRef(tanggal, nominal, uraian) {
   var key = String(tanggal || '') + '|' + nominal + '|' + String(uraian || '').replace(/\s+/g, ' ').trim();
