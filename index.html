@@ -277,7 +277,7 @@
     </div>
     <div class="row2">
       <div class="field"><label>Jumlah hari</label><input type="text" id="spdHari" readonly></div>
-      <div class="field dk-only"><label>Uang harian (Rp/hari)</label><input type="number" id="spdHarian" value="150000" onchange="hitungSemuaBiaya()"></div>
+      <div class="field dk-only"><label>Uang harian (Rp/hari)</label><input type="text" class="numfmt" id="spdHarian" value="150.000" inputmode="numeric" onchange="hitungSemuaBiaya()"></div>
     </div>
     <div class="lk-only" style="font-size:11px;color:var(--c-muted);margin:-2px 0 6px">
       Tarif mengacu SBM yang berlaku (PMK 32/2025 TA 2026); sesuaikan lampiran provinsi Papua Barat Daya. Semua nilai bisa diubah.
@@ -290,7 +290,7 @@
     <div id="spdPegList"></div>
     <div class="field"><label>Total biaya (Rp)</label><input type="text" id="spdTotal" readonly></div>
     <div class="row2 lk-only">
-      <div class="field"><label>Uang Muka (Rp)</label><input type="number" id="spdUangMuka" value="0" oninput="hitungSemuaBiaya()"></div>
+      <div class="field"><label>Uang Muka (Rp)</label><input type="text" class="numfmt" id="spdUangMuka" value="0" inputmode="numeric" oninput="hitungSemuaBiaya()"></div>
       <div class="field"><label>Sisa kurang/lebih</label><input type="text" id="spdSisaLk" readonly></div>
     </div>
     <div class="field"><label>Akun / kode rekening</label><input type="text" id="spdAkun"></div>
@@ -360,7 +360,7 @@
     <div class="field"><label>Tanggal</label><input type="date" id="txTanggal"></div>
     <div class="field"><label>Kegiatan / Uraian</label><input type="text" id="txKegiatan" placeholder="Nama kegiatan"></div>
     <div class="field"><label id="txPenjabLbl">Penanggung Jawab</label><input type="text" id="txPenjab"></div>
-    <div class="field"><label id="txNilaiLbl">Nilai</label><input type="number" id="txNilai" value="0" inputmode="numeric"></div>
+    <div class="field"><label id="txNilaiLbl">Nilai</label><input type="text" class="numfmt" id="txNilai" value="0" inputmode="numeric"></div>
     <div class="field"><label>Keterangan</label><textarea id="txKeterangan" rows="2"></textarea></div>
     <button class="btn" id="txSimpan" onclick="submitTransaksi()">Simpan</button>
     <button class="btn ghost" onclick="closeModal('modalTransaksi')">Batal</button>
@@ -374,7 +374,7 @@
     <div class="field"><label>Arah</label>
       <select id="pdArah"><option value="BANK_TUNAI">🏦 Bank → 💵 Tunai (Tarik Tunai)</option><option value="TUNAI_BANK">💵 Tunai → 🏦 Bank (Setor)</option></select></div>
     <div class="field"><label>Tanggal</label><input type="date" id="pdTanggal"></div>
-    <div class="field"><label>Nominal (Rp)</label><input type="number" id="pdNominal" value="0" inputmode="numeric"></div>
+    <div class="field"><label>Nominal (Rp)</label><input type="text" class="numfmt" id="pdNominal" value="0" inputmode="numeric"></div>
     <div class="field"><label>Keterangan (opsional)</label><input type="text" id="pdKet" placeholder="mis. Tarik tunai untuk operasional"></div>
     <button class="btn" style="background:#0d9488" onclick="submitPindah()">Simpan Pindah Dana</button>
     <button class="btn ghost" onclick="closeModal('modalPindah')">Batal</button>
@@ -425,7 +425,7 @@
     </div>
     <div class="row2">
       <div class="field"><label>NPWP Penyedia</label><input type="text" id="ntNpwp" placeholder="kosongkan bila non-NPWP"></div>
-      <div class="field"><label>Nominal</label><input type="number" id="ntNilai" value="0"></div>
+      <div class="field"><label>Nominal</label><input type="text" class="numfmt" id="ntNilai" value="0" inputmode="numeric"></div>
     </div>
     <div class="field"><label>Alamat Penyedia</label><input type="text" id="ntAlamat"></div>
     <div class="field"><label>Foto nota (opsional)</label><input type="file" id="ntFile" accept="image/*" capture="environment"></div>
@@ -442,7 +442,7 @@
     <hr>
     <div class="row2">
       <div class="field"><label>Tanggal</label><input type="date" id="kbTgl"></div>
-      <div class="field"><label>Nilai</label><input type="number" id="kbNilai" value="0"></div>
+      <div class="field"><label>Nilai</label><input type="text" class="numfmt" id="kbNilai" value="0" inputmode="numeric"></div>
     </div>
     <div class="field"><label>Keterangan</label><input type="text" id="kbKet"></div>
     <button class="btn" onclick="submitPengembalian()">Tambah</button>
@@ -711,6 +711,28 @@ function rupiah(n){
   n=parseFloat(n)||0;
   return 'Rp '+n.toLocaleString('id-ID');
 }
+/* ===== Format ribuan untuk field input nominal ===== */
+function unfmt(v){ return parseFloat(String(v==null?'':v).replace(/[^\d-]/g,''))||0; }
+function _grp(n){ return unfmt(n).toLocaleString('id-ID'); }
+function _reformatNumInputs(root){
+  var els=(root||document).querySelectorAll('input.numfmt');
+  for(var i=0;i<els.length;i++){ if(els[i].value!=='') els[i].value=_grp(els[i].value); }
+}
+/* Format live saat mengetik (caret-aware), berlaku utk field dinamis via delegasi */
+document.addEventListener('input',function(e){
+  var el=e.target;
+  if(!el||!el.classList||!el.classList.contains('numfmt')) return;
+  var before=el.value.slice(0, el.selectionStart==null?el.value.length:el.selectionStart);
+  var digitsBefore=before.replace(/[^\d]/g,'').length;
+  var formatted=el.value===''?'':_grp(el.value);
+  if(formatted===el.value) return;
+  el.value=formatted;
+  if(el.selectionStart!=null){
+    var pos=0, seen=0;
+    while(pos<formatted.length && seen<digitsBefore){ if(/\d/.test(formatted[pos])) seen++; pos++; }
+    try{ el.setSelectionRange(pos,pos); }catch(_){}
+  }
+});
 function fail(e){showLoading(false);toast('Gagal: '+(e&&e.message?e.message:e),'error');}
 
 /* ============== Tab ============== */
@@ -1075,7 +1097,7 @@ function setSpdJenis(j){
 /* Baris sub-list (transport / riil) — generik. showBdh: centang "dibayar Bendahara" (khusus transport). */
 function _subRowHtml(urai, nom, bdh, showBdh){
   return '<div class="sub-row"><input type="text" class="urai" placeholder="uraian" value="'+_attr(urai)+'">'
-   +'<input type="number" class="nom" placeholder="0" value="'+(+nom||0)+'" oninput="hitungSemuaBiaya()">'
+   +'<input type="text" inputmode="numeric" class="nom numfmt" placeholder="0" value="'+_grp(+nom||0)+'" oninput="hitungSemuaBiaya()">'
    +(showBdh?('<label class="bdhlbl" title="Dibayar langsung oleh Bendahara via Kas Bank"><input type="checkbox" class="bdh" '+(bdh?'checked':'')+' onchange="hitungSemuaBiaya()"> Bank</label>'):'')
    +'<button type="button" class="btn ghost" onclick="hapusSubRow(this)">&times;</button></div>';
 }
@@ -1099,23 +1121,23 @@ function _pegRowHtml(p){
    +'<div class="field lk-only"><label>Tingkat Biaya Perjalanan Dinas (A/B/C/D)</label><input type="text" class="pg-tingkat" value="'+_attr(p.tingkatBiaya)+'"></div>'
    // ---- Komponen Luar Kota ----
    +'<div class="peg-sub lk-only"><h5>Uang harian (lumpsum)</h5>'
-   +'<div class="row2"><div class="field"><label>Tarif (Rp/hari)</label><input type="number" class="pg-uhRate" value="'+(+p.uangHarianRate||0)+'" oninput="hitungSemuaBiaya()"></div>'
+   +'<div class="row2"><div class="field"><label>Tarif (Rp/hari)</label><input type="text" inputmode="numeric" class="pg-uhRate numfmt" value="'+_grp(+p.uangHarianRate||0)+'" oninput="hitungSemuaBiaya()"></div>'
    +'<div class="field"><label>Jumlah hari</label><input type="number" class="pg-uhHari" value="'+(p.uangHarianHari!=null?(+p.uangHarianHari||0):'')+'" oninput="hitungSemuaBiaya()"></div></div>'
    +'<div class="field"><label>Uang harian</label><input type="text" class="pg-uhTot" readonly></div></div>'
    +'<div class="peg-sub lk-only"><h5>Penginapan</h5>'
    +'<label style="display:block;margin-bottom:6px"><input type="checkbox" class="pg-menginap" '+(p.penginapanMenginap?'checked':'')+' onchange="hitungSemuaBiaya()"> Menginap di hotel (at-cost). Bila tidak: 30% × tarif × malam</label>'
    +'<div class="row2"><div class="field"><label>Jumlah malam</label><input type="number" class="pg-malam" value="'+(+p.penginapanMalam||0)+'" oninput="hitungSemuaBiaya()"></div>'
-   +'<div class="field"><label>Tarif (Rp/malam)</label><input type="number" class="pg-hotel" value="'+(+p.penginapanRate||0)+'" oninput="hitungSemuaBiaya()"></div></div>'
+   +'<div class="field"><label>Tarif (Rp/malam)</label><input type="text" inputmode="numeric" class="pg-hotel numfmt" value="'+_grp(+p.penginapanRate||0)+'" oninput="hitungSemuaBiaya()"></div></div>'
    +'<label style="display:block;margin-bottom:6px"><input type="checkbox" class="pg-pgBdh" '+(p.penginapanBendahara?'checked':'')+' onchange="hitungSemuaBiaya()"> Hotel dibayar langsung oleh Bendahara (via Kas Bank)</label>'
    +'<div class="field"><label>Biaya penginapan</label><input type="text" class="pg-pgTot" readonly></div></div>'
    +'<div class="peg-sub lk-only"><h5>Transport (at-cost) — centang "Bank" bila dibayar bendahara</h5><div class="sub-list pg-transport">'+_subListHtml(p.transport, true)+'</div>'
    +'<button type="button" class="btn ghost" style="width:auto;padding:4px 10px;margin:0" onclick="addSub(this)">+ transport</button></div>'
    +'<div class="peg-sub lk-only"><h5>Uang representasi</h5>'
-   +'<div class="field"><label>Tarif (Rp/hari) — pejabat tertentu, default 0</label><input type="number" class="pg-rep" value="'+(+p.repRate|| (p.representasi&&p.uangHarianHari?Math.round(p.representasi/p.uangHarianHari):0) ||0)+'" oninput="hitungSemuaBiaya()"></div></div>'
+   +'<div class="field"><label>Tarif (Rp/hari) — pejabat tertentu, default 0</label><input type="text" inputmode="numeric" class="pg-rep numfmt" value="'+_grp(+p.repRate|| (p.representasi&&p.uangHarianHari?Math.round(p.representasi/p.uangHarianHari):0) ||0)+'" oninput="hitungSemuaBiaya()"></div></div>'
    +'<div class="peg-sub lk-only"><h5>Daftar pengeluaran riil (tanpa bukti)</h5><div class="sub-list pg-riil">'+_subListHtml(p.riil, false)+'</div>'
    +'<button type="button" class="btn ghost" style="width:auto;padding:4px 10px;margin:0" onclick="addSub(this)">+ pengeluaran riil</button></div>'
    // ---- Total + hapus ----
-   +'<div class="row2"><div class="field"><label>Biaya pegawai (Rp)</label><input type="number" class="pg-biaya" value="'+(+p.biaya||0)+'" readonly></div>'
+   +'<div class="row2"><div class="field"><label>Biaya pegawai (Rp)</label><input type="text" class="pg-biaya numfmt" value="'+_grp(+p.biaya||0)+'" readonly></div>'
    +'<div class="field" style="display:flex;align-items:flex-end"><button type="button" class="btn ghost" style="margin:0;color:var(--c-bad)" onclick="hapusPegawaiRow(this)">Hapus pegawai</button></div></div>'
    +'</div>';
 }
@@ -1138,8 +1160,8 @@ function hitungHari(){
   document.getElementById('spdHari').value=_hariSPD()+' Hari';
   hitungSemuaBiaya();
 }
-function _v(r,sel){ var e=r.querySelector(sel); return e?(parseFloat(e.value)||0):0; }
-function _sumSub(r,sel){ var s=0, ns=r.querySelectorAll(sel+' .nom'); for(var i=0;i<ns.length;i++) s+=parseFloat(ns[i].value)||0; return s; }
+function _v(r,sel){ var e=r.querySelector(sel); return e?unfmt(e.value):0; }
+function _sumSub(r,sel){ var s=0, ns=r.querySelectorAll(sel+' .nom'); for(var i=0;i<ns.length;i++) s+=unfmt(ns[i].value); return s; }
 /* Hitung grand total satu baris pegawai (mode Luar Kota) */
 function _pegHitungLK(r, hariDefault){
   var hariEl=r.querySelector('.pg-uhHari');
@@ -1152,7 +1174,7 @@ function _pegHitungLK(r, hariDefault){
   var penginapan=menginap?(malam*hotel):(0.30*hotel*malam);
   r.querySelector('.pg-pgTot').value=rupiah(penginapan);
   var grand=uangHarian+penginapan+_sumSub(r,'.pg-transport')+(_v(r,'.pg-rep')*hari)+_sumSub(r,'.pg-riil');
-  r.querySelector('.pg-biaya').value=grand;
+  r.querySelector('.pg-biaya').value=_grp(grand);
   return grand;
 }
 function hitungSemuaBiaya(){
@@ -1160,13 +1182,13 @@ function hitungSemuaBiaya(){
   if(spdJenis==='LUAR_KOTA'){
     for(var i=0;i<rows.length;i++) total+=_pegHitungLK(rows[i], hari);
   } else {
-    var per=(parseFloat(document.getElementById('spdHarian').value)||0)*hari;
-    for(var j=0;j<rows.length;j++){ rows[j].querySelector('.pg-biaya').value=per; total+=per; }
+    var per=unfmt(document.getElementById('spdHarian').value)*hari;
+    for(var j=0;j<rows.length;j++){ rows[j].querySelector('.pg-biaya').value=_grp(per); total+=per; }
   }
   document.getElementById('spdTotal').value='Rp '+total.toLocaleString('id-ID');
   var sisaEl=document.getElementById('spdSisaLk');
   if(sisaEl){
-    var um=parseFloat(document.getElementById('spdUangMuka').value)||0, sisa=total-um;
+    var um=unfmt(document.getElementById('spdUangMuka').value), sisa=total-um;
     sisaEl.value = sisa>=0 ? ('KURANG dibayar Rp '+sisa.toLocaleString('id-ID'))
                            : ('LEBIH (dikembalikan) Rp '+Math.abs(sisa).toLocaleString('id-ID'));
   }
@@ -1179,6 +1201,7 @@ function resetSpdForm(){
     spdTtdNama:INST.direktur,spdTtdNip:INST.nipDirektur,spdTtdJab:INST.jabatanDirektur,
     spdLokNama:'',spdLokJab:'',spdKerjaNama:'',spdKerjaJab:''};
   for(var id in V) document.getElementById(id).value=V[id];
+  _reformatNumInputs();
   document.getElementById('spdPegList').innerHTML='';
   tambahPegawaiRow();
   setSpdJenis('DALAM_KOTA');
@@ -1211,6 +1234,7 @@ function _fillSpdForm(d){
     var hari=(+d.jumlahHari>0)?(+d.jumlahHari):_hariSPD();
     set('spdHarian',Math.round((+(list[0]&&list[0].biaya)||0)/(hari||1)));
   }
+  _reformatNumInputs();
   document.getElementById('spdPegList').innerHTML='';
   for(var i=0;i<list.length;i++) tambahPegawaiRow(list[i]);
   if(!list.length) tambahPegawaiRow();
@@ -1220,7 +1244,7 @@ function _gatherSub(r, sel){
   var out=[], rows=r.querySelectorAll(sel+' .sub-row');
   for(var i=0;i<rows.length;i++){
     var u=(rows[i].querySelector('.urai').value||'').trim();
-    var j=parseFloat(rows[i].querySelector('.nom').value)||0;
+    var j=unfmt(rows[i].querySelector('.nom').value);
     var bEl=rows[i].querySelector('.bdh');
     if(u||j) out.push({ uraian:u, jumlah:j, bendahara: !!(bEl&&bEl.checked) });
   }
@@ -1256,14 +1280,14 @@ function _gatherSpd(){
       base.penginapanBendahara=!!(r.querySelector('.pg-pgBdh')&&r.querySelector('.pg-pgBdh').checked);
       base.repRate=repRate; base.representasi=representasi; base.riil=riil; base.biaya=grand;
     } else {
-      base.biaya=(parseFloat(r.querySelector('.pg-biaya').value)||0);
+      base.biaya=unfmt(r.querySelector('.pg-biaya').value);
     }
     total+=base.biaya;
     list.push(base);
   }
   var p0=list[0]||{};
   return { jenis:spdJenis, nomor:g('spdNomor'), dasarSurat:g('spdDasar'), tglSurat:g('spdTglSurat'),
-    uangMuka:(parseFloat(g('spdUangMuka'))||0), pegawaiList:list,
+    uangMuka:unfmt(g('spdUangMuka')), pegawaiList:list,
     pegawai:p0.nama||'', nip:p0.nip||'', pangkat:p0.pangkat||'', jabatan:p0.jabatan||'',
     maksud:g('spdMaksud'), angkutan:g('spdAngkutan'),
     berangkat:g('spdBerangkat'), tujuan:g('spdTujuan'), tglMulai:b, tglSelesai:s, jumlahHari:n,
@@ -1732,7 +1756,7 @@ function openModalPindah(){
   openModal('modalPindah');
 }
 function submitPindah(){
-  var nominal=parseFloat(document.getElementById('pdNominal').value)||0;
+  var nominal=unfmt(document.getElementById('pdNominal').value);
   if(nominal<=0){ toast('Nominal harus > 0','error'); return; }
   showLoading(true,'Memindahkan dana...');
   google.script.run
@@ -1874,7 +1898,7 @@ function submitImporRk(){
     .serverImporBank(rows);
 }
 function submitTransaksi(){
-  var nilai=parseFloat(document.getElementById('txNilai').value)||0;
+  var nilai=unfmt(document.getElementById('txNilai').value);
   var data={
     tanggal:document.getElementById('txTanggal').value,
     kegiatan:document.getElementById('txKegiatan').value.trim(),
@@ -1948,7 +1972,7 @@ function renderNotaList(list){
   box.innerHTML=h;
 }
 function submitNota(){
-  var nilai=parseFloat(document.getElementById('ntNilai').value)||0;
+  var nilai=unfmt(document.getElementById('ntNilai').value);
   var notaData={
     namaPenyedia:document.getElementById('ntPenyedia').value.trim(),
     npwp:document.getElementById('ntNpwp').value.trim(),
@@ -2014,7 +2038,7 @@ function renderKbList(list){
   box.innerHTML=h;
 }
 function submitPengembalian(){
-  var nilai=parseFloat(document.getElementById('kbNilai').value)||0;
+  var nilai=unfmt(document.getElementById('kbNilai').value);
   if(nilai<=0){toast('Nilai harus > 0','error');return;}
   var data={tanggal:document.getElementById('kbTgl').value,nilai:nilai,
     keterangan:document.getElementById('kbKet').value.trim()};
