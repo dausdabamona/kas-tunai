@@ -247,6 +247,7 @@
     <button data-f="belumlunas">&#9888; Belum Lunas</button>
     <button data-f="belumfoto" class="active">&#129534; Belum Foto</button>
     <button data-f="spby">&#128203; SPBY</button>
+    <button data-f="belumspby">&#128203; Belum SPBY</button>
   </div>
 
   <div class="daftar-head">
@@ -826,6 +827,7 @@ function passFilter(t){
     case 'belumlunas': return t.kredit>0 && !isNotaLunas(t);
     case 'belumfoto': return t.kredit>0 && fotoCount(t)===0;
     case 'spby': return !!t.noSpby;
+    case 'belumspby': return t.kredit>0 && !t.noSpby;
     default: return true;
   }
 }
