@@ -449,7 +449,7 @@
       <div class="field"><label>Nominal</label><input type="text" class="numfmt" id="ntNilai" value="0" inputmode="numeric"></div>
     </div>
     <div class="field"><label>Alamat Penyedia</label><input type="text" id="ntAlamat"></div>
-    <div class="field"><label>Foto nota (opsional)</label><input type="file" id="ntFile" accept="image/*" capture="environment"></div>
+    <div class="field"><label>Foto nota (opsional) &mdash; atau tekan <b>Ctrl+V</b> untuk tempel screenshot</label><input type="file" id="ntFile" accept="image/*" capture="environment" onchange="_showPastePreview(this)"></div>
     <button class="btn" onclick="submitNota()">Tambah Nota</button>
     <button class="btn ghost" onclick="closeModal('modalNota')">Tutup</button>
   </div>
@@ -519,8 +519,8 @@
         <select id="bkJenis"><option>Tiket</option><option>Boarding Pass</option><option>Bukti Hotel</option><option>Bukti Transport</option><option>Lainnya</option></select></div>
       <div class="field"><label>Keterangan (opsional)</label><input type="text" id="bkKet"></div>
     </div>
-    <div class="field"><label>File (foto JPG/PNG atau PDF — boleh beberapa)</label>
-      <input type="file" id="bkFile" accept="image/*,application/pdf" multiple></div>
+    <div class="field"><label>File (foto JPG/PNG atau PDF — boleh beberapa) — atau <b>Ctrl+V</b> tempel screenshot</label>
+      <input type="file" id="bkFile" accept="image/*,application/pdf" multiple onchange="_showPastePreview(this)"></div>
     <button class="btn" onclick="submitBukti()">Unggah Bukti</button>
     <button class="btn ghost" onclick="unduhZipBukti(_bkTarget)">&#128476; Unduh ZIP Semua Bukti</button>
     <button class="btn ghost" onclick="closeModal('modalBukti')">Tutup</button>
@@ -554,8 +554,8 @@
     <button class="btn b-dark" onclick="bukaPdfKuitansi(_kwTarget)">&#128424; Cetak / Simpan PDF</button>
     <hr>
     <div id="kwStatus"></div>
-    <div class="field"><label>Upload kuitansi ber-TTD (mis. cetakan SAKTI, dilampiri SPBY)</label>
-      <input type="file" id="kwFile" accept="image/*" capture="environment"></div>
+    <div class="field"><label>Upload kuitansi ber-TTD (mis. cetakan SAKTI, dilampiri SPBY) — atau <b>Ctrl+V</b> tempel screenshot</label>
+      <input type="file" id="kwFile" accept="image/*" capture="environment" onchange="_showPastePreview(this)"></div>
     <button class="btn" style="background:var(--c-ok)" onclick="submitUploadKuitansi()">Upload Kuitansi TTD</button>
     <button class="btn ghost" onclick="closeModal('modalKuitansi')">Tutup</button>
   </div>
@@ -1846,18 +1846,55 @@ function _uploadFotoFiles(files){
   }
 }
 
-/** Tempel (Ctrl+V) screenshot/gambar saat modal Foto terbuka. */
-function _onPasteFoto(e){
-  if(!document.getElementById('modalFoto').classList.contains('show')) return;
+/** Tempel (Ctrl+V) screenshot/gambar ke form upload yang sedang terbuka. */
+function _onPasteUpload(e){
   var cd=e.clipboardData||window.clipboardData; if(!cd) return;
   var items=cd.items||[], files=[];
   for(var i=0;i<items.length;i++){
     if(items[i].type && items[i].type.indexOf('image')===0){ var f=items[i].getAsFile(); if(f) files.push(f); }
   }
   if(!files.length) return;
+  // Modal Foto: punya alur unggah sendiri (kompres + geotag) → langsung unggah
+  if(document.getElementById('modalFoto').classList.contains('show')){ e.preventDefault(); _uploadFotoFiles(files); return; }
+  // Form upload lain: isi <input type=file> pada modal yang sedang terbuka
+  var modal=document.querySelector('.modal.show'); if(!modal) return;
+  var map={ modalNota:'ntFile', modalKuitansi:'kwFile', modalBukti:'bkFile' };
+  var inpId=map[modal.id]; if(!inpId) return;
+  var inp=document.getElementById(inpId); if(!inp) return;
   e.preventDefault();
-  _uploadFotoFiles(files);
+  _setInputFiles(inp, files, !!inp.multiple);   // single: ganti; multiple: tambah
+  _showPastePreview(inp);
+  toast(files.length+' screenshot ditempel','success');
 }
+/** Set FileList sebuah <input type=file> dari array File (pakai DataTransfer). */
+function _setInputFiles(input, files, append){
+  try{
+    var dt=new DataTransfer();
+    if(append && input.files){ for(var j=0;j<input.files.length;j++) dt.items.add(input.files[j]); }
+    var add=append?files:[files[0]];
+    for(var i=0;i<add.length;i++) dt.items.add(add[i]);
+    input.files=dt.files;
+  }catch(err){ toast('Browser ini tidak mendukung tempel ke form tsb','error'); }
+}
+/** Tampilkan pratinjau thumbnail dari isi <input type=file> (paste maupun pilih file). */
+function _showPastePreview(input){
+  if(!input) return;
+  var box=document.getElementById(input.id+'_pp');
+  if(!box){ box=document.createElement('div'); box.id=input.id+'_pp';
+    box.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-top:6px'; input.parentNode.appendChild(box); }
+  box.innerHTML=''; var fs=input.files||[];
+  for(var i=0;i<fs.length;i++){
+    if(/^image\//.test(fs[i].type)){
+      var img=document.createElement('img'); img.src=URL.createObjectURL(fs[i]);
+      img.style.cssText='width:56px;height:56px;object-fit:cover;border:1px solid #ccc;border-radius:6px';
+      box.appendChild(img);
+    } else {
+      var s=document.createElement('span'); s.textContent='📄 '+fs[i].name;
+      s.style.cssText='font-size:11px;color:#555;align-self:center'; box.appendChild(s);
+    }
+  }
+}
+function _clearPastePreview(inpId){ var b=document.getElementById(inpId+'_pp'); if(b) b.innerHTML=''; }
 function hapusFoto(urutan){
   if(!confirm('Hapus foto ini?')) return;
   showLoading(true,'Menghapus...');
@@ -2099,7 +2136,7 @@ function openModalNota(no){
   document.getElementById('ntNpwp').value='';
   document.getElementById('ntAlamat').value='';
   document.getElementById('ntNilai').value=0;
-  document.getElementById('ntFile').value='';
+  document.getElementById('ntFile').value=''; _clearPastePreview('ntFile');
   document.getElementById('notaList').innerHTML='<div class="empty">Memuat...</div>';
   openModal('modalNota');
   _muatPenyedia(_isiDatalistNota);
@@ -2424,7 +2461,7 @@ var _bkTarget=null;
 function openModalBukti(no){
   _bkTarget=no;
   document.getElementById('bkLabel').textContent='(No '+no+')';
-  document.getElementById('bkFile').value=''; document.getElementById('bkKet').value='';
+  document.getElementById('bkFile').value=''; document.getElementById('bkKet').value=''; _clearPastePreview('bkFile');
   document.getElementById('bkList').innerHTML='<div class="empty">Memuat...</div>';
   openModal('modalBukti');
   _muatBuktiList();
@@ -2461,7 +2498,7 @@ function submitBukti(){
 function _kirimBukti(arr){
   showLoading(true,'Mengunggah '+arr.length+' bukti...');
   google.script.run.withSuccessHandler(function(){ showLoading(false); toast('Bukti terunggah','success');
-      document.getElementById('bkFile').value=''; _muatBuktiList(); })
+      document.getElementById('bkFile').value=''; _clearPastePreview('bkFile'); _muatBuktiList(); })
     .withFailureHandler(fail).serverUploadBuktiPD(_bkTarget,arr);
 }
 function hapusBukti(urutan){
@@ -2525,7 +2562,7 @@ function bukaModalKuitansi(no){
   var t=_cariTransaksi(no);
   document.getElementById('kwTitleTxt').textContent=suratMap[String(no)]?'Kuitansi':'Tanda Terima';
   document.getElementById('kwTxLabel').textContent='No '+no;
-  document.getElementById('kwFile').value='';
+  document.getElementById('kwFile').value=''; _clearPastePreview('kwFile');
   var el=document.getElementById('kwStatus');
   if(t && t.kuitansiUrl){
     el.innerHTML='<div class="lrow ok"><span>&#10003; Kuitansi ber-TTD sudah diupload</span>'
@@ -2851,7 +2888,7 @@ function _bukaPopup(html){
       renderList();
     });
   }
-  document.addEventListener('paste', _onPasteFoto);
+  document.addEventListener('paste', _onPasteUpload);
   loadAll();
 })();
 </script>
