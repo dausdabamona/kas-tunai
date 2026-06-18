@@ -555,6 +555,18 @@
 <div class="modal" id="modalKuitansi">
   <div class="sheet">
     <h2><span id="kwTitleTxt">Tanda Terima</span> <span id="kwTxLabel"></span></h2>
+    <div id="kwBankFields" style="display:none">
+      <div class="row2">
+        <div class="field"><label>Nomor Bukti</label><input type="text" id="kwNoBukti"></div>
+        <div class="field"><label>MAK / Kode Akun</label><input type="text" id="kwMak" placeholder="mis. DL.2376.SAC.302.521211"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Nama Penerima</label><input type="text" id="kwPenerima"></div>
+        <div class="field"><label>NIP Penerima</label><input type="text" id="kwNipPenerima" placeholder="opsional"></div>
+      </div>
+      <div class="field"><label>Untuk pembayaran</label><input type="text" id="kwUntuk"></div>
+      <div class="field"><label>Nomor SPPR</label><input type="text" id="kwNoSppr" placeholder="kosongkan bila belum ada"></div>
+    </div>
     <button class="btn b-dark" onclick="bukaPdfKuitansi(_kwTarget)">&#128424; Cetak / Simpan PDF</button>
     <hr>
     <div id="kwStatus"></div>
@@ -2510,7 +2522,80 @@ function bukaPdfKuitansi(noTransaksi){
       .serverGetSuratTugas(noTransaksi);
     return;
   }
+  if(t.sumber==='BANK'){
+    _bukaPopup(_renderBuktiTransferHtml(t, {
+      noBukti:  document.getElementById('kwNoBukti').value.trim(),
+      mak:      document.getElementById('kwMak').value.trim(),
+      penerima: document.getElementById('kwPenerima').value.trim(),
+      nipPenerima: document.getElementById('kwNipPenerima').value.trim(),
+      untuk:    document.getElementById('kwUntuk').value.trim(),
+      noSppr:   document.getElementById('kwNoSppr').value.trim()
+    }));
+    return;
+  }
   _bukaPopup(_renderKuitansiHtml(t));
+}
+/** Dokumen transaksi bank: KUITANSI/BUKTI PEMBAYARAN + SURAT PERINTAH PENDEBITAN REKENING (SPPR). */
+function _renderBuktiTransferHtml(t, o){
+  o=o||{};
+  var dot='........................';
+  var tgl=_tglPanjang(t.tanggal);
+  var jml=t.kredit;
+  var penerima=o.penerima||t.penjab||dot;
+  var penerimaNip=o.nipPenerima?(' (NIP. '+esc(o.nipPenerima)+')'):'';
+  var untuk=o.untuk||t.kegiatan||'-';
+  var noBukti=o.noBukti||dot;
+  var css='@page{size:A4 portrait;margin:0} *{font-family:Arial,sans-serif;box-sizing:border-box}'
+    +'body{font-size:12.5px;color:#000;margin:0} .page{padding:16mm}'
+    +'.ctr{text-align:center} .b{font-weight:bold}'
+    +'.kop{text-align:center;font-weight:bold;line-height:1.3}'
+    +'.judul{text-align:center;font-weight:bold;text-decoration:underline;margin:14px 0 12px;font-size:14px}'
+    +'table.f{border-collapse:collapse;width:100%;margin-bottom:8px} table.f td{vertical-align:top;padding:2px 0}'
+    +'table.f td.l{width:34%;font-weight:bold} table.f td.c{width:12px}'
+    +'.it{font-style:italic}'
+    +'table.sig{width:100%;border-collapse:collapse;margin-top:10px;text-align:center;font-size:12px}'
+    +'table.sig td{vertical-align:top;padding:4px 6px} .nm{margin-top:62px;font-weight:bold} .nip{font-size:11px}'
+    +'hr.div{border:0;border-top:2px solid #000;margin:14px 0}'
+    +'.par{text-align:justify;line-height:1.55;margin:8px 0}'
+    +'.noprint{text-align:right;padding:8px 16mm 0}@media print{.noprint{display:none}}';
+  function row(l,v){ return '<tr><td class="l">'+l+'</td><td class="c">:</td><td>'+v+'</td></tr>'; }
+  return ''
+  +'<html><head><meta charset="utf-8"><title>Bukti Transfer '+esc(noBukti)+'</title><style>'+css+'</style></head><body>'
+  +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button></div>'
+  +'<div class="page">'
+  // ===== Kop
+  +'<div class="kop">'+esc(INST.kementerian)+'<br>'+esc(INST.satker||INST.namaWP).toUpperCase()+'</div>'
+  // ===== KUITANSI / BUKTI PEMBAYARAN
+  +'<div class="judul">KUITANSI/BUKTI PEMBAYARAN</div>'
+  +'<table class="f">'
+  +row('Nomor Bukti', esc(noBukti))
+  +row('Tanggal', esc(tgl))
+  +row('Sudah terima dari', 'Bendahara Pengeluaran '+esc(INST.namaWP))
+  +row('Nama Penerima', esc(penerima)+penerimaNip)
+  +row('Uang sebanyak', '<span class="it">'+_terbilang(jml)+'</span>')
+  +row('Untuk pembayaran', esc(untuk))
+  +row('Jumlah', '<span class="b">'+rupiah(jml)+'</span>')
+  +row('MAK', esc(o.mak||dot))
+  +'</table>'
+  +'<table class="sig"><tr>'
+  +'<td class="b">Bendahara Pengeluaran<div class="nm">('+esc(INST.bendahara)+')</div><span class="nip">NIP. '+esc(INST.nipBendahara)+'</span></td>'
+  +'<td class="b">Yang Menerima (PUM)<div class="nm">('+esc(penerima)+')</div>'+(o.nipPenerima?'<span class="nip">NIP. '+esc(o.nipPenerima)+'</span>':'')+'</td>'
+  +'<td class="b">Mengetahui, PPK<div class="nm">('+esc(INST.ppk)+')</div><span class="nip">NIP. '+esc(INST.nipPpk)+'</span></td>'
+  +'</tr></table>'
+  +'<hr class="div">'
+  // ===== SPPR
+  +'<div class="judul">SURAT PERINTAH PENDEBITAN REKENING (SPPR)</div>'
+  +'<table class="f">'
+  +row('Tanggal', esc(tgl))
+  +row('Nomor', esc(o.noSppr||dot))
+  +'</table>'
+  +'<div class="par">Saya yang bertandatangan di bawah ini selaku Kuasa Pengguna Anggaran/Pejabat Pembuat Komitmen atas nama Kuasa Pengguna Anggaran <sup>*)</sup> memerintahkan Bendahara Pengeluaran/Bendahara Pengeluaran Pembantu <sup>*)</sup> agar melakukan pendebitan rekening menggunakan Kartu Debit sejumlah <span class="b">'+rupiah(jml)+'</span> (<span class="it">'+_terbilang(jml)+'</span>). Atas Dasar : Permintaan Nomor '+esc(noBukti)+'.</div>'
+  +'<table class="sig"><tr>'
+  +'<td class="b">Bendahara Pengeluaran/BPP <sup>*)</sup><div class="nm">('+esc(INST.bendahara)+')</div><span class="nip">NIP. '+esc(INST.nipBendahara)+'</span></td>'
+  +'<td>'+esc(INST.kota)+', '+esc(tgl)+'<div class="b">Kuasa Pengguna Anggaran</div><div class="nm">('+esc(INST.direktur)+')</div><span class="nip">NIP. '+esc(INST.nipDirektur||'')+'</span></td>'
+  +'</tr></table>'
+  +'<div style="font-size:10px;margin-top:14px"><sup>*)</sup> Coret yang tidak perlu</div>'
+  +'</div></body></html>';
 }
 
 /* ====== Bukti Perjalanan Dinas (tiket/boarding) ====== */
@@ -2620,6 +2705,18 @@ function bukaModalKuitansi(no){
   document.getElementById('kwTitleTxt').textContent=suratMap[String(no)]?'Kuitansi':((t&&t.sumber==='BANK')?'Bukti Transfer':'Tanda Terima');
   document.getElementById('kwTxLabel').textContent='No '+no;
   document.getElementById('kwFile').value=''; _clearPastePreview('kwFile');
+  // Field khusus transaksi bank (Kuitansi/Bukti Pembayaran + SPPR)
+  var isBank=(t && t.sumber==='BANK' && !suratMap[String(no)]);
+  document.getElementById('kwBankFields').style.display=isBank?'block':'none';
+  if(isBank){
+    var thn=(String(t.tanggal||'').split('-')[0])||(''+new Date().getFullYear());
+    document.getElementById('kwNoBukti').value='PRM-'+thn+'-'+('000'+t.no).slice(-4);
+    document.getElementById('kwMak').value='';
+    document.getElementById('kwPenerima').value=t.penjab||'';
+    document.getElementById('kwNipPenerima').value='';
+    document.getElementById('kwUntuk').value=t.kegiatan||'';
+    document.getElementById('kwNoSppr').value='';
+  }
   var el=document.getElementById('kwStatus');
   if(t && t.kuitansiUrl){
     el.innerHTML='<div class="lrow ok"><span>&#10003; Kuitansi ber-TTD sudah diupload</span>'
