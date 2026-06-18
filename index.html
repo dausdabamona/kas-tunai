@@ -439,7 +439,7 @@
     <h2>Nota Transaksi <span id="notaTxLabel"></span></h2>
     <div id="notaList"></div>
     <hr>
-    <h2 style="font-size:14px">Tambah Nota</h2>
+    <h2 style="font-size:14px" id="ntFormTitle">Tambah Nota</h2>
     <div class="field"><label>Nama Nota / Penyedia</label>
       <input type="text" id="ntPenyedia" list="ntPenyediaList" oninput="onNotaPenyediaInput()" autocomplete="off">
       <datalist id="ntPenyediaList"></datalist>
@@ -448,9 +448,13 @@
       <div class="field"><label>NPWP Penyedia</label><input type="text" id="ntNpwp" placeholder="kosongkan bila non-NPWP"></div>
       <div class="field"><label>Nominal</label><input type="text" class="numfmt" id="ntNilai" value="0" inputmode="numeric"></div>
     </div>
-    <div class="field"><label>Alamat Penyedia</label><input type="text" id="ntAlamat"></div>
+    <div class="row2">
+      <div class="field"><label>Tanggal Nota</label><input type="date" id="ntTgl"></div>
+      <div class="field"><label>Alamat Penyedia</label><input type="text" id="ntAlamat"></div>
+    </div>
     <div class="field"><label>Foto nota (opsional) &mdash; atau tekan <b>Ctrl+V</b> untuk tempel screenshot</label><input type="file" id="ntFile" accept="image/*" capture="environment" onchange="_showPastePreview(this)"></div>
-    <button class="btn" onclick="submitNota()">Tambah Nota</button>
+    <button class="btn" id="ntSubmitBtn" onclick="submitNota()">Tambah Nota</button>
+    <button class="btn ghost" id="ntCancelBtn" onclick="_cancelEditNota()" style="display:none">Batal Edit</button>
     <button class="btn ghost" onclick="closeModal('modalNota')">Tutup</button>
   </div>
 </div>
@@ -2132,11 +2136,7 @@ function submitTransaksi(){
 function openModalNota(no){
   _notaTarget=no;
   document.getElementById('notaTxLabel').textContent='No '+no;
-  document.getElementById('ntPenyedia').value='';
-  document.getElementById('ntNpwp').value='';
-  document.getElementById('ntAlamat').value='';
-  document.getElementById('ntNilai').value=0;
-  document.getElementById('ntFile').value=''; _clearPastePreview('ntFile');
+  _cancelEditNota();
   document.getElementById('notaList').innerHTML='<div class="empty">Memuat...</div>';
   openModal('modalNota');
   _muatPenyedia(_isiDatalistNota);
@@ -2163,7 +2163,10 @@ function onNotaPenyediaInput(){
     }
   }
 }
+var _notaList=[];          // cache nota transaksi yang sedang dibuka
+var _notaEditUrutan=null;  // null = mode tambah; selain itu = urutan nota yang diedit
 function renderNotaList(list){
+  _notaList=list||[];
   var box=document.getElementById('notaList');
   if(!list||!list.length){box.innerHTML='<div class="empty">Belum ada nota.</div>';return;}
   list=list.slice().sort(function(a,b){return (+b.urutan||0)-(+a.urutan||0);}); // terbaru di atas
@@ -2173,13 +2176,52 @@ function renderNotaList(list){
     h+='<div class="card" style="margin-bottom:8px">'
       +'<div class="row1"><div class="keg" style="font-size:14px">'+esc(n.namaPenyedia||'-')+'</div>'
       +'<div class="amt">'+rupiah(n.nilai)+'</div></div>'
-      +'<div class="tgl">'+(n.npwp?('NPWP '+esc(n.npwp)+' &middot; '):'')+'No '+esc(n.noNota||'-')+' &middot; '+esc(n.tglNota||'-')+'</div>'
+      +'<div class="tgl">'+(n.npwp?('NPWP '+esc(n.npwp)+' &middot; '):'')+'Tgl '+esc(n.tglNota||'-')+'</div>'
       +(n.alamat?'<div class="tgl">'+esc(n.alamat)+'</div>':'')
       +(n.fileId?('<a href="'+esc(n.urlFile||('https://drive.google.com/file/d/'+n.fileId+'/view'))+'" target="_blank" title="Lihat foto nota"><img class="nthumb" src="https://drive.google.com/thumbnail?id='+esc(n.fileId)+'&sz=w200"></a>'):'')
-      +'<div class="acts"><button onclick="hapusNota('+_notaTarget+','+n.urutan+",'"+(n.fileId||'')+"')\">Hapus</button></div>"
+      +'<div class="acts"><button class="b-edit" onclick="editNota('+n.urutan+')">&#9998; Edit</button>'
+      +'<button onclick="hapusNota('+_notaTarget+','+n.urutan+",'"+(n.fileId||'')+"')\">Hapus</button></div>"
       +'</div>';
   }
   box.innerHTML=h;
+}
+function editNota(urutan){
+  var n=null;
+  for(var i=0;i<_notaList.length;i++){ if(String(_notaList[i].urutan)===String(urutan)){ n=_notaList[i]; break; } }
+  if(!n){ toast('Nota tidak ditemukan','error'); return; }
+  _notaEditUrutan=urutan;
+  document.getElementById('ntPenyedia').value=n.namaPenyedia||'';
+  document.getElementById('ntNpwp').value=n.npwp||'';
+  document.getElementById('ntAlamat').value=n.alamat||'';
+  document.getElementById('ntNilai').value=_grp(n.nilai||0);
+  document.getElementById('ntTgl').value=_toISODate(n.tglNota);
+  document.getElementById('ntFile').value=''; _clearPastePreview('ntFile');
+  document.getElementById('ntFormTitle').textContent='Edit Nota #'+urutan;
+  document.getElementById('ntSubmitBtn').textContent='Perbarui Nota';
+  document.getElementById('ntCancelBtn').style.display='block';
+  document.getElementById('ntPenyedia').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function _cancelEditNota(){
+  _notaEditUrutan=null;
+  document.getElementById('ntPenyedia').value='';
+  document.getElementById('ntNpwp').value='';
+  document.getElementById('ntAlamat').value='';
+  document.getElementById('ntNilai').value=0;
+  document.getElementById('ntTgl').value=todayISO();
+  document.getElementById('ntFile').value=''; _clearPastePreview('ntFile');
+  document.getElementById('ntFormTitle').textContent='Tambah Nota';
+  document.getElementById('ntSubmitBtn').textContent='Tambah Nota';
+  document.getElementById('ntCancelBtn').style.display='none';
+}
+/** Konversi 'dd/mm/yyyy' atau Date string ke 'yyyy-mm-dd' utk input date. */
+function _toISODate(v){
+  if(!v) return '';
+  var s=String(v);
+  var m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(m){ return m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2); }
+  m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m){ return m[1]+'-'+m[2]+'-'+m[3]; }
+  var d=new Date(s); return isNaN(d)?'':(d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2));
 }
 function submitNota(){
   var nilai=unfmt(document.getElementById('ntNilai').value);
@@ -2187,7 +2229,8 @@ function submitNota(){
     namaPenyedia:document.getElementById('ntPenyedia').value.trim(),
     npwp:document.getElementById('ntNpwp').value.trim(),
     alamat:document.getElementById('ntAlamat').value.trim(),
-    nilai:nilai
+    nilai:nilai,
+    tglNota:document.getElementById('ntTgl').value||''
   };
   if(nilai<=0){toast('Nilai nota harus > 0','error');return;}
   var fileEl=document.getElementById('ntFile');
@@ -2198,19 +2241,24 @@ function submitNota(){
   }
 }
 function sendNota(notaData){
-  showLoading(true,'Menyimpan nota...');
-  google.script.run
-    .withSuccessHandler(function(){
-      showLoading(false);toast('Nota ditambahkan','success');
-      // simpan penyedia ke master untuk autocomplete berikutnya
-      if(notaData.namaPenyedia){
-        _allPenyedia=null;
-        google.script.run.serverSimpanPenyedia({nama:notaData.namaPenyedia,npwp:notaData.npwp,alamat:notaData.alamat});
-      }
-      openModalNota(_notaTarget);loadAll();
-    })
-    .withFailureHandler(fail)
-    .serverTambahNota(_notaTarget,notaData);
+  var edit=(_notaEditUrutan!=null);
+  showLoading(true,edit?'Memperbarui nota...':'Menyimpan nota...');
+  var ok=function(){
+    showLoading(false);toast(edit?'Nota diperbarui':'Nota ditambahkan','success');
+    // simpan penyedia ke master untuk autocomplete berikutnya
+    if(notaData.namaPenyedia){
+      _allPenyedia=null;
+      google.script.run.serverSimpanPenyedia({nama:notaData.namaPenyedia,npwp:notaData.npwp,alamat:notaData.alamat});
+    }
+    openModalNota(_notaTarget);loadAll();
+  };
+  if(edit){
+    google.script.run.withSuccessHandler(ok).withFailureHandler(fail)
+      .serverUpdateNota(_notaTarget,_notaEditUrutan,notaData);
+  }else{
+    google.script.run.withSuccessHandler(ok).withFailureHandler(fail)
+      .serverTambahNota(_notaTarget,notaData);
+  }
 }
 function hapusNota(no,urutan,fileId){
   if(!confirm('Hapus nota ini?'))return;

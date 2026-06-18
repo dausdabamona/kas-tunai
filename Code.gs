@@ -240,6 +240,9 @@ function serverGetMultiNota(transactionId) {
 function serverTambahNota(transactionId, notaData) {
   return _run(function () { return KasTunai.tambahNota(transactionId, notaData); });
 }
+function serverUpdateNota(transactionId, urutan, notaData) {
+  return _run(function () { return KasTunai.updateNota(transactionId, urutan, notaData); });
+}
 function serverHapusNotaItem(transactionId, urutan, fileId) {
   return _run(function () { return KasTunai.hapusNotaItem(transactionId, urutan, fileId); });
 }

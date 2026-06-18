@@ -194,7 +194,7 @@ var KasTunai = (function () {
         rowIndex: x.rowIndex,
         noTransaksi: r[n.NO_TRANSAKSI], urutan: r[n.URUTAN], namaPenyedia: r[n.NAMA_NOTA],
         npwp: r[n.NPWP_PENYEDIA], alamat: r[n.ALAMAT_PENYEDIA],
-        noNota: '', tglNota: Util.fmtDate(r[n.TGL_UPLOAD]), nilai: Util.num(r[n.NOMINAL]),
+        noNota: '', tglNota: Util.fmtDate(r[n.TGL_NOTA] || r[n.TGL_UPLOAD]), nilai: Util.num(r[n.NOMINAL]),
         keterangan: '', fileId: r[n.FILE_ID], namaFile: r[n.NAMA_FILE], urlFile: r[n.URL_FILE]
       };
     });
@@ -207,11 +207,36 @@ var KasTunai = (function () {
     SheetRepo.appendRow(CONFIG.SHEETS.MULTI_NOTA, [
       transactionId, 0, urutan, notaData.namaPenyedia || '', Util.num(notaData.nilai),
       file ? file.fileId : '', file ? file.namaFile : '', file ? file.url : '', new Date(),
-      notaData.npwp || '', notaData.alamat || '', FLAG_ACTIVE, '', ''
+      notaData.npwp || '', notaData.alamat || '', FLAG_ACTIVE, '', '',
+      notaData.tglNota ? new Date(notaData.tglNota) : ''
     ]);
     DeferredFlush.mark();
     _recalcNota(transactionId);
     return { success: true, urutan: urutan };
+  }
+
+  function updateNota(transactionId, urutan, notaData) {
+    var hit = _findNotaRow(transactionId, urutan);
+    if (!hit) throw new Error('Nota tidak ditemukan');
+    var n = NC();
+    var upd = Util.set(
+      n.NAMA_NOTA, notaData.namaPenyedia || '',
+      n.NOMINAL, Util.num(notaData.nilai),
+      n.NPWP_PENYEDIA, notaData.npwp || '',
+      n.ALAMAT_PENYEDIA, notaData.alamat || '',
+      n.TGL_NOTA, notaData.tglNota ? new Date(notaData.tglNota) : ''
+    );
+    // Ganti foto nota bila ada file baru (buang file lama)
+    if (notaData.file && notaData.file.base64) {
+      var oldFileId = hit.values[n.FILE_ID];
+      var file = DriveHelper.upload(notaData.file);
+      upd[n.FILE_ID] = file.fileId; upd[n.NAMA_FILE] = file.namaFile; upd[n.URL_FILE] = file.url;
+      if (oldFileId) DriveHelper.trash(oldFileId);
+    }
+    SheetRepo.setCells(CONFIG.SHEETS.MULTI_NOTA, hit.rowIndex, upd);
+    DeferredFlush.mark();
+    _recalcNota(transactionId);
+    return { success: true };
   }
 
   function hapusNotaItem(transactionId, urutan, fileId) {
@@ -360,6 +385,7 @@ var KasTunai = (function () {
     findByRef: findByRef,
     getMultiNota: getMultiNota,
     tambahNota: tambahNota,
+    updateNota: updateNota,
     hapusNotaItem: hapusNotaItem,
     restoreNota: restoreNota,
     tambahFotoBarang: tambahFotoBarang,
