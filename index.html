@@ -940,7 +940,7 @@ function _cardHtml(t, mode){
     +'<div class="sb">&#128100; '+esc(t.penjab||'-')+(t.keterangan?(' &middot; '+esc(t.keterangan)):'')+'</div></div>';
   if(mode==='masuk'){
     return '<div class="tcard">'+head
-      +'<div class="amt debet">+'+rupiah(t.debet)+'<span class="dt">'+esc(t.tanggal)+'</span></div></div>'
+      +'<div class="amt debet">+'+rupiah(t.debet)+'<span class="dt">'+esc(_tglID(t.tanggal))+'</span></div></div>'
       +'<div class="acts"><button class="b-edit" onclick="editTransaksi('+t.no+')">&#9998; Edit</button></div></div>';
   }
   var fnJml=fotoCount(t), lunas=isNotaLunas(t);
@@ -957,8 +957,8 @@ function _cardHtml(t, mode){
     : '&#10003; Nota Lunas';
   var h='<div class="tcard '+st+'">'+head
     +(lunas
-       ? '<div class="amt amt-ok">&#10003; Lunas<span class="dt">'+esc(t.tanggal)+'</span></div>'
-       : '<div class="amt">-'+rupiah(sisa)+'<span class="dt">'+esc(t.tanggal)+'</span></div>')
+       ? '<div class="amt amt-ok">&#10003; Lunas<span class="dt">'+esc(_tglID(t.tanggal))+'</span></div>'
+       : '<div class="amt">-'+rupiah(sisa)+'<span class="dt">'+esc(_tglID(t.tanggal))+'</span></div>')
     +'</div>';
   // baris keluar / nota lunas (termasuk pengembalian)
   h+= lunas
@@ -2176,7 +2176,7 @@ function renderNotaList(list){
     h+='<div class="card" style="margin-bottom:8px">'
       +'<div class="row1"><div class="keg" style="font-size:14px">'+esc(n.namaPenyedia||'-')+'</div>'
       +'<div class="amt">'+rupiah(n.nilai)+'</div></div>'
-      +'<div class="tgl">'+(n.npwp?('NPWP '+esc(n.npwp)+' &middot; '):'')+'Tgl '+esc(n.tglNota||'-')+'</div>'
+      +'<div class="tgl">'+(n.npwp?('NPWP '+esc(n.npwp)+' &middot; '):'')+'Tgl '+esc(n.tglNota?_tglID(n.tglNota):'-')+'</div>'
       +(n.alamat?'<div class="tgl">'+esc(n.alamat)+'</div>':'')
       +(n.fileId?('<a href="'+esc(n.urlFile||('https://drive.google.com/file/d/'+n.fileId+'/view'))+'" target="_blank" title="Lihat foto nota"><img class="nthumb" src="https://drive.google.com/thumbnail?id='+esc(n.fileId)+'&sz=w200"></a>'):'')
       +'<div class="acts"><button class="b-edit" onclick="editNota('+n.urutan+')">&#9998; Edit</button>'
@@ -2363,6 +2363,15 @@ function _tglPanjang(d){
   var dt=(d instanceof Date)?d:new Date(d);
   if(isNaN(dt.getTime())) return String(d||'');
   return dt.getDate()+' '+bln[dt.getMonth()]+' '+dt.getFullYear();
+}
+/** Format tanggal ringkas Indonesia: '2026-06-18' / Date / 'dd/mm/yyyy' -> '18 Jun 2026'. */
+function _tglID(d){
+  if(!d) return '';
+  var bln=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+  var iso=_toISODate(d);
+  if(!iso) return String(d);
+  var p=iso.split('-');
+  return parseInt(p[2],10)+' '+bln[parseInt(p[1],10)-1]+' '+p[0];
 }
 function _terbilang(n){
   n=Math.floor(Math.abs(parseFloat(n)||0));
