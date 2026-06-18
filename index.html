@@ -453,6 +453,10 @@
       <div class="field"><label>Alamat Penyedia</label><input type="text" id="ntAlamat"></div>
     </div>
     <div class="field"><label>Foto nota (opsional) &mdash; atau tekan <b>Ctrl+V</b> untuk tempel screenshot</label><input type="file" id="ntFile" accept="image/*" capture="environment" onchange="_showPastePreview(this)"></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:4px">
+      <input type="checkbox" id="ntAsFotoBarang" checked> Sekaligus simpan foto sebagai <b>Foto Barang</b> (dengan lokasi GPS)
+    </label>
+    <div id="ntGps" class="tgl" style="margin-bottom:8px"></div>
     <button class="btn" id="ntSubmitBtn" onclick="submitNota()">Tambah Nota</button>
     <button class="btn ghost" id="ntCancelBtn" onclick="_cancelEditNota()" style="display:none">Batal Edit</button>
     <button class="btn ghost" onclick="closeModal('modalNota')">Tutup</button>
@@ -1807,13 +1811,18 @@ function openFoto(no){
   google.script.run.withSuccessHandler(renderFotoGaleri).withFailureHandler(fail).serverGetNotaDanFoto(no);
 }
 function _ambilGps(){
-  var el=document.getElementById('ftGps');
-  if(!navigator.geolocation){ el.textContent='GPS tidak didukung browser.'; return; }
-  el.textContent='Mengambil lokasi GPS...';
+  _captureGps('ftGps', function(g){ _fotoGps=g; });
+}
+/** Ambil lokasi GPS, tampilkan ke elemen elId, dan kirim {lat,lng} ke cb. */
+function _captureGps(elId, cb){
+  var el=document.getElementById(elId);
+  if(!navigator.geolocation){ if(el) el.textContent='GPS tidak didukung browser.'; return; }
+  if(el) el.textContent='Mengambil lokasi GPS...';
   navigator.geolocation.getCurrentPosition(function(p){
-    _fotoGps={lat:+p.coords.latitude.toFixed(6), lng:+p.coords.longitude.toFixed(6)};
-    el.innerHTML='&#128205; Lokasi: '+_fotoGps.lat+', '+_fotoGps.lng;
-  }, function(){ el.textContent='⚠ Lokasi GPS tidak tersedia (foto tetap bisa diupload).'; },
+    var g={lat:+p.coords.latitude.toFixed(6), lng:+p.coords.longitude.toFixed(6)};
+    if(el) el.innerHTML='&#128205; Lokasi: '+g.lat+', '+g.lng;
+    if(cb) cb(g);
+  }, function(){ if(el) el.textContent='⚠ Lokasi GPS tidak tersedia (foto tetap tersimpan).'; },
   {enableHighAccuracy:true,timeout:10000});
 }
 function renderFotoGaleri(res){
@@ -2150,6 +2159,9 @@ function openModalNota(no){
   document.getElementById('notaTxLabel').textContent='No '+no;
   _cancelEditNota();
   document.getElementById('notaList').innerHTML='<div class="empty">Memuat...</div>';
+  document.getElementById('ntAsFotoBarang').checked=true;
+  document.getElementById('ntGps').textContent='';
+  _notaGps=null; _captureGps('ntGps', function(g){ _notaGps=g; });
   openModal('modalNota');
   _muatPenyedia(_isiDatalistNota);
   google.script.run
@@ -2177,6 +2189,7 @@ function onNotaPenyediaInput(){
 }
 var _notaList=[];          // cache nota transaksi yang sedang dibuka
 var _notaEditUrutan=null;  // null = mode tambah; selain itu = urutan nota yang diedit
+var _notaGps=null;         // lokasi GPS saat form nota dibuka (utk Foto Barang)
 function renderNotaList(list){
   _notaList=list||[];
   var box=document.getElementById('notaList');
@@ -2255,12 +2268,22 @@ function submitNota(){
 function sendNota(notaData){
   var edit=(_notaEditUrutan!=null);
   showLoading(true,edit?'Memperbarui nota...':'Menyimpan nota...');
+  // Sekaligus simpan foto nota sebagai Foto Barang (geotag) — baca sebelum form direset
+  var jugaFotoBarang=(notaData.file && notaData.file.base64 &&
+                      document.getElementById('ntAsFotoBarang').checked);
   var ok=function(){
     showLoading(false);toast(edit?'Nota diperbarui':'Nota ditambahkan','success');
     // simpan penyedia ke master untuk autocomplete berikutnya
     if(notaData.namaPenyedia){
       _allPenyedia=null;
       google.script.run.serverSimpanPenyedia({nama:notaData.namaPenyedia,npwp:notaData.npwp,alamat:notaData.alamat});
+    }
+    // unggah Foto Barang dari foto nota (fire-and-forget)
+    if(jugaFotoBarang){
+      var fb={ base64:notaData.file.base64, mimeType:notaData.file.mimeType, namaFile:notaData.file.namaFile,
+               keterangan:'Nota: '+(notaData.namaPenyedia||'') };
+      if(_notaGps){ fb.lat=_notaGps.lat; fb.lng=_notaGps.lng; }
+      google.script.run.serverUploadFotoNota(_notaTarget, 1, [fb]);
     }
     openModalNota(_notaTarget);loadAll();
   };
