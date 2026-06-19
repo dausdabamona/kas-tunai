@@ -227,9 +227,9 @@
   </div>
 
   <div class="search" style="margin-top:8px">&#128100;
-    <select id="filterPenjab" onchange="onFilterPenjab()" style="flex:1;border:none;background:transparent;font:inherit;color:inherit;outline:none">
-      <option value="">Semua Penanggung Jawab</option>
-    </select>
+    <input id="filterPenjab" list="filterPenjabList" oninput="onFilterPenjab()" autocomplete="off" placeholder="Semua Penanggung Jawab — ketik untuk cari" style="flex:1;border:none;background:transparent;font:inherit;color:inherit;outline:none">
+    <datalist id="filterPenjabList"></datalist>
+    <span onclick="_clearPenjab()" title="Hapus filter" style="cursor:pointer;padding:0 4px;color:var(--c-muted)">&times;</span>
   </div>
 
   <div class="search" style="margin-top:8px">&#8597;
@@ -889,25 +889,25 @@ function _matchMonth(t){
   return !currentMonth || String(t.tanggal||'').slice(0,7)===currentMonth;
 }
 function _matchPenjab(t){
-  return !currentPenjab || String(t.penjab||'')===currentPenjab;
+  if(!currentPenjab) return true;
+  return String(t.penjab||'').toLowerCase().indexOf(currentPenjab.toLowerCase())>=0;
 }
 function _nilai(t){ return Math.max(+t.kredit||0, +t.debet||0); }
-function onFilterPenjab(){ currentPenjab=document.getElementById('filterPenjab').value; renderList(); }
+function onFilterPenjab(){ currentPenjab=(document.getElementById('filterPenjab').value||'').trim(); renderList(); }
+function _clearPenjab(){ document.getElementById('filterPenjab').value=''; currentPenjab=''; renderList(); }
 function onFilterSort(){ currentSort=document.getElementById('filterSort').value; renderList(); }
-/* Isi dropdown penanggung jawab dari nama unik di data (A→Z) */
+/* Isi datalist penanggung jawab dari nama unik di data (A→Z) untuk ketik-cari */
 function _populatePenjab(){
-  var sel=document.getElementById('filterPenjab'); if(!sel) return;
+  var dl=document.getElementById('filterPenjabList'); if(!dl) return;
   var seen={}, names=[];
   for(var i=0;i<allTransaksi.length;i++){
     var p=String(allTransaksi[i].penjab||'').trim();
     if(p && !seen[p]){ seen[p]=1; names.push(p); }
   }
   names.sort(function(a,b){return a.localeCompare(b);});
-  if(currentPenjab && !seen[currentPenjab]) currentPenjab='';
-  var html='<option value="">Semua Penanggung Jawab</option>';
-  for(var j=0;j<names.length;j++) html+='<option value="'+esc(names[j])+'">'+esc(names[j])+'</option>';
-  sel.innerHTML=html;
-  sel.value=currentPenjab;
+  var html='';
+  for(var j=0;j<names.length;j++) html+='<option value="'+esc(names[j])+'"></option>';
+  dl.innerHTML=html;
 }
 var _NAMA_BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 function _labelBulan(ym){ var p=ym.split('-'); return (_NAMA_BULAN[(+p[1]||1)-1]||'')+' '+p[0]; }
