@@ -1257,7 +1257,7 @@ function setSpdJenis(j){
 function _subRowHtml(urai, nom, bdh, showBdh){
   return '<div class="sub-row"><input type="text" class="urai" placeholder="uraian" value="'+_attr(urai)+'">'
    +'<input type="text" inputmode="numeric" class="nom numfmt" placeholder="0" value="'+_grp(+nom||0)+'" oninput="hitungSemuaBiaya()">'
-   +(showBdh?('<label class="bdhlbl" title="Dibayar langsung oleh Bendahara via Kas Bank"><input type="checkbox" class="bdh" '+(bdh?'checked':'')+' onchange="hitungSemuaBiaya()"> Bank</label>'):'')
+   +(showBdh?('<label class="bdhlbl" title="Dibayar langsung oleh Bendahara (tunai atau bank) — bukan tunai ke pelaksana"><input type="checkbox" class="bdh" '+(bdh?'checked':'')+' onchange="hitungSemuaBiaya()"> Dibayar Bendahara</label>'):'')
    +'<button type="button" class="btn ghost" onclick="hapusSubRow(this)">&times;</button></div>';
 }
 function addSub(btn){
@@ -1287,7 +1287,7 @@ function _pegRowHtml(p){
    +'<label style="display:block;margin-bottom:6px"><input type="checkbox" class="pg-menginap" '+(p.penginapanMenginap?'checked':'')+' onchange="hitungSemuaBiaya()"> Menginap di hotel (at-cost). Bila tidak: 30% × tarif × malam</label>'
    +'<div class="row2"><div class="field"><label>Jumlah malam</label><input type="number" class="pg-malam" value="'+(+p.penginapanMalam||0)+'" oninput="hitungSemuaBiaya()"></div>'
    +'<div class="field"><label>Tarif (Rp/malam)</label><input type="text" inputmode="numeric" class="pg-hotel numfmt" value="'+_grp(+p.penginapanRate||0)+'" oninput="hitungSemuaBiaya()"></div></div>'
-   +'<label style="display:block;margin-bottom:6px"><input type="checkbox" class="pg-pgBdh" '+(p.penginapanBendahara?'checked':'')+' onchange="hitungSemuaBiaya()"> Hotel dibayar langsung oleh Bendahara (via Kas Bank)</label>'
+   +'<label style="display:block;margin-bottom:6px"><input type="checkbox" class="pg-pgBdh" '+(p.penginapanBendahara?'checked':'')+' onchange="hitungSemuaBiaya()"> Hotel dibayar langsung oleh Bendahara (tunai/bank)</label>'
    +'<div class="field"><label>Biaya penginapan</label><input type="text" class="pg-pgTot" readonly></div></div>'
    +'<div class="peg-sub lk-only"><h5>Transport (at-cost) — centang "Bank" bila dibayar bendahara</h5><div class="sub-list pg-transport">'+_subListHtml(p.transport, true)+'</div>'
    +'<button type="button" class="btn ghost" style="width:auto;padding:4px 10px;margin:0" onclick="addSub(this)">+ transport</button></div>'
@@ -1732,12 +1732,12 @@ function _rincianPage(data, peg){
   var trans=peg.transport||[], dibayarBank=0;
   for(var i=0;i<trans.length;i++){
     var tBdh=!!trans[i].bendahara; if(tBdh) dibayarBank+=(+trans[i].jumlah||0);
-    rincian+=row('Transport: '+esc(trans[i].uraian||'-'), trans[i].jumlah, tBdh?'Dibayar Bendahara (Kas Bank)':'At-cost');
+    rincian+=row('Transport: '+esc(trans[i].uraian||'-'), trans[i].jumlah, tBdh?'Dibayar Bendahara':'At-cost');
   }
   if((+peg.penginapan||0)>0 || (+peg.penginapanMalam||0)>0){
     var ketP=peg.penginapanMenginap? ((+peg.penginapanMalam||0)+' malam &times; '+rupiah(+peg.penginapanRate||0))
                                     : ('30% &times; '+rupiah(+peg.penginapanRate||0)+' &times; '+(+peg.penginapanMalam||0)+' malam (tidak menginap)');
-    if(peg.penginapanBendahara){ ketP+=' — Dibayar Bendahara (Kas Bank)'; dibayarBank+=(+peg.penginapan||0); }
+    if(peg.penginapanBendahara){ ketP+=' — Dibayar Bendahara'; dibayarBank+=(+peg.penginapan||0); }
     rincian+=row('Biaya penginapan', (+peg.penginapan||0), ketP);
   }
   if((+peg.representasi||0)>0) rincian+=row('Uang representasi', (+peg.representasi||0), 'Lumpsum');
@@ -1756,14 +1756,13 @@ function _rincianPage(data, peg){
   +'<tr><td></td><td class="rt"><b>Jumlah</b></td><td class="rt"><b>'+rupiah(total)+'</b></td><td></td></tr>'
   +'</table>'
   +'<div class="terb">Terbilang : <i>'+_terbilangTitle(total)+'</i></div>'
-  +(dibayarBank>0 ? ('<table class="b" style="margin-top:10px"><tr><td class="lbl">Dibayar langsung oleh Bendahara via Kas Bank (tiket/hotel)</td><td class="rt">'+rupiah(dibayarBank)+'</td></tr>'
-    +'<tr><td class="lbl">Dibayarkan tunai kepada Pelaksana</td><td class="rt">'+rupiah(total-dibayarBank)+'</td></tr></table>') : '')
-  +'<table class="b" style="margin-top:10px"><tr><td class="lbl">Telah dibayar sejumlah</td><td class="rt">'+rupiah(um)+'</td></tr>'
-  +'<tr><td class="lbl">'+lblSisa+'</td><td class="rt">'+rupiah(Math.abs(sisa))+'</td></tr></table>'
+  +(dibayarBank>0 ? ('<table class="b" style="margin-top:10px"><tr><td>Dibayar langsung oleh Bendahara (tiket/hotel)</td><td class="rt" style="width:28%">'+rupiah(dibayarBank)+'</td></tr>'
+    +'<tr><td>Dibayarkan tunai kepada Pelaksana</td><td class="rt" style="width:28%">'+rupiah(total-dibayarBank)+'</td></tr></table>') : '')
+  +'<table class="b" style="margin-top:10px"><tr><td>Telah dibayar sejumlah</td><td class="rt" style="width:28%">'+rupiah(um)+'</td></tr>'
+  +'<tr><td>'+lblSisa+'</td><td class="rt" style="width:28%">'+rupiah(Math.abs(sisa))+'</td></tr></table>'
   +'<table class="sign"><tr>'
-  +'<td>Telah dibayar sejumlah<br>'+rupiah(um)+'<br>Bendahara Pengeluaran,<div class="nmc">'+esc(INST.bendahara)+'</div>NIP. '+esc(INST.nipBendahara)+'</td>'
-  +'<td>Telah menerima jumlah uang sebesar<br>'+rupiah(total)+'<br>Yang menerima / Pelaksana SPD,<div class="nmc">'+esc(peg.nama||'')+'</div>NIP. '+esc(peg.nip||'')+'</td>'
-  +'<td>'+esc(INST.kota)+', '+fd(data.tglSelesai)+'<br>Menyetujui/Mengetahui,<br>Pejabat Pembuat Komitmen,<div class="nmc">'+esc(INST.ppk)+'</div>NIP. '+esc(INST.nipPpk)+'</td>'
+  +'<td style="width:50%">Telah dibayar sejumlah '+rupiah(um)+'<br>Bendahara Pengeluaran,<div class="nmc">'+esc(INST.bendahara)+'</div>NIP. '+esc(INST.nipBendahara)+'</td>'
+  +'<td style="width:50%">'+esc(INST.kota)+', '+fd(data.tglSelesai)+'<br>Telah menerima jumlah uang sebesar '+rupiah(total)+'<br>Yang menerima / Pelaksana SPD,<div class="nmc">'+esc(peg.nama||'')+'</div>NIP. '+esc(peg.nip||'')+'</td>'
   +'</tr></table>';
 }
 /* 5.4 DAFTAR PENGELUARAN RIIL — per pegawai yang punya isi riil */
