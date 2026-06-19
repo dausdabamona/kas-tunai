@@ -934,6 +934,12 @@ function _avatarColor(s){var h=0;s=String(s||'');for(var i=0;i<s.length;i++)h=(h
 
 /* Kelompokkan list per penjab lalu render grup + kartu */
 function _renderGroups(list, mode){
+  // Tanpa filter Penanggung Jawab aktif: tampilkan daftar polos (tanpa pengelompokan per nama)
+  if(!currentPenjab){
+    var fh='';
+    for(var i=0;i<list.length;i++) fh+=_cardHtml(list[i], mode);
+    return fh;
+  }
   var groups={}, order=[];
   for(var i=0;i<list.length;i++){
     var key=list[i].penjab||'(Tanpa Penjab)';
