@@ -10,12 +10,13 @@
  * ============================================================ */
 function doGet() {
   var tpl = HtmlService.createTemplateFromFile('index');
+  var full = _isFullAccess();
   tpl.appData = {
     user:      _safeEmail(),
     namaUser:  '',
-    roleUser:  'operator',
-    isAdmin:   false,
-    saldoAwal: CONFIG.SALDO_AWAL
+    roleUser:  full ? 'full' : 'viewer',
+    isAdmin:   full,
+    saldoAwal: full ? CONFIG.SALDO_AWAL : 0
   };
   return tpl.evaluate()
     .setTitle('Kas Tunai - Poltek KP Sorong')
@@ -30,6 +31,18 @@ function include(filename) {
 
 function _safeEmail() {
   try { return Session.getActiveUser().getEmail() || ''; } catch (e) { return ''; }
+}
+
+/** true bila pengguna saat ini boleh melihat saldo (ada di FULL_ACCESS_EMAILS).
+ *  Bila daftar kosong → semua pengguna full (mode lama). */
+function _isFullAccess() {
+  var full = CONFIG.FULL_ACCESS_EMAILS || [];
+  if (!full.length) return true;
+  var e = (_safeEmail() || '').toLowerCase();
+  for (var i = 0; i < full.length; i++) {
+    if (String(full[i] || '').toLowerCase() === e) return true;
+  }
+  return false;
 }
 
 /** Bungkus pemanggilan modul + flush sekali di akhir. */
@@ -60,11 +73,15 @@ function serverGetDashboard() {
       try { SheetRepo.ensureHeaders(); } catch (e) { Logger.log('[ensureHeaders] ' + e.message); }
       AppCache.put('hdr_fixed_v2', 1);
     }
+    var full = _isFullAccess();
+    var tx = KasTunai.getTransaksi();
+    if (!full) { for (var i = 0; i < tx.length; i++) { delete tx[i].saldo; } } // sembunyikan saldo berjalan
     return {
-      transaksi: KasTunai.getTransaksi(),
+      transaksi: tx,
       fotoMap: FotoNota.getJmlFotoPerTransaksi(),
       suratMap: SuratTugas.getMap(),
-      saldo: KasTunai.ringkasanSaldo()
+      saldo: full ? KasTunai.ringkasanSaldo() : null,
+      role: full ? 'full' : 'viewer'
     };
   });
 }

@@ -16,6 +16,11 @@ var CONFIG = {
   // Saldo awal kas di bank (rekening) — sesuaikan dengan saldo rekening awal
   SALDO_AWAL_BANK: 0,
 
+  // Email (Google) yang boleh MELIHAT SALDO (Tunai/Bank/Total). Email lain yang
+  // diberi akses web app = "peninjau" (saldo disembunyikan). Kosongkan array ini
+  // ([]) bila ingin SEMUA pengguna melihat saldo (mode lama). Huruf besar/kecil bebas.
+  FULL_ACCESS_EMAILS: ['dausdaba@polikpsorong.ac.id'],
+
   // Folder Drive root untuk upload (kosong = root My Drive)
   DRIVE_FOLDER_ID: '',
 

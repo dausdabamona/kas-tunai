@@ -626,6 +626,7 @@ var _txEditNo     = null;      // null = tambah baru; berisi NO saat mengedit tr
 var fotoJmlMap    = {};      // {noTransaksi: jumlahFotoNota}
 var suratMap      = {};      // {noTransaksi: nomorSurat} penanda perjalanan dinas
 var saldoInfo     = null;    // {saldoTunai, saldoBank, saldoTotal} dari server
+var isViewer      = (ROLE_USER==='viewer'); // peninjau: saldo disembunyikan
 var _notaTarget   = null;    // noTransaksi yang sedang dikelola notanya
 var _kbTarget     = null;    // noTransaksi yang sedang dikelola pengembaliannya
 var _allPenyedia  = null;
@@ -825,6 +826,8 @@ function loadAll(){
       fotoJmlMap=(d&&d.fotoMap)||{};
       suratMap=(d&&d.suratMap)||{};
       saldoInfo=(d&&d.saldo)||null;
+      if(d&&d.role) isViewer=(d.role==='viewer');
+      _applyRoleUI();
       showLoading(false);
       renderList();
     })
@@ -861,7 +864,13 @@ function passFilter(t){
   }
 }
 
+/* Sembunyikan elemen saldo untuk peninjau (viewer) */
+function _applyRoleUI(){
+  var ss=document.querySelector('.saldo-sum'); if(ss) ss.style.display=isViewer?'none':'';
+  var sp=document.querySelector('.topbar .saldo-pill'); if(sp) sp.style.display=isViewer?'none':'';
+}
 function updateSaldoBar(){
+  if(isViewer){ _applyRoleUI(); return; } // peninjau tidak melihat saldo
   var masuk=0,keluar=0;
   for(var i=0;i<allTransaksi.length;i++){
     masuk+=(+allTransaksi[i].debet||0);
@@ -3155,6 +3164,7 @@ function _bukaPopup(html){
     });
   }
   document.addEventListener('paste', _onPasteUpload);
+  _applyRoleUI();
   loadAll();
 })();
 </script>
