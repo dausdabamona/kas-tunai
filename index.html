@@ -1037,6 +1037,7 @@ function _cardHtml(t, mode){
       +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">Kuitansi</button>'
       +'<button class="b-spby" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+(t.noSpby?'SPBY &#10003;':'SPBY')+'</button>'
       +'<button class="b-spd" onclick="cetakSpd('+t.no+')">SPD</button>'
+      +(t.sumber==='BANK'?('<button class="b-spby" onclick="cetakBuktiTransferPd('+t.no+')">&#128179; Bukti Transfer</button>'):'')
       +'<button class="b-edit" onclick="editSpd('+t.no+')">Edit SPD</button>'
       +'<button class="b-gray" onclick="openModalBukti('+t.no+')">&#128206; Bukti</button>'
       +'<button class="b-dark" onclick="cetakSpjPd('+t.no+')">&#129534; Cetak SPJ</button>';
@@ -1525,6 +1526,16 @@ function cetakSpd(no){
     .withFailureHandler(fail)
     .serverGetSuratTugas(no);
 }
+/* Bukti Transfer biaya PD ke pelaksana (saat pembayaran ke Pelaksana via Bank) */
+function cetakBuktiTransferPd(no){
+  showLoading(true,'Memuat surat tugas...');
+  google.script.run
+    .withSuccessHandler(function(st){ showLoading(false);
+      if(!st){ toast('Data surat tugas tidak ditemukan','error'); return; }
+      _bukaPopup(_renderSpdTransferHtml(st)); })
+    .withFailureHandler(fail)
+    .serverGetSuratTugas(no);
+}
 /* CSS bersama semua dokumen cetak PD */
 function _docCss(){
   return '@page{size:A4 portrait;margin:0} *{font-family:Arial,sans-serif;box-sizing:border-box}'
@@ -1743,6 +1754,46 @@ function _renderRincianHtml(data){
   var list=_spdList(data);
   var pages=list.map(function(p){return '<div class="page">'+_rincianPage(data,p)+'</div>';}).join('');
   return _docWrap('Rincian Biaya '+(data.nomor||''), pages);
+}
+/* Porsi tiket/hotel yang dibayar langsung Bendahara untuk 1 pegawai. */
+function _porsiBendaharaPeg(peg){
+  var b=0, tr=peg.transport||[];
+  for(var i=0;i<tr.length;i++) if(tr[i]&&tr[i].bendahara) b+=(+tr[i].jumlah||0);
+  if(peg.penginapanBendahara) b+=(+peg.penginapan||0);
+  return b;
+}
+/* Bukti Transfer biaya PD ke pelaksana (per pegawai) — saat pembayaran ke Pelaksana via Bank. */
+function _renderSpdTransferHtml(data){
+  var thn=(String(data.tglSurat||data.tglMulai||'').split('-')[0])||(''+new Date().getFullYear());
+  var list=_spdList(data).map(function(p,i){return {p:p,i:i};})
+            .filter(function(x){ return ((+x.p.biaya||0)-_porsiBendaharaPeg(x.p))>0; });
+  if(!list.length) return _docWrap('Bukti Transfer', '<div class="page">Tidak ada porsi yang ditransfer ke pelaksana.</div>');
+  var pages=list.map(function(x){ return '<div class="page">'+_spdTransferPage(data,x.p,thn,x.i)+'</div>'; }).join('');
+  return _docWrap('Bukti Transfer '+(data.nomor||''), pages);
+}
+function _spdTransferPage(data, peg, thn, idx){
+  function fd(v){ return v?_tglPanjang(v):'…'; }
+  var amount=(+peg.biaya||0)-_porsiBendaharaPeg(peg); if(amount<0) amount=0;
+  var no='BT-'+thn+'-'+('00'+(idx+1)).slice(-2)+'/'+esc(data.nomor||'-');
+  var tgl=fd(data.tglSelesai||data.tglSurat||data.tglMulai);
+  function row(l,v){ return '<tr><td class="lbl" style="width:34%">'+l+'</td><td>'+v+'</td></tr>'; }
+  return ''
+  +_docKop()
+  +'<h1>Bukti Transfer Biaya Perjalanan Dinas</h1>'
+  +'<div style="text-align:center;margin:0 0 12px">SPD Nomor '+esc(data.nomor||'-')+' Tanggal '+fd(data.tglSurat||data.tglMulai)+'</div>'
+  +'<table class="b">'
+  +row('Nomor Bukti', esc(no))
+  +row('Tanggal', esc(tgl))
+  +row('Telah ditransfer kepada', esc(peg.nama||'-')+(peg.nip?(' (NIP. '+esc(peg.nip)+')'):''))
+  +row('Ke rekening', esc(peg.norek||'................')+' a.n. '+esc(peg.nama||'-')+(peg.bank?(' &mdash; '+esc(peg.bank)):''))
+  +row('Sejumlah', '<b>'+rupiah(amount)+'</b>')
+  +row('Untuk pembayaran', 'Biaya perjalanan dinas — '+esc(data.maksud||'-'))
+  +'</table>'
+  +'<div class="terb">Terbilang : <i>'+_terbilangTitle(amount)+'</i></div>'
+  +'<table class="sign" style="margin-top:14px"><tr>'
+  +'<td style="width:50%">Yang mentransfer,<br>Bendahara Pengeluaran,<div class="nmc">'+esc(INST.bendahara)+'</div>NIP. '+esc(INST.nipBendahara)+'</td>'
+  +'<td style="width:50%">'+esc(INST.kota)+', '+tgl+'<br>Penerima / Pelaksana SPD,<div class="nmc">'+esc(peg.nama||'')+'</div>NIP. '+esc(peg.nip||'')+'</td>'
+  +'</tr></table>';
 }
 function _rincianPage(data, peg){
   function fd(v){ return v?_tglPanjang(v):'…'; }
