@@ -214,6 +214,7 @@
     <div style="text-align:right;margin-top:8px">
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0" onclick="openModalPindah()">&#128181; Pindah Dana (Bank&#8596;Tunai)</button>
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalImporRk()">&#127974; Impor Rekening Koran</button>
+      <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalSpbyGab()">&#128203; SPBY Gabungan</button>
     </div>
   </div>
 
@@ -586,6 +587,36 @@
     <button class="btn" id="usrSubmitBtn" onclick="submitUser()">Tambah User</button>
     <button class="btn ghost" id="usrCancelBtn" onclick="_cancelEditUser()" style="display:none">Batal Edit</button>
     <button class="btn ghost" onclick="closeModal('modalUsers')">Tutup</button>
+  </div>
+</div>
+
+<!-- ================= MODAL PECAH TRANSAKSI ================= -->
+<div class="modal" id="modalPecah">
+  <div class="sheet">
+    <h2>&#9986; Pecah Transaksi <span id="pcLabel"></span></h2>
+    <div class="tgl" id="pcInfo" style="margin-bottom:8px"></div>
+    <div id="pcRows"></div>
+    <button class="btn ghost" style="width:auto;padding:4px 10px;margin:0" onclick="pcAddRow()">+ Bagian</button>
+    <div id="pcSum" class="tgl" style="margin:8px 0;font-weight:600"></div>
+    <button class="btn" onclick="submitPecah()">Simpan Pemecahan</button>
+    <button class="btn ghost" onclick="closeModal('modalPecah')">Tutup</button>
+  </div>
+</div>
+
+<!-- ================= MODAL SPBY GABUNGAN ================= -->
+<div class="modal" id="modalSpbyGab">
+  <div class="sheet">
+    <h2>&#128203; SPBY Gabungan</h2>
+    <div class="row2">
+      <div class="field"><label>Nomor SPBY</label><input type="text" id="sgNo" placeholder="mis. 045/SPBY/2026"></div>
+      <div class="field"><label>Tanggal SPBY</label><input type="date" id="sgTgl"></div>
+    </div>
+    <div class="field"><label>Pilih transaksi pengeluaran untuk digabung:</label></div>
+    <div id="sgList" style="max-height:300px;overflow:auto;border:1px solid var(--c-line);border-radius:8px;padding:6px"></div>
+    <div id="sgSum" class="tgl" style="margin:8px 0;font-weight:600"></div>
+    <button class="btn" onclick="submitSpbyGab()">Simpan SPBY ke transaksi terpilih</button>
+    <button class="btn b-dark" onclick="cetakSpbyGab()">&#128424; Cetak SPBY Gabungan</button>
+    <button class="btn ghost" onclick="closeModal('modalSpbyGab')">Tutup</button>
   </div>
 </div>
 
@@ -1161,7 +1192,8 @@ function _cardHtml(t, mode){
       +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">'+(t.sumber==='BANK'?'Bukti Transfer':'Tanda Terima')+'</button>'
       +'<button class="b-spby" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+(t.noSpby?'SPBY &#10003;':'SPBY')+'</button>';
     if(lunas) h+='<button class="b-dark" onclick="cetakSPJ('+t.no+')">Cetak SPJ</button>';
-    h+='<button class="b-spd" onclick="konversiKePd('+t.no+')" title="Jadikan transaksi ini Perjalanan Dinas">&#9992; Jadikan PD</button>';
+    h+='<button class="b-spd" onclick="konversiKePd('+t.no+')" title="Jadikan transaksi ini Perjalanan Dinas">&#9992; Jadikan PD</button>'
+      +'<button onclick="openModalPecah('+t.no+')" title="Pecah jadi beberapa transaksi">&#9986; Pecah</button>';
   }
   h+='</div></div>';
   return h;
@@ -1642,6 +1674,108 @@ function batalkanPd(no){
     .withSuccessHandler(function(){ showLoading(false); toast('Status PD dibatalkan','success'); loadAll(); })
     .withFailureHandler(fail)
     .serverBatalkanPd(no);
+}
+/* ============== Pecah Transaksi ============== */
+var _pcTarget=null, _pcTotal=0;
+function _pcRowHtml(keg,nom){
+  return '<div class="row2 pc-row" style="margin-bottom:6px"><div class="field"><input type="text" class="pc-keg" placeholder="uraian/kegiatan" value="'+_attr(keg)+'"></div>'
+    +'<div class="field" style="display:flex;gap:6px"><input type="text" inputmode="numeric" class="pc-nom numfmt" value="'+_grp(+nom||0)+'" oninput="pcRecalc()" style="flex:1">'
+    +'<button type="button" class="btn ghost" style="margin:0;width:auto;padding:0 10px" onclick="pcRemoveRow(this)">&times;</button></div></div>';
+}
+function openModalPecah(no){
+  var t=_cariTransaksi(no); if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
+  if(suratMap[String(no)]){ toast('Transaksi Perjalanan Dinas tidak dapat dipecah di sini','info'); return; }
+  _pcTarget=no; _pcTotal=(+t.kredit||0);
+  document.getElementById('pcLabel').textContent='No '+no;
+  document.getElementById('pcInfo').textContent='Nilai transaksi: '+rupiah(_pcTotal)+' — '+esc(t.kegiatan||'');
+  document.getElementById('pcRows').innerHTML=_pcRowHtml(t.kegiatan||'', _pcTotal)+_pcRowHtml('',0);
+  pcRecalc(); openModal('modalPecah');
+}
+function pcAddRow(){ document.getElementById('pcRows').insertAdjacentHTML('beforeend',_pcRowHtml('',0)); pcRecalc(); }
+function pcRemoveRow(btn){ var rows=document.querySelectorAll('#pcRows .pc-row'); if(rows.length<=2){ toast('Minimal 2 bagian','info'); return;} btn.closest('.pc-row').remove(); pcRecalc(); }
+function pcRecalc(){
+  var rows=document.querySelectorAll('#pcRows .pc-row'), sum=0;
+  for(var i=0;i<rows.length;i++) sum+=unfmt(rows[i].querySelector('.pc-nom').value);
+  var sisa=_pcTotal-sum;
+  document.getElementById('pcSum').innerHTML='Jumlah bagian: '+rupiah(sum)+' / '+rupiah(_pcTotal)
+    +(sisa===0?' <span style="color:var(--c-ok)">&#10003; pas</span>':(' <span style="color:#991b1b">selisih '+rupiah(Math.abs(sisa))+(sisa>0?' (kurang)':' (lebih)')+'</span>'));
+}
+function submitPecah(){
+  var rows=document.querySelectorAll('#pcRows .pc-row'), parts=[], sum=0;
+  for(var i=0;i<rows.length;i++){
+    var nom=unfmt(rows[i].querySelector('.pc-nom').value);
+    if(nom<=0) continue;
+    parts.push({ kegiatan:(rows[i].querySelector('.pc-keg').value||'').trim(), keterangan:'', nominal:nom });
+    sum+=nom;
+  }
+  if(parts.length<2){ toast('Isi minimal 2 bagian dengan nominal > 0','error'); return; }
+  if(sum!==_pcTotal){ toast('Jumlah bagian harus sama dengan nilai transaksi','error'); return; }
+  showLoading(true,'Memecah transaksi...');
+  google.script.run
+    .withSuccessHandler(function(res){ showLoading(false); toast('Transaksi dipecah jadi '+parts.length+' (baru: '+(res.baru||[]).join(', ')+')','success');
+      closeModal('modalPecah'); loadAll(); })
+    .withFailureHandler(fail)
+    .serverPecahTransaksi(_pcTarget, parts);
+}
+/* ============== SPBY Gabungan ============== */
+function openModalSpbyGab(){
+  document.getElementById('sgNo').value='';
+  document.getElementById('sgTgl').value=todayISO();
+  var box=document.getElementById('sgList');
+  var list=allTransaksi.filter(function(t){return t.kredit>0;}).filter(_notTransfer)
+            .sort(function(a,b){return (+b.no||0)-(+a.no||0);});
+  var h='';
+  for(var i=0;i<list.length;i++){ var t=list[i];
+    h+='<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 2px;border-bottom:1px solid var(--c-line);font-size:13px">'
+      +'<input type="checkbox" class="sg-cb" value="'+t.no+'" data-nom="'+(+t.kredit||0)+'" onchange="_sgRecalc()">'
+      +'<span><b>#'+t.no+'</b> '+esc(t.kegiatan||'-')+' &middot; '+rupiah(t.kredit)
+      +(t.noSpby?(' <span class="chip ok">SPBY '+esc(t.noSpby)+'</span>'):'')+'<br><span class="tgl">'+esc(_tglID(t.tanggal))+' &middot; '+esc(t.penjab||'-')+'</span></span></label>';
+  }
+  document.getElementById('sgList').innerHTML=h||'<div class="empty">Tidak ada transaksi</div>';
+  _sgRecalc(); openModal('modalSpbyGab');
+}
+function _sgChecked(){ var cbs=document.querySelectorAll('#sgList .sg-cb'), out=[]; for(var i=0;i<cbs.length;i++) if(cbs[i].checked) out.push(cbs[i]); return out; }
+function _sgRecalc(){
+  var cbs=_sgChecked(), sum=0; for(var i=0;i<cbs.length;i++) sum+=(+cbs[i].getAttribute('data-nom')||0);
+  document.getElementById('sgSum').textContent=cbs.length+' transaksi terpilih · Total '+rupiah(sum);
+}
+function submitSpbyGab(){
+  var no=(document.getElementById('sgNo').value||'').trim();
+  var tgl=document.getElementById('sgTgl').value;
+  var cbs=_sgChecked(); if(!no){ toast('Nomor SPBY wajib diisi','error'); return; }
+  if(!cbs.length){ toast('Pilih minimal 1 transaksi','error'); return; }
+  var nos=[]; for(var i=0;i<cbs.length;i++) nos.push(+cbs[i].value);
+  showLoading(true,'Menyimpan SPBY gabungan...');
+  google.script.run
+    .withSuccessHandler(function(res){ showLoading(false); toast('SPBY diberikan ke '+res.jml+' transaksi','success'); closeModal('modalSpbyGab'); loadAll(); })
+    .withFailureHandler(fail)
+    .serverSpbyGabungan(no, tgl, nos);
+}
+function cetakSpbyGab(){
+  var no=(document.getElementById('sgNo').value||'').trim();
+  var tgl=document.getElementById('sgTgl').value;
+  var cbs=_sgChecked(); if(!cbs.length){ toast('Pilih transaksi dulu','error'); return; }
+  var list=[]; for(var i=0;i<cbs.length;i++){ var t=_cariTransaksi(+cbs[i].value); if(t) list.push(t); }
+  _bukaPopup(_renderSpbyGabunganHtml(no, tgl, list));
+}
+function _renderSpbyGabunganHtml(noSpby, tgl, list){
+  var total=0; for(var i=0;i<list.length;i++) total+=(+list[i].kredit||0);
+  var rows=''; for(var j=0;j<list.length;j++){ var t=list[j];
+    rows+='<tr><td class="ct">'+(j+1)+'</td><td>'+esc(t.kegiatan||'-')+'</td><td>'+esc(t.penjab||'-')+'</td>'
+      +'<td>'+esc(_tglPanjang(t.tanggal))+'</td><td class="rt">'+rupiah(t.kredit)+'</td></tr>';
+  }
+  var body=_docKop()
+    +'<h1>Surat Permintaan Pembayaran (SPBY)</h1>'
+    +'<div style="text-align:center;margin:0 0 12px">Nomor : '+esc(noSpby||'................')+' &middot; Tanggal '+(tgl?_tglPanjang(tgl):'................')+'</div>'
+    +'<table class="b"><tr><th class="no">No</th><th>Uraian Kegiatan</th><th>Penerima/PUM</th><th>Tanggal</th><th class="rt" style="width:20%">Jumlah</th></tr>'
+    +rows
+    +'<tr><td></td><td colspan="3" class="rt"><b>Jumlah</b></td><td class="rt"><b>'+rupiah(total)+'</b></td></tr></table>'
+    +'<div class="terb">Terbilang : <i>'+_terbilangTitle(total)+'</i></div>'
+    +'<table class="sign" style="margin-top:16px"><tr>'
+    +'<td style="width:50%">Mengetahui,<br>Pejabat Pembuat Komitmen,<div class="nmc">'+esc(INST.ppk)+'</div>NIP. '+esc(INST.nipPpk)+'</td>'
+    +'<td style="width:50%">'+esc(INST.kota)+', '+(tgl?_tglPanjang(tgl):'................')+'<br>Bendahara Pengeluaran,<div class="nmc">'+esc(INST.bendahara)+'</div>NIP. '+esc(INST.nipBendahara)+'</td>'
+    +'</tr></table>';
+  return _docWrap('SPBY '+(noSpby||''), '<div class="page">'+body+'</div>');
 }
 /* Buka tab Perjalanan Dinas dalam mode edit, terisi data SPD tersimpan */
 function editSpd(no){

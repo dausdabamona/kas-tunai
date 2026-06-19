@@ -334,6 +334,67 @@ var KasTunai = (function () {
     return simpanSpby(rowIndex, '', '', 0);
   }
 
+  /** Set SPBY berdasarkan NO transaksi (untuk SPBY gabungan/massal). */
+  function setSpbyByNo(no, noSpby, tglSpby, nilaiSpby) {
+    var ok = updateByTransactionId(no, Util.set(
+      C.NO_SPBY, noSpby || '',
+      C.TGL_SPBY, tglSpby ? new Date(tglSpby) : '',
+      C.NILAI_SPBY, Util.num(nilaiSpby)));
+    return { success: ok };
+  }
+
+  /** Beri 1 nomor SPBY ke beberapa transaksi sekaligus. nilai per baris = kreditnya. */
+  function spbyGabungan(noSpby, tglSpby, nos) {
+    if (!noSpby) throw new Error('Nomor SPBY wajib diisi');
+    nos = nos || [];
+    var n = 0;
+    for (var i = 0; i < nos.length; i++) {
+      var t = getRowByTransactionId(nos[i]);
+      if (!t) continue;
+      var nilai = Util.num(t.values[C.KREDIT]);
+      setSpbyByNo(nos[i], noSpby, tglSpby, nilai);
+      n++;
+    }
+    DeferredFlush.mark();
+    AuditLog.write('SPBY', CONFIG.SHEETS.KAS_TUNAI, noSpby, 'gabungan ' + n + ' transaksi');
+    return { success: true, jml: n };
+  }
+
+  /** Pecah 1 transaksi pengeluaran menjadi beberapa transaksi.
+   *  parts = [{kegiatan, keterangan, nominal}, ...] (>=2). Σnominal harus = kredit asli.
+   *  Baris asli menjadi bagian ke-1; sisanya transaksi baru (tanggal/penjab/sumber sama). */
+  function pecahTransaksi(no, parts) {
+    var t = getRowByTransactionId(no);
+    if (!t) throw new Error('Transaksi tidak ditemukan');
+    parts = parts || [];
+    if (parts.length < 2) throw new Error('Minimal 2 bagian');
+    var kredit = Util.num(t.values[C.KREDIT]);
+    if (kredit <= 0) throw new Error('Hanya transaksi pengeluaran yang bisa dipecah');
+    var sum = 0;
+    for (var i = 0; i < parts.length; i++) sum += Util.num(parts[i].nominal);
+    if (sum !== kredit) throw new Error('Total bagian (' + sum + ') harus sama dengan nilai transaksi (' + kredit + ')');
+
+    var tanggal = t.values[C.TANGGAL], penjab = t.values[C.PENJAB];
+    var sumber = String(t.values[C.SUMBER] || 'TUNAI');
+    // Bagian ke-1 → perbarui baris asli
+    updateByTransactionId(no, Util.set(
+      C.KREDIT, Util.num(parts[0].nominal),
+      C.KEGIATAN, parts[0].kegiatan || t.values[C.KEGIATAN],
+      C.KETERANGAN, parts[0].keterangan || ''));
+    // Bagian ke-2..n → transaksi baru
+    var baru = [];
+    for (var j = 1; j < parts.length; j++) {
+      var res = tambahTransaksi({
+        tanggal: tanggal, debet: 0, kredit: Util.num(parts[j].nominal), sumber: sumber,
+        penjab: penjab, kegiatan: parts[j].kegiatan || t.values[C.KEGIATAN],
+        keterangan: parts[j].keterangan || '' });
+      baru.push(res.no);
+    }
+    DeferredFlush.mark();
+    AuditLog.write('SPLIT', CONFIG.SHEETS.KAS_TUNAI, no, 'pecah jadi ' + parts.length + ' (baru: ' + baru.join(',') + ')');
+    return { success: true, no: no, baru: baru };
+  }
+
   /* -------------------------------------------------------- *
    * Kuitansi ber-TTD (scan/foto) - disimpan di kolom FILE_ID/NAMA_FILE/URL_FILE
    * -------------------------------------------------------- */
@@ -390,6 +451,8 @@ var KasTunai = (function () {
     restoreNota: restoreNota,
     tambahFotoBarang: tambahFotoBarang,
     simpanSpby: simpanSpby,
+    spbyGabungan: spbyGabungan,
+    pecahTransaksi: pecahTransaksi,
     hapusSpby: hapusSpby,
     uploadKuitansi: uploadKuitansi,
     hapusKuitansi: hapusKuitansi,

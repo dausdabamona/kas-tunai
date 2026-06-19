@@ -114,6 +114,14 @@ function perbaikiHeader() {
 function serverPindahDana(arah, nominal, tanggal, keterangan) {
   return _run(function () { return KasTunai.pindahDana(arah, nominal, tanggal, keterangan); });
 }
+/** SPBY gabungan: beri 1 nomor SPBY ke beberapa transaksi. */
+function serverSpbyGabungan(noSpby, tglSpby, nos) {
+  return _run(function () { return KasTunai.spbyGabungan(noSpby, tglSpby, nos); });
+}
+/** Pecah 1 transaksi pengeluaran menjadi beberapa transaksi. */
+function serverPecahTransaksi(no, parts) {
+  return _run(function () { return KasTunai.pecahTransaksi(no, parts); });
+}
 
 /* ============================================================
  * Perjalanan Dinas / Surat Tugas
