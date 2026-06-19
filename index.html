@@ -310,6 +310,14 @@
     </div>
     <div id="spdPegList"></div>
     <div class="field"><label>Total biaya (Rp)</label><input type="text" id="spdTotal" readonly></div>
+    <div class="row2">
+      <div class="field"><label>Pembayaran ke Pelaksana via</label>
+        <select id="spdSumberPelaksana"><option value="TUNAI">Tunai (Kas Tunai)</option><option value="BANK">Bank (Kas Bank)</option></select>
+      </div>
+      <div class="field lk-only"><label>Pembayaran Bendahara (tiket/hotel) via</label>
+        <select id="spdSumberBendahara"><option value="BANK">Bank (Kas Bank)</option><option value="TUNAI">Tunai (Kas Tunai)</option></select>
+      </div>
+    </div>
     <div class="row2 lk-only">
       <div class="field"><label>Uang Muka (Rp)</label><input type="text" class="numfmt" id="spdUangMuka" value="0" inputmode="numeric" oninput="hitungSemuaBiaya()"></div>
       <div class="field"><label>Sisa kurang/lebih</label><input type="text" id="spdSisaLk" readonly></div>
@@ -1358,7 +1366,8 @@ function resetSpdForm(){
     spdTglB:todayISO(),spdTglS:todayISO(),spdHarian:SPD_HARIAN_DEFAULT,spdUangMuka:0,spdAkun:'',
     spdPpk:INST.ppk,spdNipPpk:INST.nipPpk,spdKpaNama:'',spdKpaNip:'',spdKpaJab:'',
     spdTtdNama:INST.direktur,spdTtdNip:INST.nipDirektur,spdTtdJab:INST.jabatanDirektur,
-    spdLokNama:'',spdLokJab:'',spdKerjaNama:'',spdKerjaJab:''};
+    spdLokNama:'',spdLokJab:'',spdKerjaNama:'',spdKerjaJab:'',
+    spdSumberPelaksana:'TUNAI',spdSumberBendahara:'BANK'};
   for(var id in V) document.getElementById(id).value=V[id];
   _reformatNumInputs();
   document.getElementById('spdPegList').innerHTML='';
@@ -1386,6 +1395,7 @@ function _fillSpdForm(d){
   set('spdBerangkat',d.berangkat); set('spdTujuan',d.tujuan);
   set('spdTglB',d.tglMulai||todayISO()); set('spdTglS',d.tglSelesai||todayISO());
   set('spdUangMuka',(+d.uangMuka||0)); set('spdAkun',d.akun); set('spdPpk',d.ppk); set('spdNipPpk',d.nipPpk);
+  set('spdSumberPelaksana',d.sumberPelaksana||'TUNAI'); set('spdSumberBendahara',d.sumberBendahara||'BANK');
   set('spdLokNama',d.lokNama); set('spdLokJab',d.lokJab);
   set('spdKerjaNama',d.kerjaNama); set('spdKerjaJab',d.kerjaJab);
   var list=(d.pegawaiList&&d.pegawaiList.length)?d.pegawaiList:[{nama:d.pegawai,nip:d.nip,pangkat:d.pangkat,jabatan:d.jabatan,biaya:d.biaya}];
@@ -1447,6 +1457,7 @@ function _gatherSpd(){
   var p0=list[0]||{};
   return { jenis:spdJenis, nomor:g('spdNomor'), dasarSurat:g('spdDasar'), tglSurat:g('spdTglSurat'),
     uangMuka:unfmt(g('spdUangMuka')), pegawaiList:list,
+    sumberPelaksana:g('spdSumberPelaksana')||'TUNAI', sumberBendahara:g('spdSumberBendahara')||'BANK',
     pegawai:p0.nama||'', nip:p0.nip||'', pangkat:p0.pangkat||'', jabatan:p0.jabatan||'',
     maksud:g('spdMaksud'), angkutan:g('spdAngkutan'),
     berangkat:g('spdBerangkat'), tujuan:g('spdTujuan'), tglMulai:b, tglSelesai:s, jumlahHari:n,
@@ -1746,6 +1757,8 @@ function _rincianPage(data, peg){
   if(dibayarBank>total) dibayarBank=total;
   var um=(+data.uangMuka||0), sisa=total-um;
   var lblSisa = sisa>=0 ? 'Sisa KURANG dibayar' : 'Sisa LEBIH (dikembalikan)';
+  var srcPel=(data.sumberPelaksana==='BANK')?'Kas Bank':'Kas Tunai';
+  var srcBdh=(data.sumberBendahara==='BANK')?'Kas Bank':'Kas Tunai';
   return ''
   +_docKop()
   +'<h1>Rincian Biaya Perjalanan Dinas</h1>'
@@ -1756,8 +1769,8 @@ function _rincianPage(data, peg){
   +'<tr><td></td><td class="rt"><b>Jumlah</b></td><td class="rt"><b>'+rupiah(total)+'</b></td><td></td></tr>'
   +'</table>'
   +'<div class="terb">Terbilang : <i>'+_terbilangTitle(total)+'</i></div>'
-  +(dibayarBank>0 ? ('<table class="b" style="margin-top:10px"><tr><td>Dibayar langsung oleh Bendahara (tiket/hotel)</td><td class="rt" style="width:28%">'+rupiah(dibayarBank)+'</td></tr>'
-    +'<tr><td>Dibayarkan tunai kepada Pelaksana</td><td class="rt" style="width:28%">'+rupiah(total-dibayarBank)+'</td></tr></table>') : '')
+  +(dibayarBank>0 ? ('<table class="b" style="margin-top:10px"><tr><td>Dibayar langsung oleh Bendahara (tiket/hotel) — '+srcBdh+'</td><td class="rt" style="width:28%">'+rupiah(dibayarBank)+'</td></tr>'
+    +'<tr><td>Dibayarkan kepada Pelaksana — '+srcPel+'</td><td class="rt" style="width:28%">'+rupiah(total-dibayarBank)+'</td></tr></table>') : '')
   +'<table class="b" style="margin-top:10px"><tr><td>Telah dibayar sejumlah</td><td class="rt" style="width:28%">'+rupiah(um)+'</td></tr>'
   +'<tr><td>'+lblSisa+'</td><td class="rt" style="width:28%">'+rupiah(Math.abs(sisa))+'</td></tr></table>'
   +'<table class="sign"><tr>'

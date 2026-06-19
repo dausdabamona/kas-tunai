@@ -42,7 +42,8 @@ var SuratTugas = (function () {
       createdAt, createdBy, JSON.stringify(n.list),
       d.jenis || 'DALAM_KOTA', d.dasarSurat || '', Util.num(d.uangMuka),
       d.tglSurat ? new Date(d.tglSurat) : '',
-      d.menimbang || '', d.ttdNama || '', d.ttdJab || '', d.ttdNip || ''
+      d.menimbang || '', d.ttdNama || '', d.ttdJab || '', d.ttdNip || '',
+      d.sumberPelaksana || 'TUNAI', d.sumberBendahara || 'BANK'
     ];
   }
 
@@ -95,6 +96,8 @@ var SuratTugas = (function () {
       uangMuka: Util.num(r[c.UANG_MUKA]), tglSurat: Util.fmtDate(r[c.TGL_SURAT]),
       menimbang: r[c.MENIMBANG] || '', ttdNama: r[c.TTD_NAMA] || '',
       ttdJab: r[c.TTD_JAB] || '', ttdNip: r[c.TTD_NIP] || '',
+      sumberPelaksana: r[c.SUMBER_PELAKSANA] || 'TUNAI',
+      sumberBendahara: r[c.SUMBER_BENDAHARA] || 'BANK',
       pegawaiList: list
     };
   }
