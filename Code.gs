@@ -10,12 +10,13 @@
  * ============================================================ */
 function doGet() {
   var tpl = HtmlService.createTemplateFromFile('index');
-  var full = _isFullAccess();
+  var role = _currentRole();
+  var full = (role === 'admin' || role === 'full');
   tpl.appData = {
     user:      _safeEmail(),
     namaUser:  '',
-    roleUser:  full ? 'full' : 'viewer',
-    isAdmin:   full,
+    roleUser:  role,
+    isAdmin:   (role === 'admin'),
     saldoAwal: full ? CONFIG.SALDO_AWAL : 0
   };
   return tpl.evaluate()
@@ -33,17 +34,12 @@ function _safeEmail() {
   try { return Session.getActiveUser().getEmail() || ''; } catch (e) { return ''; }
 }
 
-/** true bila pengguna saat ini boleh melihat saldo (ada di FULL_ACCESS_EMAILS).
- *  Bila daftar kosong → semua pengguna full (mode lama). */
-function _isFullAccess() {
-  var full = CONFIG.FULL_ACCESS_EMAILS || [];
-  if (!full.length) return true;
-  var e = (_safeEmail() || '').toLowerCase();
-  for (var i = 0; i < full.length; i++) {
-    if (String(full[i] || '').toLowerCase() === e) return true;
-  }
-  return false;
-}
+/** Role pengguna saat ini: 'admin' | 'full' | 'viewer'. */
+function _currentRole() { return Users.getRole(_safeEmail()); }
+/** true bila boleh melihat saldo (admin atau full). */
+function _isFullAccess() { var r = _currentRole(); return r === 'admin' || r === 'full'; }
+function _isAdmin() { return _currentRole() === 'admin'; }
+function _requireAdmin() { if (!_isAdmin()) throw new Error('Akses ditolak: khusus admin'); }
 
 /** Bungkus pemanggilan modul + flush sekali di akhir. */
 function _run(fn) {
@@ -73,7 +69,8 @@ function serverGetDashboard() {
       try { SheetRepo.ensureHeaders(); } catch (e) { Logger.log('[ensureHeaders] ' + e.message); }
       AppCache.put('hdr_fixed_v2', 1);
     }
-    var full = _isFullAccess();
+    var role = _currentRole();
+    var full = (role === 'admin' || role === 'full');
     var tx = KasTunai.getTransaksi();
     if (!full) { for (var i = 0; i < tx.length; i++) { delete tx[i].saldo; } } // sembunyikan saldo berjalan
     return {
@@ -81,9 +78,26 @@ function serverGetDashboard() {
       fotoMap: FotoNota.getJmlFotoPerTransaksi(),
       suratMap: SuratTugas.getMap(),
       saldo: full ? KasTunai.ringkasanSaldo() : null,
-      role: full ? 'full' : 'viewer'
+      role: role,
+      isAdmin: (role === 'admin')
     };
   });
+}
+
+/* ============================================================
+ * Manajemen User (khusus admin)
+ * ============================================================ */
+function serverListUsers() {
+  return _run(function () { _requireAdmin(); return Users.list(); });
+}
+function serverAddUser(email, nama, role) {
+  return _run(function () { _requireAdmin(); return Users.add(email, nama, role); });
+}
+function serverUpdateUser(email, nama, role) {
+  return _run(function () { _requireAdmin(); return Users.update(email, nama, role); });
+}
+function serverDeleteUser(email) {
+  return _run(function () { _requireAdmin(); return Users.remove(email); });
 }
 
 /** Perbaiki header kolom kosong secara manual (dari frontend bila perlu). */

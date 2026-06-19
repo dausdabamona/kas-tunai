@@ -21,6 +21,10 @@ var CONFIG = {
   // ([]) bila ingin SEMUA pengguna melihat saldo (mode lama). Huruf besar/kecil bebas.
   FULL_ACCESS_EMAILS: ['dausdaba@polikpsorong.ac.id'],
 
+  // Super Admin tetap (selalu role 'admin', tak bisa dihapus/diubah dari menu user).
+  SUPER_ADMIN: 'dausdaba@polikpsorong.ac.id',
+
+
   // Folder Drive root untuk upload (kosong = root My Drive)
   DRIVE_FOLDER_ID: '',
 
@@ -34,7 +38,8 @@ var CONFIG = {
     MASTER_PENYEDIA:'Master Penyedia',
     SURAT_TUGAS:    'Surat Tugas',
     BUKTI_PD:       'Bukti Perjalanan',
-    AUDIT_LOG:      'Audit Log'
+    AUDIT_LOG:      'Audit Log',
+    USERS:          'Users'
   },
 
   // Index kolom sheet Kas Tunai (0-based, A-X = 24 kolom inti + kolom kuitansi TTD)
@@ -98,6 +103,9 @@ var CONFIG = {
     ],
     AUDIT_LOG: [
       'TIMESTAMP', 'ACTION', 'SHEET', 'ROW_REF', 'DETAIL', 'OPERATOR'
+    ],
+    USERS: [
+      'EMAIL', 'NAMA', 'ROLE', 'CREATED_AT', 'CREATED_BY'
     ]
   },
 

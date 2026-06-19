@@ -197,6 +197,7 @@
   <button id="tabTransaksi" class="active" onclick="switchTab('transaksi')">&#128221; Transaksi</button>
   <button id="tabSpd" onclick="switchTab('spd')">&#9992; Perjalanan Dinas</button>
   <button id="tabLaporan" onclick="switchTab('laporan')">&#128202; Laporan</button>
+  <button id="btnUsers" class="hidden" onclick="openModalUsers()">&#128101; Kelola User</button>
 </div>
 
 <!-- ================= TAB TRANSAKSI ================= -->
@@ -564,6 +565,30 @@
   </div>
 </div>
 
+<!-- ================= MODAL KELOLA USER (admin) ================= -->
+<div class="modal" id="modalUsers">
+  <div class="sheet">
+    <h2>&#128101; Kelola User</h2>
+    <div id="usersList"><div class="empty">Memuat...</div></div>
+    <hr>
+    <h2 style="font-size:14px" id="usrFormTitle">Tambah User</h2>
+    <div class="field"><label>Email Google</label><input type="email" id="usrEmail" placeholder="nama@polikpsorong.ac.id" autocomplete="off"></div>
+    <div class="row2">
+      <div class="field"><label>Nama</label><input type="text" id="usrNama"></div>
+      <div class="field"><label>Peran (role)</label>
+        <select id="usrRole">
+          <option value="viewer">Peninjau (tanpa saldo)</option>
+          <option value="full">Penuh (lihat saldo)</option>
+          <option value="admin">Admin (kelola user + saldo)</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn" id="usrSubmitBtn" onclick="submitUser()">Tambah User</button>
+    <button class="btn ghost" id="usrCancelBtn" onclick="_cancelEditUser()" style="display:none">Batal Edit</button>
+    <button class="btn ghost" onclick="closeModal('modalUsers')">Tutup</button>
+  </div>
+</div>
+
 <!-- ================= MODAL KUITANSI (cetak + upload TTD) ================= -->
 <div class="modal" id="modalKuitansi">
   <div class="sheet">
@@ -827,6 +852,7 @@ function loadAll(){
       suratMap=(d&&d.suratMap)||{};
       saldoInfo=(d&&d.saldo)||null;
       if(d&&d.role) isViewer=(d.role==='viewer');
+      if(d&&typeof d.isAdmin!=='undefined') IS_ADMIN=!!d.isAdmin;
       _applyRoleUI();
       showLoading(false);
       renderList();
@@ -864,10 +890,81 @@ function passFilter(t){
   }
 }
 
-/* Sembunyikan elemen saldo untuk peninjau (viewer) */
+/* Sembunyikan elemen saldo untuk peninjau (viewer); tampilkan menu user utk admin */
 function _applyRoleUI(){
   var ss=document.querySelector('.saldo-sum'); if(ss) ss.style.display=isViewer?'none':'';
   var sp=document.querySelector('.topbar .saldo-pill'); if(sp) sp.style.display=isViewer?'none':'';
+  var bu=document.getElementById('btnUsers'); if(bu) bu.classList.toggle('hidden', !IS_ADMIN);
+}
+/* ============== Kelola User (admin) ============== */
+var _usrEditEmail=null; // null = mode tambah
+function openModalUsers(){
+  if(!IS_ADMIN){ toast('Khusus admin','error'); return; }
+  _cancelEditUser();
+  document.getElementById('usersList').innerHTML='<div class="empty">Memuat...</div>';
+  openModal('modalUsers');
+  google.script.run.withSuccessHandler(renderUsersList).withFailureHandler(fail).serverListUsers();
+}
+function _roleLabel(r){ return r==='admin'?'Admin':(r==='full'?'Penuh':'Peninjau'); }
+function renderUsersList(list){
+  _usersCache=list||[];
+  var box=document.getElementById('usersList');
+  if(!list||!list.length){ box.innerHTML='<div class="empty">Belum ada user.</div>'; return; }
+  var h='';
+  for(var i=0;i<list.length;i++){
+    var u=list[i];
+    h+='<div class="card" style="margin-bottom:8px"><div class="row1">'
+      +'<div class="keg" style="font-size:14px">'+esc(u.nama||'-')+' <span class="chip '+(u.role==='viewer'?'':'ok')+'">'+_roleLabel(u.role)+'</span></div></div>'
+      +'<div class="tgl">'+esc(u.email)+'</div>'
+      +'<div class="acts">'
+      +(u.locked?'<span class="tgl">Super Admin (tetap)</span>'
+        :('<button class="b-edit" onclick="editUser(\''+esc(u.email)+'\')">&#9998; Edit</button>'
+         +'<button onclick="deleteUser(\''+esc(u.email)+'\')">Hapus</button>'))
+      +'</div></div>';
+  }
+  box.innerHTML=h;
+}
+var _usersCache=[];
+function editUser(email){
+  var u=null; for(var i=0;i<_usersCache.length;i++) if(_usersCache[i].email===email){u=_usersCache[i];break;}
+  if(!u){ toast('User tidak ditemukan','error'); return; }
+  _usrEditEmail=email;
+  document.getElementById('usrEmail').value=u.email; document.getElementById('usrEmail').readOnly=true;
+  document.getElementById('usrNama').value=u.nama||'';
+  document.getElementById('usrRole').value=u.role||'viewer';
+  document.getElementById('usrFormTitle').textContent='Edit User';
+  document.getElementById('usrSubmitBtn').textContent='Perbarui User';
+  document.getElementById('usrCancelBtn').style.display='block';
+}
+function _cancelEditUser(){
+  _usrEditEmail=null;
+  var el=document.getElementById('usrEmail'); if(el){ el.value=''; el.readOnly=false; }
+  if(document.getElementById('usrNama')) document.getElementById('usrNama').value='';
+  if(document.getElementById('usrRole')) document.getElementById('usrRole').value='viewer';
+  if(document.getElementById('usrFormTitle')) document.getElementById('usrFormTitle').textContent='Tambah User';
+  if(document.getElementById('usrSubmitBtn')) document.getElementById('usrSubmitBtn').textContent='Tambah User';
+  if(document.getElementById('usrCancelBtn')) document.getElementById('usrCancelBtn').style.display='none';
+}
+function submitUser(){
+  var email=(document.getElementById('usrEmail').value||'').trim();
+  var nama=(document.getElementById('usrNama').value||'').trim();
+  var role=document.getElementById('usrRole').value;
+  if(!email){ toast('Email wajib diisi','error'); return; }
+  showLoading(true,'Menyimpan user...');
+  var ok=function(){ showLoading(false); toast('User tersimpan','success'); _cancelEditUser();
+    google.script.run.withSuccessHandler(renderUsersList).withFailureHandler(fail).serverListUsers(); };
+  if(_usrEditEmail){
+    google.script.run.withSuccessHandler(ok).withFailureHandler(fail).serverUpdateUser(email,nama,role);
+  }else{
+    google.script.run.withSuccessHandler(ok).withFailureHandler(fail).serverAddUser(email,nama,role);
+  }
+}
+function deleteUser(email){
+  if(!confirm('Hapus akses user '+email+'?')) return;
+  showLoading(true,'Menghapus user...');
+  google.script.run.withSuccessHandler(function(){ showLoading(false); toast('User dihapus','success');
+    google.script.run.withSuccessHandler(renderUsersList).withFailureHandler(fail).serverListUsers(); })
+    .withFailureHandler(fail).serverDeleteUser(email);
 }
 function updateSaldoBar(){
   if(isViewer){ _applyRoleUI(); return; } // peninjau tidak melihat saldo
