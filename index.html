@@ -1152,7 +1152,8 @@ function _cardHtml(t, mode){
       +(t.sumber==='BANK'?('<button class="b-spby" onclick="cetakBuktiTransferPd('+t.no+')">&#128179; Bukti Transfer</button>'):'')
       +'<button class="b-edit" onclick="editSpd('+t.no+')">Edit SPD</button>'
       +'<button class="b-gray" onclick="openModalBukti('+t.no+')">&#128206; Bukti</button>'
-      +'<button class="b-dark" onclick="cetakSpjPd('+t.no+')">&#129534; Cetak SPJ</button>';
+      +'<button class="b-dark" onclick="cetakSpjPd('+t.no+')">&#129534; Cetak SPJ</button>'
+      +'<button onclick="batalkanPd('+t.no+')" title="Kembalikan ke transaksi biasa">&#8630; Batalkan PD</button>';
   } else {
     h+='<button class="b-edit" onclick="editTransaksi('+t.no+')">&#9998; Edit</button>'
       +'<button class="b-orange" onclick="openModalNota('+t.no+')">Kelola Nota</button>'
@@ -1632,6 +1633,15 @@ function konversiKePd(no){
   if(note){ note.style.display='block';
     note.textContent='Mode konversi: transaksi No '+no+' → Perjalanan Dinas. Lengkapi data lalu Simpan. (Total awal = '+rupiah(t.kredit)+'; sesuaikan uang harian & jumlah hari bila perlu.)'; }
   window.scrollTo(0,0);
+}
+/* Batalkan status PD → kembali jadi transaksi biasa (record Surat Tugas dihapus) */
+function batalkanPd(no){
+  if(!confirm('Batalkan status Perjalanan Dinas transaksi No '+no+'?\nTransaksi tetap ada sebagai pengeluaran biasa; data SPD dihapus.')) return;
+  showLoading(true,'Membatalkan PD...');
+  google.script.run
+    .withSuccessHandler(function(){ showLoading(false); toast('Status PD dibatalkan','success'); loadAll(); })
+    .withFailureHandler(fail)
+    .serverBatalkanPd(no);
 }
 /* Buka tab Perjalanan Dinas dalam mode edit, terisi data SPD tersimpan */
 function editSpd(no){

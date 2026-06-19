@@ -112,6 +112,18 @@ var SuratTugas = (function () {
     return null;
   }
 
+  /** Hapus semua record surat tugas untuk satu transaksi (batalkan status PD). */
+  function remove(noTransaksi) {
+    var c = SC();
+    var data = SheetRepo.getData(CONFIG.SHEETS.SURAT_TUGAS);
+    var sh = SheetRepo.sheet(CONFIG.SHEETS.SURAT_TUGAS), n = 0;
+    for (var i = data.length - 1; i >= 0; i--) {
+      if (String(data[i][c.NO_TRANSAKSI]) === String(noTransaksi)) { sh.deleteRow(i + 2); n++; }
+    }
+    if (n) DeferredFlush.mark();
+    return { success: true, removed: n };
+  }
+
   /** Peta {noTransaksi: nomorSurat} — penanda kartu perjalanan dinas. */
   function getMap() {
     var c = SC();
@@ -124,5 +136,5 @@ var SuratTugas = (function () {
     return map;
   }
 
-  return { simpan: simpan, update: update, get: get, getMap: getMap };
+  return { simpan: simpan, update: update, remove: remove, get: get, getMap: getMap };
 })();

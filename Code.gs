@@ -190,6 +190,11 @@ function serverUpdatePerjalananDinas(no, data) {
 function serverGetSuratTugas(noTransaksi) {
   return _run(function () { return SuratTugas.get(noTransaksi); });
 }
+/** Batalkan status Perjalanan Dinas: hapus record Surat Tugas (transaksi kas tetap
+ *  ada sebagai pengeluaran biasa). Baris porsi bendahara (bila ada) dibiarkan. */
+function serverBatalkanPd(noTransaksi) {
+  return _run(function () { return SuratTugas.remove(noTransaksi); });
+}
 function serverTambahTransaksi(data) {
   return _run(function () { return KasTunai.tambahTransaksi(data); });
 }
