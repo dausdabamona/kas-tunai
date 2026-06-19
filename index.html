@@ -464,6 +464,7 @@
       <div class="field"><label>Alamat Penyedia</label><input type="text" id="ntAlamat"></div>
     </div>
     <div class="field"><label>Foto nota (opsional) &mdash; atau tekan <b>Ctrl+V</b> untuk tempel screenshot</label><input type="file" id="ntFile" accept="image/*" capture="environment" onchange="_showPastePreview(this)"></div>
+    <button class="btn ghost scan-imp" style="display:none;margin-bottom:6px" onclick="importScanNota()">&#128247; Impor dari Folder Scan</button>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:4px">
       <input type="checkbox" id="ntAsFotoBarang" checked> Sekaligus simpan foto sebagai <b>Foto Barang</b> (dengan lokasi GPS)
     </label>
@@ -540,6 +541,7 @@
     </div>
     <div class="field"><label>File (foto JPG/PNG atau PDF — boleh beberapa) — atau <b>Ctrl+V</b> tempel screenshot</label>
       <input type="file" id="bkFile" accept="image/*,application/pdf" multiple onchange="_showPastePreview(this)"></div>
+    <button class="btn ghost scan-imp" style="display:none" onclick="importScanBukti()">&#128247; Impor dari Folder Scan</button>
     <button class="btn" onclick="submitBukti()">Unggah Bukti</button>
     <button class="btn ghost" onclick="unduhZipBukti(_bkTarget)">&#128476; Unduh ZIP Semua Bukti</button>
     <button class="btn ghost" onclick="closeModal('modalBukti')">Tutup</button>
@@ -620,6 +622,18 @@
   </div>
 </div>
 
+<!-- ================= MODAL IMPOR SCAN (folder Drive) ================= -->
+<div class="modal" id="modalScan">
+  <div class="sheet">
+    <h2>&#128247; Impor dari Folder Scan</h2>
+    <label style="font-size:13px;display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <input type="checkbox" id="scArchive" checked> Pindahkan file ke arsip (_Terpakai) setelah dipakai
+    </label>
+    <div id="scList" style="max-height:60vh;overflow:auto"></div>
+    <button class="btn ghost" onclick="closeModal('modalScan')">Tutup</button>
+  </div>
+</div>
+
 <!-- ================= MODAL KUITANSI (cetak + upload TTD) ================= -->
 <div class="modal" id="modalKuitansi">
   <div class="sheet">
@@ -642,6 +656,7 @@
     <div class="field"><label>Upload kuitansi ber-TTD (mis. cetakan SAKTI, dilampiri SPBY) — atau <b>Ctrl+V</b> tempel screenshot</label>
       <input type="file" id="kwFile" accept="image/*" capture="environment" onchange="_showPastePreview(this)"></div>
     <button class="btn" style="background:var(--c-ok)" onclick="submitUploadKuitansi()">Upload Kuitansi TTD</button>
+    <button class="btn ghost scan-imp" style="display:none" onclick="importScanKuitansi()">&#128247; Impor dari Folder Scan</button>
     <button class="btn ghost" onclick="closeModal('modalKuitansi')">Tutup</button>
   </div>
 </div>
@@ -1785,6 +1800,71 @@ function _renderSpbyGabunganHtml(noSpby, tgl, list){
     +'</tr></table>';
   return _docWrap('SPBY '+(noSpby||''), '<div class="page">'+body+'</div>');
 }
+/* ============== Impor lampiran dari folder scan (Drive) ============== */
+var _scanCb=null, _scanFiles=[], _ntScanFile=null;
+function openScanPicker(cb){
+  _scanCb=cb;
+  document.getElementById('scList').innerHTML='<div class="empty">Memuat...</div>';
+  openModal('modalScan');
+  google.script.run
+    .withSuccessHandler(_renderScanList)
+    .withFailureHandler(function(e){ document.getElementById('scList').innerHTML='<div class="empty">'+esc((e&&e.message)||'Folder scan belum diatur')+'</div>'; })
+    .serverListScan();
+}
+function _renderScanList(list){
+  _scanFiles=list||[];
+  var box=document.getElementById('scList');
+  if(!_scanFiles.length){ box.innerHTML='<div class="empty">Tidak ada file di folder scan.</div>'; return; }
+  var h='';
+  for(var i=0;i<_scanFiles.length;i++){ var f=_scanFiles[i];
+    h+='<div class="card" style="margin-bottom:6px;display:flex;gap:8px;align-items:center">'
+      +(f.thumb?('<img src="'+esc(f.thumb)+'" style="width:46px;height:46px;object-fit:cover;border-radius:6px">'):'<span style="font-size:26px">&#128196;</span>')
+      +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;word-break:break-all">'+esc(f.nama)+'</div>'
+      +'<div class="tgl">'+esc(f.waktu||'')+' &middot; '+f.sizeKB+' KB</div></div>'
+      +'<button class="btn" style="width:auto;padding:6px 12px;margin:0" onclick="_pickScan('+i+')">Pilih</button></div>';
+  }
+  box.innerHTML=h;
+}
+function _pickScan(idx){
+  var f=_scanFiles[idx]; if(!f) return;
+  showLoading(true,'Mengambil file scan...');
+  google.script.run
+    .withSuccessHandler(function(file){ showLoading(false);
+      file.fileId=f.fileId;
+      closeModal('modalScan');
+      if(document.getElementById('scArchive').checked){ google.script.run.serverArchiveScan(f.fileId); }
+      if(_scanCb) _scanCb(file);
+    })
+    .withFailureHandler(fail)
+    .serverGetScanFile(f.fileId);
+}
+function importScanNota(){
+  openScanPicker(function(file){
+    _ntScanFile=file;
+    var box=document.getElementById('ntFile_pp');
+    if(!box){ box=document.createElement('div'); box.id='ntFile_pp'; box.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-top:6px'; document.getElementById('ntFile').parentNode.appendChild(box); }
+    box.innerHTML='';
+    if(/^image\//.test(file.mimeType)){ var img=document.createElement('img'); img.src='data:'+file.mimeType+';base64,'+file.base64; img.style.cssText='width:56px;height:56px;object-fit:cover;border:1px solid #ccc;border-radius:6px'; box.appendChild(img); }
+    else { var s=document.createElement('span'); s.textContent='📄 '+file.namaFile; s.style.cssText='font-size:11px;color:#555'; box.appendChild(s); }
+    toast('Scan dipilih. Lengkapi data nota lalu Tambah Nota','success');
+  });
+}
+function importScanKuitansi(){
+  openScanPicker(function(file){
+    showLoading(true,'Mengunggah lampiran...');
+    google.script.run.withSuccessHandler(function(){ showLoading(false); toast('Lampiran dari scan diunggah','success'); bukaModalKuitansi(_kwTarget); loadAll(); })
+      .withFailureHandler(fail).serverUploadKuitansi(_kwTarget, file);
+  });
+}
+function importScanBukti(){
+  openScanPicker(function(file){
+    file.jenisDok=(document.getElementById('bkJenis')||{}).value||'';
+    file.keterangan=(document.getElementById('bkKet')||{}).value||'';
+    showLoading(true,'Mengunggah bukti...');
+    google.script.run.withSuccessHandler(function(){ showLoading(false); toast('Bukti dari scan ditambahkan','success'); _muatBuktiList(); })
+      .withFailureHandler(fail).serverUploadBuktiPD(_bkTarget,[file]);
+  });
+}
 /* Buka tab Perjalanan Dinas dalam mode edit, terisi data SPD tersimpan */
 function editSpd(no){
   showLoading(true,'Memuat surat tugas...');
@@ -2584,7 +2664,7 @@ function editNota(urutan){
   document.getElementById('ntPenyedia').scrollIntoView({behavior:'smooth',block:'center'});
 }
 function _cancelEditNota(){
-  _notaEditUrutan=null;
+  _notaEditUrutan=null; _ntScanFile=null;
   document.getElementById('ntPenyedia').value='';
   document.getElementById('ntNpwp').value='';
   document.getElementById('ntAlamat').value='';
@@ -2618,6 +2698,8 @@ function submitNota(){
   var fileEl=document.getElementById('ntFile');
   if(fileEl.files&&fileEl.files[0]){
     compressImage(fileEl.files[0],function(f){notaData.file=f;sendNota(notaData);});
+  }else if(_ntScanFile){
+    notaData.file=_ntScanFile; sendNota(notaData);
   }else{
     sendNota(notaData);
   }
@@ -3430,6 +3512,9 @@ function _bukaPopup(html){
   }
   document.addEventListener('paste', _onPasteUpload);
   _applyRoleUI();
+  google.script.run.withSuccessHandler(function(aktif){
+    if(aktif){ var b=document.querySelectorAll('.scan-imp'); for(var i=0;i<b.length;i++) b[i].style.display=''; }
+  }).serverScanAktif();
   loadAll();
 })();
 </script>

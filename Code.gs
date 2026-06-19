@@ -124,6 +124,22 @@ function serverPecahTransaksi(no, parts) {
 }
 
 /* ============================================================
+ * Impor lampiran dari folder scan (EPSON Scan-to-Drive)
+ * ============================================================ */
+function serverScanAktif() {
+  return _run(function () { return !!CONFIG.SCAN_FOLDER_ID; });
+}
+function serverListScan() {
+  return _run(function () { return ScanInbox.list(60); });
+}
+function serverGetScanFile(fileId) {
+  return _run(function () { return ScanInbox.getFile(fileId); });
+}
+function serverArchiveScan(fileId) {
+  return _run(function () { return ScanInbox.archive(fileId); });
+}
+
+/* ============================================================
  * Perjalanan Dinas / Surat Tugas
  * ============================================================ */
 /** Ringkas data SPD → field transaksi kas (total, penjab, kegiatan, keterangan, porsiBank).

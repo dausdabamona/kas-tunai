@@ -28,6 +28,10 @@ var CONFIG = {
   // Folder Drive root untuk upload (kosong = root My Drive)
   DRIVE_FOLDER_ID: '',
 
+  // Folder Drive "kotak masuk hasil scan" (mis. tujuan Scan-to-Cloud EPSON DS-570W II).
+  // Isi dengan ID folder Drive; kosong = fitur Impor Scan nonaktif.
+  SCAN_FOLDER_ID: '',
+
   // Nama-nama sheet
   SHEETS: {
     KAS_TUNAI:      'Kas Tunai',

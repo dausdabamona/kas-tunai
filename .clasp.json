@@ -15,6 +15,7 @@
     "SuratTugas.gs",
     "BuktiPD.gs",
     "Users.gs",
+    "ScanInbox.gs",
     "Code.gs"
   ]
 }
