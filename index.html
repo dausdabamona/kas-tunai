@@ -261,6 +261,7 @@
 <style>
   #viewSpd:not(.jenis-lk) .lk-only{display:none}
   #viewSpd.jenis-lk .dk-only{display:none}
+  #viewSpd:not(.pel-bank) .pelbank-only{display:none}
   .jenis-seg{display:flex;gap:8px;margin:10px 0 0}
   .jenis-seg label{flex:1;text-align:center;border:1px solid var(--c-line);border-radius:8px;padding:9px;font-weight:600;cursor:pointer}
   .jenis-seg input{margin-right:5px}
@@ -312,7 +313,7 @@
     <div class="field"><label>Total biaya (Rp)</label><input type="text" id="spdTotal" readonly></div>
     <div class="row2">
       <div class="field"><label>Pembayaran ke Pelaksana via</label>
-        <select id="spdSumberPelaksana"><option value="TUNAI">Tunai (Kas Tunai)</option><option value="BANK">Bank (Kas Bank)</option></select>
+        <select id="spdSumberPelaksana" onchange="onSumberPelaksana()"><option value="TUNAI">Tunai (Kas Tunai)</option><option value="BANK">Bank (Kas Bank)</option></select>
       </div>
       <div class="field lk-only"><label>Pembayaran Bendahara (tiket/hotel) via</label>
         <select id="spdSumberBendahara"><option value="BANK">Bank (Kas Bank)</option><option value="TUNAI">Tunai (Kas Tunai)</option></select>
@@ -1251,6 +1252,11 @@ var SPD_HARIAN_DEFAULT=150000;
 var _spdEditNo=null;   // null = mode buat baru; berisi NO transaksi saat mengedit SPD tersimpan
 var spdJenis='DALAM_KOTA';
 function _attr(v){ return (v==null?'':String(v)).replace(/"/g,'&quot;'); }
+/* Tampilkan field No. Rekening & Nama Bank pegawai bila pembayaran ke Pelaksana via Bank */
+function onSumberPelaksana(){
+  var bank=(document.getElementById('spdSumberPelaksana').value==='BANK');
+  document.getElementById('viewSpd').classList.toggle('pel-bank', bank);
+}
 /* Toggle Dalam Kota / Luar Kota */
 function setSpdJenis(j){
   spdJenis=(j==='LUAR_KOTA')?'LUAR_KOTA':'DALAM_KOTA';
@@ -1285,6 +1291,8 @@ function _pegRowHtml(p){
    +'<div class="field"><label>NIP</label><input type="text" class="pg-nip" value="'+_attr(p.nip)+'"></div></div>'
    +'<div class="row2"><div class="field"><label>Pangkat / Golongan</label><input type="text" class="pg-pangkat" value="'+_attr(p.pangkat)+'"></div>'
    +'<div class="field"><label>Jabatan / Instansi</label><input type="text" class="pg-jabatan" value="'+_attr(p.jabatan)+'"></div></div>'
+   +'<div class="row2 pelbank-only"><div class="field"><label>No. Rekening Pelaksana</label><input type="text" class="pg-norek" value="'+_attr(p.norek)+'" placeholder="nomor rekening tujuan transfer"></div>'
+   +'<div class="field"><label>Nama Bank</label><input type="text" class="pg-bank" value="'+_attr(p.bank)+'" placeholder="mis. BRI / Mandiri"></div></div>'
    +'<div class="field lk-only"><label>Tingkat Biaya Perjalanan Dinas (A/B/C/D)</label><input type="text" class="pg-tingkat" value="'+_attr(p.tingkatBiaya)+'"></div>'
    // ---- Komponen Luar Kota ----
    +'<div class="peg-sub lk-only"><h5>Uang harian (lumpsum)</h5>'
@@ -1373,6 +1381,7 @@ function resetSpdForm(){
   document.getElementById('spdPegList').innerHTML='';
   tambahPegawaiRow();
   setSpdJenis('DALAM_KOTA');
+  onSumberPelaksana();
   hitungHari();
   _spdEditNo=null; _setSpdMode(false);
 }
@@ -1396,6 +1405,7 @@ function _fillSpdForm(d){
   set('spdTglB',d.tglMulai||todayISO()); set('spdTglS',d.tglSelesai||todayISO());
   set('spdUangMuka',(+d.uangMuka||0)); set('spdAkun',d.akun); set('spdPpk',d.ppk); set('spdNipPpk',d.nipPpk);
   set('spdSumberPelaksana',d.sumberPelaksana||'TUNAI'); set('spdSumberBendahara',d.sumberBendahara||'BANK');
+  onSumberPelaksana();
   set('spdLokNama',d.lokNama); set('spdLokJab',d.lokJab);
   set('spdKerjaNama',d.kerjaNama); set('spdKerjaJab',d.kerjaJab);
   var list=(d.pegawaiList&&d.pegawaiList.length)?d.pegawaiList:[{nama:d.pegawai,nip:d.nip,pangkat:d.pangkat,jabatan:d.jabatan,biaya:d.biaya}];
@@ -1431,7 +1441,9 @@ function _gatherSpd(){
     if(!nama) continue;
     var base={ nama:nama, nip:(r.querySelector('.pg-nip').value||'').trim(),
       pangkat:(r.querySelector('.pg-pangkat').value||'').trim(),
-      jabatan:(r.querySelector('.pg-jabatan').value||'').trim() };
+      jabatan:(r.querySelector('.pg-jabatan').value||'').trim(),
+      norek:(r.querySelector('.pg-norek')&&r.querySelector('.pg-norek').value||'').trim(),
+      bank:(r.querySelector('.pg-bank')&&r.querySelector('.pg-bank').value||'').trim() };
     if(luar){
       var hari=_v(r,'.pg-uhHari')||n;
       var uangHarian=_v(r,'.pg-uhRate')*hari;
@@ -1757,7 +1769,9 @@ function _rincianPage(data, peg){
   if(dibayarBank>total) dibayarBank=total;
   var um=(+data.uangMuka||0), sisa=total-um;
   var lblSisa = sisa>=0 ? 'Sisa KURANG dibayar' : 'Sisa LEBIH (dikembalikan)';
-  var srcPel=(data.sumberPelaksana==='BANK')?'Kas Bank':'Kas Tunai';
+  var srcPel=(data.sumberPelaksana==='BANK')
+    ? ('Transfer ke rekening '+esc(peg.norek||'................')+(peg.bank?(' ('+esc(peg.bank)+')'):''))
+    : 'Kas Tunai';
   var srcBdh=(data.sumberBendahara==='BANK')?'Kas Bank':'Kas Tunai';
   return ''
   +_docKop()
