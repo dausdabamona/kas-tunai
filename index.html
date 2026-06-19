@@ -1160,6 +1160,7 @@ function _cardHtml(t, mode){
       +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">'+(t.sumber==='BANK'?'Bukti Transfer':'Tanda Terima')+'</button>'
       +'<button class="b-spby" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+(t.noSpby?'SPBY &#10003;':'SPBY')+'</button>';
     if(lunas) h+='<button class="b-dark" onclick="cetakSPJ('+t.no+')">Cetak SPJ</button>';
+    h+='<button class="b-spd" onclick="konversiKePd('+t.no+')" title="Jadikan transaksi ini Perjalanan Dinas">&#9992; Jadikan PD</button>';
   }
   h+='</div></div>';
   return h;
@@ -1616,6 +1617,21 @@ function simpanPerjalananDinas(){
       resetSpdForm(); switchTab('transaksi'); loadAll(); })
     .withFailureHandler(fail)
     .serverSimpanPerjalananDinas(data);
+}
+/* Konversi transaksi biasa (terlanjur dibuat) menjadi Perjalanan Dinas */
+function konversiKePd(no){
+  var t=_cariTransaksi(no); if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
+  if(suratMap[String(no)]){ toast('Transaksi ini sudah Perjalanan Dinas','info'); return; }
+  if(!confirm('Jadikan transaksi No '+no+' sebagai Perjalanan Dinas?\nForm SPD akan terisi dari data transaksi ini; lengkapi (nomor surat, hari, dll) lalu Simpan.')) return;
+  var d={ jenis:'DALAM_KOTA', nomor:'', maksud:t.kegiatan||'',
+    tglMulai:t.tanggal, tglSelesai:t.tanggal, jumlahHari:1,
+    sumberPelaksana:(t.sumber==='BANK'?'BANK':'TUNAI'),
+    pegawaiList:[{nama:t.penjab||'', nip:'', pangkat:'', jabatan:'', biaya:(+t.kredit||0)}] };
+  switchTab('spd'); _spdEditNo=no; _fillSpdForm(d); _setSpdMode(true);
+  var note=document.getElementById('spdEditNote');
+  if(note){ note.style.display='block';
+    note.textContent='Mode konversi: transaksi No '+no+' → Perjalanan Dinas. Lengkapi data lalu Simpan. (Total awal = '+rupiah(t.kredit)+'; sesuaikan uang harian & jumlah hari bila perlu.)'; }
+  window.scrollTo(0,0);
 }
 /* Buka tab Perjalanan Dinas dalam mode edit, terisi data SPD tersimpan */
 function editSpd(no){
