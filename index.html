@@ -655,6 +655,7 @@
     <div class="field"><label>Nilai SPBY (Rp)</label><input type="text" class="numfmt" id="spNilai" inputmode="numeric" value="0" oninput="_spbyRecon()"></div>
     <div id="spRecon" style="font-size:12px;line-height:1.5;background:#f8fafc;border:1px solid var(--c-line);border-radius:8px;padding:8px;margin-bottom:10px"></div>
     <button class="btn" onclick="submitSpby()">Simpan SPBY</button>
+    <button class="btn b-dark" onclick="cetakSpbySingle()">&#128424; Cetak SPBY</button>
     <button class="btn ghost" id="spHapusBtn" onclick="hapusSpbyTx()" style="background:#fee2e2;color:#991b1b">Hapus SPBY</button>
     <button class="btn ghost" onclick="closeModal('modalSpby')">Tutup</button>
   </div>
@@ -1248,6 +1249,13 @@ function openModalSpby(no,rowIndex){
   document.getElementById('spHapusBtn').style.display=(t&&t.noSpby)?'block':'none';
   _spbyRecon();
   openModal('modalSpby');
+}
+/* Cetak SPBY untuk satu transaksi (memakai dokumen yang sama dengan SPBY gabungan) */
+function cetakSpbySingle(){
+  var t=_cariTransaksi(_spTarget); if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
+  var no=(document.getElementById('spNo').value||'').trim();
+  var tgl=document.getElementById('spTgl').value;
+  _bukaPopup(_renderSpbyGabunganHtml(no, tgl, [t]));
 }
 /* Hitung & tampilkan rekonsiliasi Nilai SPBY vs Nilai SPJ (total nota) + pengembalian */
 function _spbyRecon(){
