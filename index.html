@@ -2624,12 +2624,11 @@ function _renderBuktiTransferHtml(t, o){
   +row('Tanggal', esc(tgl))
   +row('Nomor', esc(o.noSppr||dot))
   +'</table>'
-  +'<div class="par">Saya yang bertandatangan di bawah ini selaku Kuasa Pengguna Anggaran/Pejabat Pembuat Komitmen atas nama Kuasa Pengguna Anggaran <sup>*)</sup> memerintahkan Bendahara Pengeluaran/Bendahara Pengeluaran Pembantu <sup>*)</sup> agar melakukan pendebitan rekening menggunakan Kartu Debit sejumlah <span class="b">'+rupiah(jml)+'</span> (<span class="it">'+_terbilang(jml)+'</span>). Atas Dasar : Permintaan Nomor '+esc(noBukti)+'.</div>'
+  +'<div class="par">Saya yang bertandatangan di bawah ini selaku Kuasa Pengguna Anggaran memerintahkan Bendahara Pengeluaran agar melakukan pendebitan rekening menggunakan Kartu Debit sejumlah <span class="b">'+rupiah(jml)+'</span> (<span class="it">'+_terbilang(jml)+'</span>). Atas Dasar : Permintaan Nomor '+esc(noBukti)+'.</div>'
   +'<table class="sig"><tr>'
-  +'<td class="b">Bendahara Pengeluaran/BPP <sup>*)</sup><div class="nm">('+esc(INST.bendahara)+')</div><span class="nip">NIP. '+esc(INST.nipBendahara)+'</span></td>'
+  +'<td class="b">Bendahara Pengeluaran<div class="nm">('+esc(INST.bendahara)+')</div><span class="nip">NIP. '+esc(INST.nipBendahara)+'</span></td>'
   +'<td>'+esc(INST.kota)+', '+esc(tgl)+'<div class="b">Kuasa Pengguna Anggaran</div><div class="nm">('+esc(INST.direktur)+')</div><span class="nip">NIP. '+esc(INST.nipDirektur||'')+'</span></td>'
   +'</tr></table>'
-  +'<div style="font-size:10px;margin-top:14px"><sup>*)</sup> Coret yang tidak perlu</div>'
   +'</div></body></html>';
 }
 
@@ -2750,7 +2749,7 @@ function bukaModalKuitansi(no){
     document.getElementById('kwPenerima').value=t.penjab||'';
     document.getElementById('kwNipPenerima').value='';
     document.getElementById('kwUntuk').value=t.kegiatan||'';
-    document.getElementById('kwNoSppr').value='';
+    document.getElementById('kwNoSppr').value='SPPR-'+thn+'-'+('000'+t.no).slice(-4);
   }
   var el=document.getElementById('kwStatus');
   if(t && t.kuitansiUrl){
