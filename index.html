@@ -1461,8 +1461,8 @@ function _pegRowHtml(p){
    +'<div class="field"><label>NIP</label><input type="text" class="pg-nip" value="'+_attr(p.nip)+'"></div></div>'
    +'<div class="row2"><div class="field"><label>Pangkat / Golongan</label><input type="text" class="pg-pangkat" value="'+_attr(p.pangkat)+'"></div>'
    +'<div class="field"><label>Jabatan / Instansi</label><input type="text" class="pg-jabatan" value="'+_attr(p.jabatan)+'"></div></div>'
-   +'<div class="row2 pelbank-only"><div class="field"><label>No. Rekening Pelaksana</label><input type="text" class="pg-norek" value="'+_attr(p.norek)+'" placeholder="nomor rekening tujuan transfer"></div>'
-   +'<div class="field"><label>Nama Bank</label><input type="text" class="pg-bank" value="'+_attr(p.bank)+'" placeholder="mis. BRI / Mandiri"></div></div>'
+   +'<div class="row2 pelbank-only"><div class="field"><label>No. Rekening Pelaksana <span style="color:#c00">*</span></label><input type="text" class="pg-norek" value="'+_attr(p.norek)+'" placeholder="nomor rekening tujuan transfer"></div>'
+   +'<div class="field"><label>Nama Bank <span style="color:#c00">*</span></label><input type="text" class="pg-bank" value="'+_attr(p.bank)+'" placeholder="mis. BRI / Mandiri"></div></div>'
    +'<div class="field lk-only"><label>Tingkat Biaya Perjalanan Dinas (A/B/C/D)</label><input type="text" class="pg-tingkat" value="'+_attr(p.tingkatBiaya)+'"></div>'
    // ---- Komponen Luar Kota ----
    +'<div class="peg-sub lk-only"><h5>Uang harian (lumpsum)</h5>'
@@ -1649,10 +1649,24 @@ function _gatherSpd(){
     lokNama:g('spdLokNama'), lokJab:g('spdLokJab'), kerjaNama:g('spdKerjaNama'), kerjaJab:g('spdKerjaJab') };
 }
 function cetakSpdForm(){ _bukaPopup(_renderSpdHtml(_gatherSpd())); }
+/* Bila pembayaran ke Pelaksana via Bank → No. Rekening & Nama Bank wajib tiap pegawai. */
+function _validasiRekPelaksana(data){
+  if(data.sumberPelaksana!=='BANK') return true;
+  for(var i=0;i<data.pegawaiList.length;i++){
+    var p=data.pegawaiList[i];
+    if(!String(p.norek||'').trim() || !String(p.bank||'').trim()){
+      toast('Pembayaran ke Pelaksana via Bank: isi No. Rekening & Nama Bank untuk '+(p.nama||('pegawai #'+(i+1))),'error');
+      onSumberPelaksana(); // pastikan field rekening tampil
+      return false;
+    }
+  }
+  return true;
+}
 function simpanPerjalananDinas(){
   var data=_gatherSpd();
   if(!data.pegawaiList.length){ toast('Isi minimal 1 nama pegawai','error'); return; }
   if(data.biaya<=0){ toast('Total biaya harus > 0 (cek tanggal & uang harian)','error'); return; }
+  if(!_validasiRekPelaksana(data)) return;
   if(_spdEditNo!=null){
     var no=_spdEditNo;
     showLoading(true,'Memperbarui SPD & kas tunai...');
