@@ -263,7 +263,6 @@
 <style>
   #viewSpd:not(.jenis-lk) .lk-only{display:none}
   #viewSpd.jenis-lk .dk-only{display:none}
-  #viewSpd:not(.pel-bank) .pelbank-only{display:none}
   .jenis-seg{display:flex;gap:8px;margin:10px 0 0}
   .jenis-seg label{flex:1;text-align:center;border:1px solid var(--c-line);border-radius:8px;padding:9px;font-weight:600;cursor:pointer}
   .jenis-seg input{margin-right:5px}
@@ -1425,7 +1424,8 @@ function _attr(v){ return (v==null?'':String(v)).replace(/"/g,'&quot;'); }
 /* Tampilkan field No. Rekening & Nama Bank pegawai bila pembayaran ke Pelaksana via Bank */
 function onSumberPelaksana(){
   var bank=(document.getElementById('spdSumberPelaksana').value==='BANK');
-  document.getElementById('viewSpd').classList.toggle('pel-bank', bank);
+  var els=document.querySelectorAll('#spdPegList .pelbank-only');
+  for(var i=0;i<els.length;i++) els[i].style.display=bank?'flex':'none';
 }
 /* Toggle Dalam Kota / Luar Kota */
 function setSpdJenis(j){
@@ -1461,7 +1461,7 @@ function _pegRowHtml(p){
    +'<div class="field"><label>NIP</label><input type="text" class="pg-nip" value="'+_attr(p.nip)+'"></div></div>'
    +'<div class="row2"><div class="field"><label>Pangkat / Golongan</label><input type="text" class="pg-pangkat" value="'+_attr(p.pangkat)+'"></div>'
    +'<div class="field"><label>Jabatan / Instansi</label><input type="text" class="pg-jabatan" value="'+_attr(p.jabatan)+'"></div></div>'
-   +'<div class="row2 pelbank-only"><div class="field"><label>No. Rekening Pelaksana <span style="color:#c00">*</span></label><input type="text" class="pg-norek" value="'+_attr(p.norek)+'" placeholder="nomor rekening tujuan transfer"></div>'
+   +'<div class="row2 pelbank-only" style="display:none"><div class="field"><label>No. Rekening Pelaksana <span style="color:#c00">*</span></label><input type="text" class="pg-norek" value="'+_attr(p.norek)+'" placeholder="nomor rekening tujuan transfer"></div>'
    +'<div class="field"><label>Nama Bank <span style="color:#c00">*</span></label><input type="text" class="pg-bank" value="'+_attr(p.bank)+'" placeholder="mis. BRI / Mandiri"></div></div>'
    +'<div class="field lk-only"><label>Tingkat Biaya Perjalanan Dinas (A/B/C/D)</label><input type="text" class="pg-tingkat" value="'+_attr(p.tingkatBiaya)+'"></div>'
    // ---- Komponen Luar Kota ----
@@ -1488,6 +1488,7 @@ function _pegRowHtml(p){
 }
 function tambahPegawaiRow(p){
   document.getElementById('spdPegList').insertAdjacentHTML('beforeend', _pegRowHtml(p));
+  onSumberPelaksana(); // tampilkan/sembunyikan field rekening sesuai pilihan sumber
   hitungSemuaBiaya();
 }
 function hapusPegawaiRow(btn){
@@ -1652,11 +1653,15 @@ function cetakSpdForm(){ _bukaPopup(_renderSpdHtml(_gatherSpd())); }
 /* Bila pembayaran ke Pelaksana via Bank → No. Rekening & Nama Bank wajib tiap pegawai. */
 function _validasiRekPelaksana(data){
   if(data.sumberPelaksana!=='BANK') return true;
+  onSumberPelaksana(); // pastikan field rekening tampil
+  var rows=document.querySelectorAll('#spdPegList .peg-row');
   for(var i=0;i<data.pegawaiList.length;i++){
     var p=data.pegawaiList[i];
     if(!String(p.norek||'').trim() || !String(p.bank||'').trim()){
       toast('Pembayaran ke Pelaksana via Bank: isi No. Rekening & Nama Bank untuk '+(p.nama||('pegawai #'+(i+1))),'error');
-      onSumberPelaksana(); // pastikan field rekening tampil
+      var r=rows[i];
+      if(r){ var f=r.querySelector(String(p.norek||'').trim()?'.pg-bank':'.pg-norek');
+        if(f){ f.scrollIntoView({behavior:'smooth',block:'center'}); try{ f.focus(); }catch(e){} } }
       return false;
     }
   }
