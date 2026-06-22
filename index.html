@@ -3248,11 +3248,11 @@ function _renderKuitansiHtml(t, list){
   } else if(t.sumber==='BANK'){
     // Transaksi via bank: Bukti Transfer
     docTitle='Bukti Transfer '+noBase+'/'+thn;
-    pages=_kuitansiPage(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'BUKTI TRANSFER', mode:'transfer' });
+    pages=_kuitansiPage(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'BUKTI TRANSFER', mode:'transfer', noPpk:true });
   } else {
     // Transaksi tunai (uang muka PUM): Tanda Terima Uang Muka
     docTitle='Tanda Terima Uang Muka '+noBase+'/'+thn;
-    pages=_kuitansiPage(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'TANDA TERIMA UANG MUKA' });
+    pages=_kuitansiPage(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'TANDA TERIMA UANG MUKA', noPpk:true });
   }
   return ''
   +'<html><head><meta charset="utf-8"><title>'+esc(docTitle)+'</title><style>'+_kuitansiCss()
