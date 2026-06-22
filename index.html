@@ -3163,7 +3163,7 @@ function _renderSpjPdHtml(t, data, bukti){
   var noBase='KT-'+('00'+t.no).slice(-3);
   for(i=0;i<list.length;i++){
     var nk=(list.length>1)?(noBase+'-'+(i+1)+'/'+thn):(noBase+'/'+thn);
-    pages+=_kuitansiPage(t,{penerima:(list[i].nama||'(…………………)'), jumlah:(+list[i].biaya||0), noKwt:nk});
+    pages+=_kuitansiPage(t,{penerima:(list[i].nama||'(…………………)'), jumlah:(+list[i].biaya||0), noKwt:nk, noPpk:true});
   }
   var imgs=(bukti||[]).filter(function(b){return b.isImg && b.b64;});                   // 6. Lampiran bukti foto
   for(i=0;i<imgs.length;i++){
@@ -3240,9 +3240,9 @@ function _renderKuitansiHtml(t, list){
       var biaya=(+p.biaya||0), bdh=_porsiBendaharaPeg(p); if(bdh>biaya) bdh=biaya;
       var pel=biaya-bdh, suf=(list.length>1)?('-'+(i+1)):'';
       if(pel>0) arr.push(_kuitansiPage(t,{ penerima:(p.nama||'(…………………)'), jumlah:pel,
-        noKwt:noBase+suf+'P/'+thn, untuk:'Biaya perjalanan dinas (dibayarkan kepada pelaksana) — '+keg }));
+        noKwt:noBase+suf+'P/'+thn, untuk:'Biaya perjalanan dinas (dibayarkan kepada pelaksana) — '+keg, noPpk:true }));
       if(bdh>0) arr.push(_kuitansiPage(t,{ penerima:(p.nama||'(…………………)'), jumlah:bdh,
-        noKwt:noBase+suf+'B/'+thn, untuk:'Tiket/Hotel dibayar langsung oleh Bendahara — '+keg }));
+        noKwt:noBase+suf+'B/'+thn, untuk:'Tiket/Hotel dibayar langsung oleh Bendahara — '+keg, noPpk:true }));
     });
     pages=arr.join('');
   } else if(t.sumber==='BANK'){
@@ -3302,9 +3302,9 @@ function _kuitansiPage(t, o){
   +'</table>'
 
   +'<table class="sig"><tr>'
-  +'<td>'+((o.mode==='transfer')?'Penerima Transfer,':'Penerima,')+'<br>'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)+'<div class="nm">'+esc(o.penerima)+'</div></td>'
-  +'<td>Bendahara Pengeluaran,<div class="nm">'+esc(INST.bendahara)+'</div><span class="nip">NIP. '+esc(INST.nipBendahara)+'</span></td>'
-  +'<td>Mengetahui,<br>PPK Poltek KP Sorong<div class="nm">'+esc(INST.ppk)+'</div><span class="nip">NIP. '+esc(INST.nipPpk)+'</span></td>'
+  +'<td'+(o.noPpk?' style="width:50%"':'')+'>'+((o.mode==='transfer')?'Penerima Transfer,':'Penerima,')+'<br>'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)+'<div class="nm">'+esc(o.penerima)+'</div></td>'
+  +'<td'+(o.noPpk?' style="width:50%"':'')+'>Bendahara Pengeluaran,<div class="nm">'+esc(INST.bendahara)+'</div><span class="nip">NIP. '+esc(INST.nipBendahara)+'</span></td>'
+  +(o.noPpk?'':'<td>Mengetahui,<br>PPK Poltek KP Sorong<div class="nm">'+esc(INST.ppk)+'</div><span class="nip">NIP. '+esc(INST.nipPpk)+'</span></td>')
   +'</tr></table>'
   +'</div>';
 }
