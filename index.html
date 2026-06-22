@@ -3233,12 +3233,18 @@ function _renderKuitansiHtml(t, list){
   var noBase='KT-'+('00'+t.no).slice(-3);
   var pages, docTitle;
   if(list && list.length){
-    // Perjalanan Dinas: tetap "KUITANSI" per pegawai
+    // Perjalanan Dinas: kuitansi per pegawai, dipisah porsi Pelaksana & porsi Bendahara
     docTitle='Kuitansi '+noBase+'/'+thn;
-    pages=list.map(function(p,i){
-      var no=(list.length>1)?(noBase+'-'+(i+1)+'/'+thn):(noBase+'/'+thn);
-      return _kuitansiPage(t,{ penerima:(p.nama||'(…………………)'), jumlah:(+p.biaya||0), noKwt:no });
-    }).join('');
+    var arr=[], keg=(t.kegiatan||'');
+    list.forEach(function(p,i){
+      var biaya=(+p.biaya||0), bdh=_porsiBendaharaPeg(p); if(bdh>biaya) bdh=biaya;
+      var pel=biaya-bdh, suf=(list.length>1)?('-'+(i+1)):'';
+      if(pel>0) arr.push(_kuitansiPage(t,{ penerima:(p.nama||'(…………………)'), jumlah:pel,
+        noKwt:noBase+suf+'P/'+thn, untuk:'Biaya perjalanan dinas (dibayarkan kepada pelaksana) — '+keg }));
+      if(bdh>0) arr.push(_kuitansiPage(t,{ penerima:(p.nama||'(…………………)'), jumlah:bdh,
+        noKwt:noBase+suf+'B/'+thn, untuk:'Tiket/Hotel dibayar langsung oleh Bendahara — '+keg }));
+    });
+    pages=arr.join('');
   } else if(t.sumber==='BANK'){
     // Transaksi via bank: Bukti Transfer
     docTitle='Bukti Transfer '+noBase+'/'+thn;
@@ -3291,7 +3297,7 @@ function _kuitansiPage(t, o){
      : ('<tr><td class="l">Sudah diterima dari</td><td class="c">:</td>'
         +'<td>Bendahara Pengeluaran '+esc(INST.namaWP)+'<br><span class="it">('+esc(INST.bendahara)+')</span></td></tr>'))
   +'<tr><td class="l">Uang sejumlah</td><td class="c">:</td><td class="us">'+rupiah(o.jumlah)+'</td></tr>'
-  +'<tr><td class="l">Untuk pembayaran</td><td class="c">:</td><td>'+esc(t.kegiatan)+'</td></tr>'
+  +'<tr><td class="l">Untuk pembayaran</td><td class="c">:</td><td>'+esc(o.untuk||t.kegiatan)+'</td></tr>'
   +'<tr><td class="terb" colspan="3">Terbilang : <i>'+_terbilangTitle(o.jumlah)+'</i></td></tr>'
   +'</table>'
 
