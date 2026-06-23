@@ -7,8 +7,9 @@
 var ScanInbox = (function () {
 
   function _folder() {
-    if (!CONFIG.SCAN_FOLDER_ID) throw new Error('Folder scan belum diatur (CONFIG.SCAN_FOLDER_ID kosong)');
-    return DriveApp.getFolderById(CONFIG.SCAN_FOLDER_ID);
+    var id = Settings.scanFolderId();
+    if (!id) throw new Error('Folder scan belum diatur (Pengaturan Penyimpanan)');
+    return DriveApp.getFolderById(id);
   }
 
   function _isImg(m) { return /^image\//.test(m || ''); }

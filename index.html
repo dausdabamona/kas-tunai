@@ -198,6 +198,7 @@
   <button id="tabSpd" onclick="switchTab('spd')">&#9992; Perjalanan Dinas</button>
   <button id="tabLaporan" onclick="switchTab('laporan')">&#128202; Laporan</button>
   <button id="btnUsers" class="hidden" onclick="openModalUsers()">&#128101; Kelola User</button>
+  <button id="btnSettings" class="hidden" onclick="openModalSettings()">&#9881; Pengaturan</button>
 </div>
 
 <!-- ================= TAB TRANSAKSI ================= -->
@@ -621,6 +622,24 @@
   </div>
 </div>
 
+<!-- ================= MODAL PENGATURAN PENYIMPANAN (admin) ================= -->
+<div class="modal" id="modalSettings">
+  <div class="sheet">
+    <h2>&#9881; Pengaturan Penyimpanan</h2>
+    <div class="field"><label>Folder Drive penyimpanan foto &amp; dokumen (ID)</label>
+      <input type="text" id="stDrive" placeholder="kosong = root My Drive">
+      <div class="tgl" id="stDriveInfo" style="margin-top:2px"></div>
+    </div>
+    <div class="field"><label>Folder Drive "kotak masuk hasil scan" (ID)</label>
+      <input type="text" id="stScan" placeholder="kosong = fitur Impor Scan nonaktif">
+      <div class="tgl" id="stScanInfo" style="margin-top:2px"></div>
+    </div>
+    <div class="tgl" style="margin-bottom:8px">Salin ID dari URL folder Drive: <code>drive.google.com/drive/folders/<b>&lt;ID&gt;</b></code>. Folder harus dimiliki/dibagikan ke pemilik aplikasi.</div>
+    <button class="btn" onclick="submitSettings()">Simpan Pengaturan</button>
+    <button class="btn ghost" onclick="closeModal('modalSettings')">Tutup</button>
+  </div>
+</div>
+
 <!-- ================= MODAL IMPOR SCAN (folder Drive) ================= -->
 <div class="modal" id="modalScan">
   <div class="sheet">
@@ -941,6 +960,34 @@ function _applyRoleUI(){
   var ss=document.querySelector('.saldo-sum'); if(ss) ss.style.display=isViewer?'none':'';
   var sp=document.querySelector('.topbar .saldo-pill'); if(sp) sp.style.display=isViewer?'none':'';
   var bu=document.getElementById('btnUsers'); if(bu) bu.classList.toggle('hidden', !IS_ADMIN);
+  var bs=document.getElementById('btnSettings'); if(bs) bs.classList.toggle('hidden', !IS_ADMIN);
+}
+/* ============== Pengaturan Penyimpanan (admin) ============== */
+function openModalSettings(){
+  if(!IS_ADMIN){ toast('Khusus admin','error'); return; }
+  document.getElementById('stDrive').value='';
+  document.getElementById('stScan').value='';
+  document.getElementById('stDriveInfo').textContent='Memuat...';
+  document.getElementById('stScanInfo').textContent='';
+  openModal('modalSettings');
+  google.script.run.withSuccessHandler(function(s){
+    document.getElementById('stDrive').value=s.driveFolderId||'';
+    document.getElementById('stScan').value=s.scanFolderId||'';
+    document.getElementById('stDriveInfo').innerHTML='Aktif: <b>'+esc(s.driveInfo.nama)+'</b>';
+    document.getElementById('stScanInfo').innerHTML='Aktif: <b>'+esc(s.scanInfo.nama)+'</b>';
+  }).withFailureHandler(fail).serverGetSettings();
+}
+function submitSettings(){
+  var drive=(document.getElementById('stDrive').value||'').trim();
+  var scan=(document.getElementById('stScan').value||'').trim();
+  showLoading(true,'Menyimpan pengaturan...');
+  google.script.run.withSuccessHandler(function(res){ showLoading(false);
+    toast('Pengaturan disimpan','success');
+    document.getElementById('stDriveInfo').innerHTML='Aktif: <b>'+esc(res.driveInfo.nama)+'</b>';
+    document.getElementById('stScanInfo').innerHTML='Aktif: <b>'+esc(res.scanInfo.nama)+'</b>';
+    // segarkan visibilitas tombol Impor Scan
+    var b=document.querySelectorAll('.scan-imp'); for(var i=0;i<b.length;i++) b[i].style.display=res.scanInfo.id?'':'none';
+  }).withFailureHandler(fail).serverSetSettings(drive, scan);
 }
 /* ============== Kelola User (admin) ============== */
 var _usrEditEmail=null; // null = mode tambah

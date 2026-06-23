@@ -6,10 +6,11 @@
 
 var DriveHelper = (function () {
 
-  /** Folder tujuan upload (root bila DRIVE_FOLDER_ID kosong). */
+  /** Folder tujuan upload (root bila tak diatur). Diutamakan dari Settings (Script Properties). */
   function targetFolder() {
-    if (CONFIG.DRIVE_FOLDER_ID) {
-      try { return DriveApp.getFolderById(CONFIG.DRIVE_FOLDER_ID); } catch (e) {}
+    var id = Settings.driveFolderId();
+    if (id) {
+      try { return DriveApp.getFolderById(id); } catch (e) {}
     }
     return DriveApp.getRootFolder();
   }

@@ -127,7 +127,38 @@ function serverPecahTransaksi(no, parts) {
  * Impor lampiran dari folder scan (EPSON Scan-to-Drive)
  * ============================================================ */
 function serverScanAktif() {
-  return _run(function () { return !!CONFIG.SCAN_FOLDER_ID; });
+  return _run(function () { return !!Settings.scanFolderId(); });
+}
+
+/* ============================================================
+ * Pengaturan penyimpanan (folder Drive) — khusus admin
+ * ============================================================ */
+function _folderInfo(id) {
+  if (!id) return { id: '', nama: '(root My Drive / belum diatur)', ok: true };
+  try { return { id: id, nama: DriveApp.getFolderById(id).getName(), ok: true }; }
+  catch (e) { return { id: id, nama: '(tidak dapat diakses!)', ok: false }; }
+}
+function serverGetSettings() {
+  return _run(function () {
+    _requireAdmin();
+    return {
+      driveFolderId: Settings.get('DRIVE_FOLDER_ID', ''),
+      scanFolderId:  Settings.get('SCAN_FOLDER_ID', ''),
+      driveInfo: _folderInfo(Settings.driveFolderId()),
+      scanInfo:  _folderInfo(Settings.scanFolderId())
+    };
+  });
+}
+function serverSetSettings(driveFolderId, scanFolderId) {
+  return _run(function () {
+    _requireAdmin();
+    // Validasi folder bila diisi
+    if (driveFolderId) { try { DriveApp.getFolderById(driveFolderId); } catch (e) { throw new Error('Folder penyimpanan tidak ditemukan / tak bisa diakses'); } }
+    if (scanFolderId)  { try { DriveApp.getFolderById(scanFolderId);  } catch (e) { throw new Error('Folder scan tidak ditemukan / tak bisa diakses'); } }
+    Settings.set('DRIVE_FOLDER_ID', driveFolderId);
+    Settings.set('SCAN_FOLDER_ID', scanFolderId);
+    return { success: true, driveInfo: _folderInfo(Settings.driveFolderId()), scanInfo: _folderInfo(Settings.scanFolderId()) };
+  });
 }
 function serverListScan() {
   return _run(function () { return ScanInbox.list(60); });

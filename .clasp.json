@@ -5,6 +5,7 @@
     "_Config.gs",
     "Util.gs",
     "SheetRepository.gs",
+    "Settings.gs",
     "SoftDelete.gs",
     "TxnHelper.gs",
     "DriveHelper.gs",
