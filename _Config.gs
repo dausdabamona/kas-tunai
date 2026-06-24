@@ -43,7 +43,8 @@ var CONFIG = {
     SURAT_TUGAS:    'Surat Tugas',
     BUKTI_PD:       'Bukti Perjalanan',
     AUDIT_LOG:      'Audit Log',
-    USERS:          'Users'
+    USERS:          'Users',
+    DETAIL_NOTA:    'Detail Nota'
   },
 
   // Index kolom sheet Kas Tunai (0-based, A-X = 24 kolom inti + kolom kuitansi TTD)
@@ -54,7 +55,7 @@ var CONFIG = {
     UANG_DISERAHKAN: 16, KEMBALIAN_JML: 17, KEMBALIAN_TOTAL: 18,
     IS_DELETED: 19, DELETED_AT: 20, DELETED_BY: 21, NO_SPBY: 22, TGL_SPBY: 23,
     KUITANSI_FILE_ID: 24, KUITANSI_NAMA_FILE: 25, KUITANSI_URL: 26,
-    SUMBER: 27, REF_TRANSFER: 28, NILAI_SPBY: 29
+    SUMBER: 27, REF_TRANSFER: 28, NILAI_SPBY: 29, AKUN: 30, PERSEDIAAN: 31
   },
 
   // Header tiap sheet (urut sesuai kolom FISIK sheet asli)
@@ -66,7 +67,7 @@ var CONFIG = {
       'UANG_DISERAHKAN', 'KEMBALIAN_JML', 'KEMBALIAN_TOTAL',
       'IS_DELETED', 'DELETED_AT', 'DELETED_BY', 'NO_SPBY', 'TGL_SPBY',
       'KUITANSI_FILE_ID', 'KUITANSI_NAMA_FILE', 'KUITANSI_URL',
-      'SUMBER', 'REF_TRANSFER', 'NILAI_SPBY'
+      'SUMBER', 'REF_TRANSFER', 'NILAI_SPBY', 'AKUN', 'PERSEDIAAN'
     ],
     MULTI_NOTA: [
       'NO_TRANSAKSI', 'ROW_INDEX', 'URUTAN', 'NAMA_NOTA', 'NOMINAL',
@@ -110,6 +111,12 @@ var CONFIG = {
     ],
     USERS: [
       'EMAIL', 'NAMA', 'ROLE', 'CREATED_AT', 'CREATED_BY'
+    ],
+    DETAIL_NOTA: [
+      'NO_TRANSAKSI', 'ROW_INDEX', 'URUTAN', 'NAMA_BARANG', 'QTY', 'SATUAN',
+      'HARGA_SATUAN', 'SUBTOTAL', 'KETERANGAN', 'NOTA_URUTAN', 'FILE_ID',
+      'NAMA_FILE', 'URL_FILE', 'LAT', 'LNG', 'MAPS_URL', 'WAKTU',
+      'IS_DELETED', 'DELETED_AT', 'DELETED_BY'
     ]
   },
 

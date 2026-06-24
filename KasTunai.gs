@@ -41,7 +41,9 @@ var KasTunai = (function () {
       kuitansiFileId:  row[C.KUITANSI_FILE_ID],
       kuitansiUrl:     row[C.KUITANSI_URL],
       sumber:          (String(row[C.SUMBER]||'').toUpperCase()==='BANK') ? 'BANK' : 'TUNAI',
-      refTransfer:     row[C.REF_TRANSFER] || ''
+      refTransfer:     row[C.REF_TRANSFER] || '',
+      akun:            row[C.AKUN] || '',
+      persediaan:      String(row[C.PERSEDIAAN]||'').toUpperCase()==='Y'
     };
   }
   /** true bila baris adalah pemindahan dana antar kas (Pindah Dana), bukan belanja riil. */
@@ -114,6 +116,8 @@ var KasTunai = (function () {
     row[C.IS_DELETED] = FLAG_ACTIVE;
     row[C.SUMBER]       = (String(data.sumber||'').toUpperCase()==='BANK') ? 'BANK' : 'TUNAI';
     row[C.REF_TRANSFER] = data.refTransfer || '';
+    row[C.AKUN]         = data.akun || '';
+    row[C.PERSEDIAAN]   = data.persediaan ? 'Y' : '';
 
     SheetRepo.appendRow(CONFIG.SHEETS.KAS_TUNAI, row);
     DeferredFlush.mark();
@@ -155,6 +159,8 @@ var KasTunai = (function () {
       C.KEGIATAN,   data.kegiatan || '',
       C.KETERANGAN, data.keterangan || '');
     if (data.sumber) upd[C.SUMBER] = (String(data.sumber).toUpperCase()==='BANK') ? 'BANK' : 'TUNAI';
+    if (data.akun !== undefined) upd[C.AKUN] = data.akun || '';
+    if (data.persediaan !== undefined) upd[C.PERSEDIAAN] = data.persediaan ? 'Y' : '';
     var ok = updateByTransactionId(no, upd);
     if (ok) AuditLog.write('UPDATE', CONFIG.SHEETS.KAS_TUNAI, no, 'kegiatan: ' + (data.kegiatan || ''));
     return { success: ok, no: no };

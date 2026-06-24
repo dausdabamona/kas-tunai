@@ -394,6 +394,21 @@
     <div class="field"><label id="txPenjabLbl">Penanggung Jawab</label><input type="text" id="txPenjab"></div>
     <div class="field"><label id="txNilaiLbl">Nilai</label><input type="text" class="numfmt" id="txNilai" value="0" inputmode="numeric"></div>
     <div class="field"><label>Keterangan</label><textarea id="txKeterangan" rows="2"></textarea></div>
+    <div id="txAkunWrap">
+      <div class="field"><label>Akun / Kode Akun (MAK)</label>
+        <input type="text" id="txAkun" list="txAkunList" placeholder="mis. 521811" autocomplete="off">
+        <datalist id="txAkunList">
+          <option value="521811">521811 - Belanja Barang Persediaan Barang Konsumsi</option>
+          <option value="521211">521211 - Belanja Bahan</option>
+          <option value="521111">521111 - Belanja Keperluan Perkantoran</option>
+          <option value="522141">522141 - Belanja Sewa</option>
+          <option value="524111">524111 - Belanja Perjalanan Dinas Biasa</option>
+        </datalist>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:10px">
+        <input type="checkbox" id="txPersediaan" onchange="_onTxPersediaan()"> Akun <b>Persediaan</b> (perlu rincian barang &amp; foto per item di nota)
+      </label>
+    </div>
     <button class="btn" id="txSimpan" onclick="submitTransaksi()">Simpan</button>
     <button class="btn ghost" onclick="closeModal('modalTransaksi')">Batal</button>
   </div>
@@ -2456,8 +2471,14 @@ function openModalTransaksi(mode){
   document.getElementById('txPenjab').value=masuk?'':(NAMA_USER||'');
   document.getElementById('txNilai').value=0;
   document.getElementById('txKeterangan').value='';
+  document.getElementById('txAkun').value='';
+  document.getElementById('txPersediaan').checked=false;
+  document.getElementById('txAkunWrap').style.display=masuk?'none':'';
+  _onTxPersediaan();
   openModal('modalTransaksi');
 }
+/* Auto-centang persediaan bila akun = 521811 (umum); cukup info, tetap bisa diubah manual */
+function _onTxPersediaan(){ /* placeholder hook bila perlu efek tambahan */ }
 /* Edit transaksi yang sudah ada (prefill modal yang sama) */
 function editTransaksi(no){
   var t=_cariTransaksi(no);
@@ -2474,6 +2495,9 @@ function editTransaksi(no){
   document.getElementById('txPenjab').value=t.penjab||'';
   document.getElementById('txNilai').value=_grp(masuk?t.debet:t.kredit);
   document.getElementById('txKeterangan').value=t.keterangan||'';
+  document.getElementById('txAkun').value=t.akun||'';
+  document.getElementById('txPersediaan').checked=!!t.persediaan;
+  document.getElementById('txAkunWrap').style.display=masuk?'none':'';
   openModal('modalTransaksi');
 }
 function openModalPindah(){
@@ -2634,7 +2658,9 @@ function submitTransaksi(){
     debet:_txMode==='masuk'?nilai:0,
     kredit:_txMode==='keluar'?nilai:0,
     sumber:document.getElementById('txSumber').value,
-    keterangan:document.getElementById('txKeterangan').value.trim()
+    keterangan:document.getElementById('txKeterangan').value.trim(),
+    akun:(_txMode==='keluar')?document.getElementById('txAkun').value.trim():'',
+    persediaan:(_txMode==='keluar')&&document.getElementById('txPersediaan').checked
   };
   if(!data.kegiatan){toast('Kegiatan/uraian wajib diisi','error');return;}
   if(nilai<=0){toast('Nilai harus lebih dari 0','error');return;}
