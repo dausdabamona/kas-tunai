@@ -196,12 +196,14 @@ var KasTunai = (function () {
     });
     return rows.map(function (x) {
       var r = x.values;
+      var detail = DetailNota.get(transactionId, r[n.URUTAN]);
       return {
         rowIndex: x.rowIndex,
         noTransaksi: r[n.NO_TRANSAKSI], urutan: r[n.URUTAN], namaPenyedia: r[n.NAMA_NOTA],
         npwp: r[n.NPWP_PENYEDIA], alamat: r[n.ALAMAT_PENYEDIA],
         noNota: '', tglNota: Util.fmtDate(r[n.TGL_NOTA] || r[n.TGL_UPLOAD]), nilai: Util.num(r[n.NOMINAL]),
-        keterangan: '', fileId: r[n.FILE_ID], namaFile: r[n.NAMA_FILE], urlFile: r[n.URL_FILE]
+        keterangan: '', fileId: r[n.FILE_ID], namaFile: r[n.NAMA_FILE], urlFile: r[n.URL_FILE],
+        detail: detail, jmlItem: detail.length
       };
     });
   }
@@ -209,14 +211,17 @@ var KasTunai = (function () {
   function tambahNota(transactionId, notaData) {
     var urutan = getMultiNota(transactionId).length + 1;
     var file = (notaData.file && notaData.file.base64) ? DriveHelper.upload(notaData.file) : null;
+    var hasDetail = notaData.detail && notaData.detail.length;
+    var nilai = hasDetail ? DetailNota.totalItems(notaData.detail) : Util.num(notaData.nilai);
 
     SheetRepo.appendRow(CONFIG.SHEETS.MULTI_NOTA, [
-      transactionId, 0, urutan, notaData.namaPenyedia || '', Util.num(notaData.nilai),
+      transactionId, 0, urutan, notaData.namaPenyedia || '', nilai,
       file ? file.fileId : '', file ? file.namaFile : '', file ? file.url : '', new Date(),
       notaData.npwp || '', notaData.alamat || '', FLAG_ACTIVE, '', '',
       notaData.tglNota ? new Date(notaData.tglNota) : ''
     ]);
     DeferredFlush.mark();
+    if (hasDetail) DetailNota.save(transactionId, urutan, notaData.detail);
     _recalcNota(transactionId);
     return { success: true, urutan: urutan };
   }
@@ -225,9 +230,11 @@ var KasTunai = (function () {
     var hit = _findNotaRow(transactionId, urutan);
     if (!hit) throw new Error('Nota tidak ditemukan');
     var n = NC();
+    var hasDetail = notaData.detail && notaData.detail.length;
+    var nilai = hasDetail ? DetailNota.totalItems(notaData.detail) : Util.num(notaData.nilai);
     var upd = Util.set(
       n.NAMA_NOTA, notaData.namaPenyedia || '',
-      n.NOMINAL, Util.num(notaData.nilai),
+      n.NOMINAL, nilai,
       n.NPWP_PENYEDIA, notaData.npwp || '',
       n.ALAMAT_PENYEDIA, notaData.alamat || '',
       n.TGL_NOTA, notaData.tglNota ? new Date(notaData.tglNota) : ''
@@ -241,6 +248,7 @@ var KasTunai = (function () {
     }
     SheetRepo.setCells(CONFIG.SHEETS.MULTI_NOTA, hit.rowIndex, upd);
     DeferredFlush.mark();
+    if (notaData.detail !== undefined) DetailNota.save(transactionId, urutan, notaData.detail);
     _recalcNota(transactionId);
     return { success: true };
   }

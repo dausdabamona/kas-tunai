@@ -17,6 +17,7 @@
     "BuktiPD.gs",
     "Users.gs",
     "ScanInbox.gs",
+    "DetailNota.gs",
     "Code.gs"
   ]
 }
