@@ -482,6 +482,7 @@
       <div style="font-weight:600;font-size:13px;margin-bottom:6px">&#128230; Rincian Barang (Persediaan)</div>
       <div id="ntItemList"></div>
       <button type="button" class="btn ghost" style="width:auto;padding:4px 10px;margin:0" onclick="ntAddItem()">+ Tambah item</button>
+      <button type="button" class="btn ghost" style="width:auto;padding:4px 10px;margin:0 0 0 6px" onclick="openImporItem()">&#11014; Impor dari Excel/CSV</button>
       <div id="ntItemTotal" class="tgl" style="margin-top:8px;font-weight:600"></div>
       <div class="tgl" style="margin-top:2px">Nominal nota otomatis = jumlah subtotal item. Foto per item bersifat anjuran (tag = nama barang).</div>
     </div>
@@ -494,6 +495,34 @@
     <button class="btn" id="ntSubmitBtn" onclick="submitNota()">Tambah Nota</button>
     <button class="btn ghost" id="ntCancelBtn" onclick="_cancelEditNota()" style="display:none">Batal Edit</button>
     <button class="btn ghost" onclick="closeModal('modalNota')">Tutup</button>
+  </div>
+</div>
+
+<!-- ================= MODAL IMPOR ITEM (Excel/CSV) ================= -->
+<div class="modal" id="modalImporItem">
+  <div class="sheet">
+    <h2>&#11014; Impor Item Nota dari Excel/CSV</h2>
+    <div class="field"><label>File (kolom: Nama Barang, Banyaknya/Qty, Harga, Jumlah)</label>
+      <input type="file" id="itFile" accept=".xlsx,.xls,.csv" onchange="itParse()"></div>
+    <div id="itMap" class="hidden">
+      <div class="row2">
+        <div class="field"><label>Baris header</label><select id="itHeader" onchange="itRenderPreview()"></select></div>
+        <div class="field"><label>Kolom Nama Barang</label><select id="itColNama" onchange="itRenderPreview()"></select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Kolom Banyaknya/Qty</label><select id="itColQty" onchange="itRenderPreview()"></select></div>
+        <div class="field"><label>Kolom Satuan (opsional)</label><select id="itColSatuan" onchange="itRenderPreview()"></select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Kolom Harga Satuan</label><select id="itColHarga" onchange="itRenderPreview()"></select></div>
+        <div class="field"><label>Kolom Jumlah (opsional)</label><select id="itColJumlah" onchange="itRenderPreview()"></select></div>
+      </div>
+      <div class="tgl">Jika Harga Satuan kosong tapi Jumlah &amp; Qty ada → harga = Jumlah ÷ Qty. "1 pak" → qty=1, satuan="pak".</div>
+      <div id="itPreview" style="max-height:230px;overflow:auto;font-size:11px;border:1px solid var(--c-line);border-radius:8px;padding:6px;margin:8px 0"></div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px"><input type="checkbox" id="itReplace"> Ganti semua item yang ada (bukan menambah)</label>
+      <button class="btn" style="background:var(--c-ok)" onclick="submitImporItem()">Tambah ke Rincian</button>
+    </div>
+    <button class="btn ghost" onclick="closeModal('modalImporItem')">Tutup</button>
   </div>
 </div>
 
@@ -2885,6 +2914,110 @@ function _ntGatherItems(){
   if(total<=0){ toast('Total item harus > 0 (cek qty & harga)','error'); return null; }
   if(noFoto>0 && !confirm(noFoto+' item belum ada foto. Tetap simpan? (foto bersifat anjuran)')) return null;
   return { detail:detail, total:total };
+}
+/* ----- Impor item nota dari Excel/CSV (reuse parser serverParseRekKoran) ----- */
+var _itRows=null;
+function openImporItem(){
+  _itRows=null;
+  document.getElementById('itFile').value='';
+  document.getElementById('itMap').classList.add('hidden');
+  document.getElementById('itPreview').innerHTML='';
+  document.getElementById('itReplace').checked=false;
+  openModal('modalImporItem');
+}
+function itParse(){
+  var f=document.getElementById('itFile').files[0]; if(!f) return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    var b64=String(rd.result).split(',')[1];
+    showLoading(true,'Membaca file...');
+    google.script.run
+      .withSuccessHandler(function(rows){ showLoading(false); _itRows=rows||[]; _itBuildMap(); })
+      .withFailureHandler(fail)
+      .serverParseRekKoran(b64, f.name);
+  };
+  rd.readAsDataURL(f);
+}
+function _itBuildMap(){
+  if(!_itRows||!_itRows.length){ toast('File kosong / tak terbaca','error'); return; }
+  var cols=0,i; for(i=0;i<_itRows.length;i++) cols=Math.max(cols,_itRows[i].length);
+  var hdr=0;
+  for(i=0;i<Math.min(_itRows.length,15);i++){
+    var line=_itRows[i].join(' ').toLowerCase();
+    if(line.indexOf('nama')>=0 && (line.indexOf('harga')>=0||line.indexOf('banyak')>=0||line.indexOf('qty')>=0)){ hdr=i; break; }
+  }
+  var hs=document.getElementById('itHeader'); hs.innerHTML='';
+  for(i=0;i<Math.min(_itRows.length,15);i++){
+    var o=document.createElement('option'); o.value=i;
+    o.textContent='Baris '+(i+1)+': '+String(_itRows[i].slice(0,5).join(' | ')).slice(0,40); hs.appendChild(o);
+  }
+  hs.value=hdr;
+  _itFillCols();
+  document.getElementById('itMap').classList.remove('hidden');
+  itRenderPreview();
+}
+function _itFillCols(){
+  var hdr=+document.getElementById('itHeader').value;
+  var head=_itRows[hdr]||[], cols=0,c;
+  for(var r=0;r<_itRows.length;r++) cols=Math.max(cols,_itRows[r].length);
+  function find(keys){ for(var c=0;c<cols;c++){ var t=String(head[c]||'').toLowerCase(); for(var k=0;k<keys.length;k++) if(t.indexOf(keys[k])>=0) return c; } return -1; }
+  function opts(sel, allowNone, guess){
+    var s=document.getElementById(sel); s.innerHTML='';
+    if(allowNone){ var n=document.createElement('option'); n.value=-1; n.textContent='— tidak ada —'; s.appendChild(n); }
+    for(var c=0;c<cols;c++){ var o=document.createElement('option'); o.value=c; o.textContent='Kol '+(c+1)+': '+String(head[c]||'').slice(0,18); s.appendChild(o); }
+    s.value=(guess>=0)?guess:(allowNone?-1:0);
+  }
+  opts('itColNama', false, find(['nama','barang','uraian']));
+  opts('itColQty', false, find(['banyak','qty','volume']));
+  opts('itColSatuan', true, find(['satuan','unit']));
+  opts('itColHarga', false, find(['harga']));
+  opts('itColJumlah', true, find(['jumlah','total','subtotal']));
+}
+function _itParseQty(s){
+  s=String(s==null?'':s).trim();
+  var m=s.match(/^([\d.,]+)\s*(.*)$/);
+  if(m){ return { qty:(parseFloat(String(m[1]).replace(/\./g,'').replace(',','.'))||_rkNum(m[1])||0), satuan:(m[2]||'').trim() }; }
+  return { qty:_rkNum(s), satuan:'' };
+}
+function _itCollect(){
+  var hdr=+document.getElementById('itHeader').value;
+  var cN=+document.getElementById('itColNama').value, cQ=+document.getElementById('itColQty').value,
+      cS=+document.getElementById('itColSatuan').value, cH=+document.getElementById('itColHarga').value,
+      cJ=+document.getElementById('itColJumlah').value, out=[];
+  for(var i=hdr+1;i<_itRows.length;i++){
+    var r=_itRows[i]; if(!r) continue;
+    var nama=String(r[cN]==null?'':r[cN]).trim(); if(!nama) continue;
+    var pq=_itParseQty(r[cQ]);
+    var qty=pq.qty||0, satuan=(cS>=0?String(r[cS]||'').trim():'')||pq.satuan;
+    var harga=cH>=0?_rkNum(r[cH]):0, jml=cJ>=0?_rkNum(r[cJ]):0;
+    if((!harga||harga<=0) && jml>0 && qty>0) harga=Math.round(jml/qty);
+    if(qty<=0 && jml>0 && harga>0) qty=Math.round(jml/harga);
+    out.push({ namaBarang:nama, qty:qty, satuan:satuan, hargaSatuan:harga });
+  }
+  return out;
+}
+function itRenderPreview(){
+  var items=_itCollect();
+  var h='<table style="width:100%;border-collapse:collapse"><tr><th align="left">Nama</th><th>Qty</th><th>Sat</th><th align="right">Harga</th><th align="right">Subtotal</th></tr>';
+  for(var i=0;i<Math.min(items.length,15);i++){ var it=items[i];
+    h+='<tr><td>'+esc(it.namaBarang)+'</td><td align="center">'+it.qty+'</td><td align="center">'+esc(it.satuan)+'</td><td align="right">'+rupiah(it.hargaSatuan)+'</td><td align="right">'+rupiah(it.qty*it.hargaSatuan)+'</td></tr>';
+  }
+  h+='</table><div class="tgl" style="margin-top:4px"><b>'+items.length+'</b> item terbaca.</div>';
+  document.getElementById('itPreview').innerHTML=h;
+}
+function submitImporItem(){
+  var items=_itCollect();
+  if(!items.length){ toast('Tidak ada item terbaca (cek pemetaan kolom)','error'); return; }
+  if(document.getElementById('itReplace').checked) document.getElementById('ntItemList').innerHTML='';
+  else {
+    // buang satu baris kosong default agar tidak menyisakan baris hampa
+    var rows=document.querySelectorAll('#ntItemList .nti-row');
+    if(rows.length===1 && !(rows[0].querySelector('.nti-nama').value||'').trim()) rows[0].remove();
+  }
+  for(var i=0;i<items.length;i++) ntAddItem(items[i]);
+  _ntRecalc();
+  closeModal('modalImporItem');
+  toast(items.length+' item ditambahkan ke rincian','success');
 }
 /** Konversi 'dd/mm/yyyy' atau Date string ke 'yyyy-mm-dd' utk input date. */
 function _toISODate(v){
