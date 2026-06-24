@@ -478,6 +478,13 @@
       <div class="field"><label>Tanggal Nota</label><input type="date" id="ntTgl"></div>
       <div class="field"><label>Alamat Penyedia</label><input type="text" id="ntAlamat"></div>
     </div>
+    <div id="ntDetailWrap" style="display:none;border:1px solid var(--c-line);border-radius:8px;padding:8px;margin-bottom:10px;background:#fafbfc">
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px">&#128230; Rincian Barang (Persediaan)</div>
+      <div id="ntItemList"></div>
+      <button type="button" class="btn ghost" style="width:auto;padding:4px 10px;margin:0" onclick="ntAddItem()">+ Tambah item</button>
+      <div id="ntItemTotal" class="tgl" style="margin-top:8px;font-weight:600"></div>
+      <div class="tgl" style="margin-top:2px">Nominal nota otomatis = jumlah subtotal item. Foto per item bersifat anjuran (tag = nama barang).</div>
+    </div>
     <div class="field"><label>Foto nota (opsional) &mdash; atau tekan <b>Ctrl+V</b> untuk tempel screenshot</label><input type="file" id="ntFile" accept="image/*" capture="environment" onchange="_showPastePreview(this)"></div>
     <button class="btn ghost scan-imp" style="display:none;margin-bottom:6px" onclick="importScanNota()">&#128247; Impor dari Folder Scan</button>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:4px">
@@ -2685,7 +2692,8 @@ function submitTransaksi(){
 /* ============== Nota ============== */
 function openModalNota(no){
   _notaTarget=no;
-  document.getElementById('notaTxLabel').textContent='No '+no;
+  var _t=_cariTransaksi(no); _ntPersediaan=!!(_t&&_t.persediaan);
+  document.getElementById('notaTxLabel').textContent='No '+no+(_ntPersediaan?' · Persediaan':'');
   _cancelEditNota();
   document.getElementById('notaList').innerHTML='<div class="empty">Memuat...</div>';
   document.getElementById('ntAsFotoBarang').checked=true;
@@ -2719,6 +2727,7 @@ function onNotaPenyediaInput(){
 var _notaList=[];          // cache nota transaksi yang sedang dibuka
 var _notaEditUrutan=null;  // null = mode tambah; selain itu = urutan nota yang diedit
 var _notaGps=null;         // lokasi GPS saat form nota dibuka (utk Foto Barang)
+var _ntPersediaan=false;   // transaksi akun persediaan → rincian barang per item
 function renderNotaList(list){
   _notaList=list||[];
   var box=document.getElementById('notaList');
@@ -2730,7 +2739,8 @@ function renderNotaList(list){
     h+='<div class="card" style="margin-bottom:8px">'
       +'<div class="row1"><div class="keg" style="font-size:14px">'+esc(n.namaPenyedia||'-')+'</div>'
       +'<div class="amt">'+rupiah(n.nilai)+'</div></div>'
-      +'<div class="tgl">'+(n.npwp?('NPWP '+esc(n.npwp)+' &middot; '):'')+'Tgl '+esc(n.tglNota?_tglID(n.tglNota):'-')+'</div>'
+      +'<div class="tgl">'+(n.npwp?('NPWP '+esc(n.npwp)+' &middot; '):'')+'Tgl '+esc(n.tglNota?_tglID(n.tglNota):'-')
+      +((n.jmlItem>0)?(' &middot; <b>'+n.jmlItem+' item</b>'):'')+'</div>'
       +(n.alamat?'<div class="tgl">'+esc(n.alamat)+'</div>':'')
       +(n.fileId?('<a href="'+esc(n.urlFile||('https://drive.google.com/file/d/'+n.fileId+'/view'))+'" target="_blank" title="Lihat foto nota"><img class="nthumb" src="https://drive.google.com/thumbnail?id='+esc(n.fileId)+'&sz=w200"></a>'):'')
       +'<div class="acts"><button class="b-edit" onclick="editNota('+n.urutan+')">&#9998; Edit</button>'
@@ -2750,6 +2760,12 @@ function editNota(urutan){
   document.getElementById('ntNilai').value=_grp(n.nilai||0);
   document.getElementById('ntTgl').value=_toISODate(n.tglNota);
   document.getElementById('ntFile').value=''; _clearPastePreview('ntFile');
+  if(_ntPersediaan){
+    document.getElementById('ntItemList').innerHTML='';
+    var det=n.detail||[];
+    if(det.length){ for(var k=0;k<det.length;k++) ntAddItem(det[k]); } else { ntAddItem(); }
+    _ntRecalc();
+  }
   document.getElementById('ntFormTitle').textContent='Edit Nota #'+urutan;
   document.getElementById('ntSubmitBtn').textContent='Perbarui Nota';
   document.getElementById('ntCancelBtn').style.display='block';
@@ -2766,6 +2782,90 @@ function _cancelEditNota(){
   document.getElementById('ntFormTitle').textContent='Tambah Nota';
   document.getElementById('ntSubmitBtn').textContent='Tambah Nota';
   document.getElementById('ntCancelBtn').style.display='none';
+  // Rincian barang (persediaan)
+  document.getElementById('ntDetailWrap').style.display=_ntPersediaan?'':'none';
+  document.getElementById('ntNilai').readOnly=_ntPersediaan;
+  if(_ntPersediaan){ document.getElementById('ntItemList').innerHTML=''; ntAddItem(); _ntRecalc(); }
+}
+/* ----- Rincian Barang (persediaan): baris item + foto per item ----- */
+function _ntItemRowHtml(it){
+  it=it||{};
+  return '<div class="nti-row" style="border:1px solid var(--c-line);border-radius:8px;padding:8px;margin-bottom:8px">'
+   +'<div class="row2"><div class="field"><label>Nama Barang</label><input type="text" class="nti-nama" value="'+_attr(it.namaBarang)+'"></div>'
+   +'<div class="field"><label>Keterangan</label><input type="text" class="nti-ket" value="'+_attr(it.keterangan)+'"></div></div>'
+   +'<div class="row2" style="grid-template-columns:1fr 1fr 1fr 1fr"><div class="field"><label>Qty</label><input type="number" step="any" class="nti-qty" value="'+(it.qty!=null?(+it.qty||0):'')+'" oninput="_ntRecalc()"></div>'
+   +'<div class="field"><label>Satuan</label><input type="text" class="nti-satuan" value="'+_attr(it.satuan)+'" placeholder="pcs/rim/dus"></div>'
+   +'<div class="field"><label>Harga Satuan</label><input type="text" inputmode="numeric" class="nti-harga numfmt" value="'+_grp(+it.hargaSatuan||0)+'" oninput="_ntRecalc()"></div>'
+   +'<div class="field"><label>Subtotal</label><input type="text" class="nti-sub numfmt" value="0" readonly></div></div>'
+   +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+   +'<label class="btn ghost" style="width:auto;margin:0;padding:5px 10px;cursor:pointer">&#128247; Foto<input type="file" class="nti-file" accept="image/*" capture="environment" style="display:none" onchange="_ntItemFile(this)"></label>'
+   +'<button type="button" class="btn ghost scan-imp" style="width:auto;margin:0;padding:5px 10px;display:none" onclick="_ntItemScan(this)">Impor Scan</button>'
+   +'<div class="nti-thumb" style="flex:1"></div>'
+   +'<button type="button" class="btn ghost" style="width:auto;margin:0;color:var(--c-bad)" onclick="_ntRemoveItem(this)">&times;</button>'
+   +'</div></div>';
+}
+function ntAddItem(it){
+  var box=document.getElementById('ntItemList');
+  box.insertAdjacentHTML('beforeend', _ntItemRowHtml(it||{}));
+  var row=box.lastElementChild;
+  if(it&&it.fileId){ row._fileId=it.fileId; row._url=it.urlFile||''; row._lat=it.lat; row._lng=it.lng; }
+  _ntShowItemThumb(row);
+  _reformatNumInputs(row);
+  _ntRecalc();
+}
+function _ntRemoveItem(btn){
+  var rows=document.querySelectorAll('#ntItemList .nti-row');
+  if(rows.length<=1){ toast('Minimal 1 item','info'); return; }
+  btn.closest('.nti-row').remove(); _ntRecalc();
+}
+function _ntRecalc(){
+  var rows=document.querySelectorAll('#ntItemList .nti-row'), total=0;
+  for(var i=0;i<rows.length;i++){
+    var qty=+rows[i].querySelector('.nti-qty').value||0;
+    var harga=unfmt(rows[i].querySelector('.nti-harga').value);
+    var sub=qty*harga; total+=sub;
+    rows[i].querySelector('.nti-sub').value=_grp(sub);
+  }
+  document.getElementById('ntItemTotal').textContent='Total nota (otomatis): '+rupiah(total);
+  document.getElementById('ntNilai').value=_grp(total);
+}
+function _ntItemFile(input){
+  if(!input.files||!input.files[0]) return;
+  compressImage(input.files[0], function(f){
+    var row=input.closest('.nti-row');
+    row._foto={base64:f.base64,mimeType:f.mimeType,namaFile:f.namaFile}; row._fileId=null;
+    _ntShowItemThumb(row);
+  });
+}
+function _ntItemScan(btn){
+  var row=btn.closest('.nti-row');
+  openScanPicker(function(file){ row._foto={base64:file.base64,mimeType:file.mimeType,namaFile:file.namaFile}; row._fileId=null; _ntShowItemThumb(row); });
+}
+function _ntShowItemThumb(row){
+  var box=row.querySelector('.nti-thumb');
+  if(row._foto&&row._foto.base64) box.innerHTML='<img src="data:'+row._foto.mimeType+';base64,'+row._foto.base64+'" style="width:46px;height:46px;object-fit:cover;border-radius:6px">';
+  else if(row._fileId) box.innerHTML='<a href="https://drive.google.com/file/d/'+esc(row._fileId)+'/view" target="_blank"><img src="https://drive.google.com/thumbnail?id='+esc(row._fileId)+'&sz=w120" style="width:46px;height:46px;object-fit:cover;border-radius:6px"></a>';
+  else box.innerHTML='<span class="tgl">belum ada foto</span>';
+}
+/** Kumpulkan item persediaan → {detail,total} atau null bila tak valid. */
+function _ntGatherItems(){
+  var rows=document.querySelectorAll('#ntItemList .nti-row'), detail=[], total=0, noFoto=0;
+  for(var i=0;i<rows.length;i++){
+    var row=rows[i], nama=(row.querySelector('.nti-nama').value||'').trim();
+    var qty=+row.querySelector('.nti-qty').value||0, harga=unfmt(row.querySelector('.nti-harga').value);
+    if(!nama && qty<=0 && harga<=0) continue; // baris kosong, lewati
+    if(!nama){ toast('Nama barang item #'+(i+1)+' wajib diisi','error'); return null; }
+    var item={ namaBarang:nama, qty:qty, satuan:(row.querySelector('.nti-satuan').value||'').trim(),
+      hargaSatuan:harga, keterangan:(row.querySelector('.nti-ket').value||'').trim() };
+    if(row._foto&&row._foto.base64){ if(_notaGps){row._foto.lat=_notaGps.lat;row._foto.lng=_notaGps.lng;} item.foto=row._foto; }
+    else if(row._fileId){ item.fileId=row._fileId; item.urlFile=row._url; item.lat=row._lat; item.lng=row._lng; }
+    else noFoto++;
+    detail.push(item); total+=qty*harga;
+  }
+  if(!detail.length){ toast('Isi minimal 1 item barang','error'); return null; }
+  if(total<=0){ toast('Total item harus > 0 (cek qty & harga)','error'); return null; }
+  if(noFoto>0 && !confirm(noFoto+' item belum ada foto. Tetap simpan? (foto bersifat anjuran)')) return null;
+  return { detail:detail, total:total };
 }
 /** Konversi 'dd/mm/yyyy' atau Date string ke 'yyyy-mm-dd' utk input date. */
 function _toISODate(v){
@@ -2778,15 +2878,20 @@ function _toISODate(v){
   var d=new Date(s); return isNaN(d)?'':(d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2));
 }
 function submitNota(){
-  var nilai=unfmt(document.getElementById('ntNilai').value);
   var notaData={
     namaPenyedia:document.getElementById('ntPenyedia').value.trim(),
     npwp:document.getElementById('ntNpwp').value.trim(),
     alamat:document.getElementById('ntAlamat').value.trim(),
-    nilai:nilai,
     tglNota:document.getElementById('ntTgl').value||''
   };
-  if(nilai<=0){toast('Nilai nota harus > 0','error');return;}
+  if(_ntPersediaan){
+    var g=_ntGatherItems(); if(!g) return;
+    notaData.detail=g.detail; notaData.nilai=g.total;
+  } else {
+    var nilai=unfmt(document.getElementById('ntNilai').value);
+    if(nilai<=0){toast('Nilai nota harus > 0','error');return;}
+    notaData.nilai=nilai;
+  }
   var fileEl=document.getElementById('ntFile');
   if(fileEl.files&&fileEl.files[0]){
     compressImage(fileEl.files[0],function(f){notaData.file=f;sendNota(notaData);});
