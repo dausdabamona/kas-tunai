@@ -1414,6 +1414,22 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
       +(n.npwp?('<br>NPWP: '+esc(n.npwp)):'')
       +(n.urlFile?('<br><a href="'+esc(n.urlFile)+'" target="_blank">'+esc(n.urlFile)+'</a>'):'')
       +'</div></div>';
+    // Rincian barang (persediaan) + foto tagging per item
+    var det=n.detail||[];
+    if(det.length){
+      notaHtml+='<table class="itbl"><tr><th>No</th><th>Nama Barang</th><th>Qty</th><th>Satuan</th><th class="rt">Harga</th><th class="rt">Subtotal</th></tr>';
+      for(var d=0;d<det.length;d++){ var it=det[d];
+        notaHtml+='<tr><td class="ct">'+(d+1)+'</td><td>'+esc(it.namaBarang||'-')+(it.keterangan?(' <span style="color:#777">('+esc(it.keterangan)+')</span>'):'')+'</td>'
+          +'<td class="ct">'+(it.qty||0)+'</td><td class="ct">'+esc(it.satuan||'')+'</td>'
+          +'<td class="rt">'+rupiah(it.hargaSatuan)+'</td><td class="rt">'+rupiah(it.subtotal)+'</td></tr>';
+      }
+      notaHtml+='</table>';
+      var fotoItem=''; var nfi=0;
+      for(d=0;d<det.length;d++){ var it2=det[d]; if(!it2.fileId) continue; nfi++;
+        fotoItem+='<figure><a href="'+esc(it2.urlFile||('https://drive.google.com/file/d/'+it2.fileId+'/view'))+'" target="_blank"><img src="'+srcOf(it2.fileId)+'"></a><figcaption>'+esc(it2.namaBarang||'')+'</figcaption></figure>';
+      }
+      if(nfi) notaHtml+='<div class="ftagh">&#128247; Foto per item ('+nfi+')</div><div class="ftrow">'+fotoItem+'</div>';
+    }
     notaHtml+='<div class="ftag"><div class="ftagh">&#128247; Foto Barang ('+fp.length+')</div>';
     if(fp.length){
       notaHtml+='<div class="ftrow">';
@@ -1449,6 +1465,8 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
   +'.ftag{margin-top:10px;border-top:1px dashed #e2e6ec;padding-top:8px}'
   +'.ftagh{font-weight:bold;font-size:12px;margin-bottom:6px}'
   +'.ftrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px} .ftrow img{width:100%;height:auto;max-height:210px;object-fit:contain;border:1px solid #e2e6ec;border-radius:6px;background:#f7f7f7}'
+  +'.ftrow figure{margin:0} .ftrow figcaption{font-size:10px;text-align:center;margin-top:2px;font-weight:600}'
+  +'.itbl{width:100%;border-collapse:collapse;margin:6px 0;font-size:11px} .itbl th,.itbl td{border:1px solid #cbd5e1;padding:3px 5px} .itbl th{background:#eef2f7} .itbl .ct{text-align:center} .itbl .rt{text-align:right}'
   +'.ftnone{color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:8px;font-size:11px;text-align:center}'
   +'.total{text-align:right;font-weight:bold;color:#16456e;font-size:15px;margin-top:6px}'
   +'.foot{text-align:center;font-size:10px;color:#9aa;margin-top:16px}'
@@ -1468,6 +1486,7 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
   +'<div class="bx"><div class="k">Tanggal</div><div class="v">'+_tglPanjang(t.tanggal)+'</div></div>'
   +'<div class="bx"><div class="k">Nilai Diterima PUM</div><div class="v">'+rupiah(nilai)+'</div></div>'
   +'</div>'
+  +((t.akun||t.persediaan)?('<div class="grid"><div class="bx"><div class="k">Akun / MAK</div><div class="v">'+esc(t.akun||'-')+(t.persediaan?' &middot; Persediaan':'')+'</div></div></div>'):'')
   +'<div class="status'+(lengkap?'':' no')+'"><div class="s">'
   +(lengkap?('&#9989; Pertanggungjawaban Lengkap ('+rupiah(totalNota+dikembalikan)+')')
            :('&#9888; Belum Lengkap ('+rupiah(totalNota+dikembalikan)+' dari '+rupiah(targetSpj)+')'))

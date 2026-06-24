@@ -127,6 +127,12 @@ var FotoNota = (function () {
     for (i = 0; i < nd.notas.length; i++) {
       var fid = nd.notas[i].fileId;
       if (fid && !imgB64[fid]) imgB64[fid] = _imgDataUri(fid);
+      // foto per item rincian barang (persediaan)
+      var det = nd.notas[i].detail || [];
+      for (var d = 0; d < det.length; d++) {
+        var dfid = det[d].fileId;
+        if (dfid && !imgB64[dfid]) imgB64[dfid] = _imgDataUri(dfid);
+      }
     }
     for (var nid in nd.fotoPerNota) {
       var arr = nd.fotoPerNota[nid];
