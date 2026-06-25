@@ -210,7 +210,7 @@ var KasTunai = (function () {
 
   function tambahNota(transactionId, notaData) {
     var urutan = getMultiNota(transactionId).length + 1;
-    var file = (notaData.file && notaData.file.base64) ? DriveHelper.upload(notaData.file) : null;
+    var file = (notaData.file && notaData.file.base64) ? DriveHelper.upload(notaData.file, {noTransaksi:transactionId}) : null;
     var hasDetail = notaData.detail && notaData.detail.length;
     var nilai = hasDetail ? DetailNota.totalItems(notaData.detail) : Util.num(notaData.nilai);
 
@@ -242,7 +242,7 @@ var KasTunai = (function () {
     // Ganti foto nota bila ada file baru (buang file lama)
     if (notaData.file && notaData.file.base64) {
       var oldFileId = hit.values[n.FILE_ID];
-      var file = DriveHelper.upload(notaData.file);
+      var file = DriveHelper.upload(notaData.file, {noTransaksi:transactionId});
       upd[n.FILE_ID] = file.fileId; upd[n.NAMA_FILE] = file.namaFile; upd[n.URL_FILE] = file.url;
       if (oldFileId) DriveHelper.trash(oldFileId);
     }
@@ -316,7 +316,7 @@ var KasTunai = (function () {
     }).length;
 
     for (var i = 0; i < fotoArr.length; i++) {
-      var f = DriveHelper.upload(fotoArr[i]);
+      var f = DriveHelper.upload(fotoArr[i], {noTransaksi:transactionId});
       var lat = fotoArr[i].lat == null ? '' : fotoArr[i].lat;
       var lng = fotoArr[i].lng == null ? '' : fotoArr[i].lng;
       var maps = (lat !== '' && lng !== '') ? ('https://maps.google.com/?q=' + lat + ',' + lng) : '';
@@ -413,7 +413,7 @@ var KasTunai = (function () {
    * Kuitansi ber-TTD (scan/foto) - disimpan di kolom FILE_ID/NAMA_FILE/URL_FILE
    * -------------------------------------------------------- */
   function uploadKuitansi(transactionId, file) {
-    var up = DriveHelper.upload(file);
+    var up = DriveHelper.upload(file, {noTransaksi:transactionId});
     updateByTransactionId(transactionId, Util.set(
       C.KUITANSI_FILE_ID, up.fileId, C.KUITANSI_NAMA_FILE, up.namaFile, C.KUITANSI_URL, up.url));
     DeferredFlush.mark();

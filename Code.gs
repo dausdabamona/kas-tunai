@@ -130,6 +130,15 @@ function serverScanAktif() {
   return _run(function () { return !!Settings.scanFolderId(); });
 }
 
+/* ---- Rapikan penyimpanan Drive (pindah file lama ke folder per transaksi) ---- */
+function serverMigrateDrive(dryRun) {
+  return _run(function () { _requireAdmin(); return DriveHelper.migrateDriveStorage({ dryRun: !!dryRun }); });
+}
+/** Jalankan langsung dari editor Apps Script: pratinjau rencana migrasi. */
+function rapikanDriveDryRun() { return DriveHelper.migrateDriveStorage({ dryRun: true }); }
+/** Jalankan langsung dari editor Apps Script: pindahkan file sungguhan. */
+function rapikanDrive() { return DriveHelper.migrateDriveStorage({ dryRun: false }); }
+
 /* ============================================================
  * Pengaturan penyimpanan (folder Drive) — khusus admin
  * ============================================================ */

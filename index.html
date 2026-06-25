@@ -687,6 +687,12 @@
     </div>
     <div class="tgl" style="margin-bottom:8px">Salin ID dari URL folder Drive: <code>drive.google.com/drive/folders/<b>&lt;ID&gt;</b></code>. Folder harus dimiliki/dibagikan ke pemilik aplikasi.</div>
     <button class="btn" onclick="submitSettings()">Simpan Pengaturan</button>
+    <hr>
+    <div style="font-weight:600;font-size:13px;margin-bottom:4px">&#128193; Rapikan Penyimpanan Drive</div>
+    <div class="tgl" style="margin-bottom:6px">Memindahkan file lama ke struktur rapi <code>Bukti Transaksi/Tahun/Bulan/Txn-No/</code>. Tautan/preview tetap valid (File ID tidak berubah). Upload baru sudah otomatis rapi.</div>
+    <button class="btn ghost" onclick="rapikanDrive(true)">&#128065; Pratinjau (dry run)</button>
+    <button class="btn" style="background:#7c3aed" onclick="rapikanDrive(false)">&#128736; Jalankan Rapikan</button>
+    <div id="stMigInfo" class="tgl" style="margin-top:6px"></div>
     <button class="btn ghost" onclick="closeModal('modalSettings')">Tutup</button>
   </div>
 </div>
@@ -1039,6 +1045,34 @@ function submitSettings(){
     // segarkan visibilitas tombol Impor Scan
     var b=document.querySelectorAll('.scan-imp'); for(var i=0;i<b.length;i++) b[i].style.display=res.scanInfo.id?'':'none';
   }).withFailureHandler(fail).serverSetSettings(drive, scan);
+}
+/* Rapikan penyimpanan Drive (dry run / sungguhan); ulangi hingga sisa habis */
+var _migTot=0;
+function rapikanDrive(dryRun){
+  if(!dryRun && !confirm('Pindahkan semua file lama ke struktur folder per transaksi?\nFile ID tetap (link tidak rusak). Lanjut?')) return;
+  _migTot=0;
+  document.getElementById('stMigInfo').innerHTML='';
+  _migStep(dryRun);
+}
+function _migStep(dryRun){
+  showLoading(true,dryRun?'Memeriksa rencana...':'Memindahkan file...');
+  google.script.run
+    .withSuccessHandler(function(res){
+      _migTot+=(res.moved||0);
+      var info=document.getElementById('stMigInfo');
+      if(dryRun){
+        showLoading(false);
+        info.innerHTML='Pratinjau: <b>'+(res.moved||0)+'</b> file akan dipindah, '+(res.skipped||0)+' sudah rapi (dari '+res.total+'). '
+          +(res.log&&res.log.length?('<br><span style="font-size:11px">'+esc(res.log.slice(0,8).join(' · '))+'…</span>'):'');
+        return;
+      }
+      info.innerHTML='Dipindah: <b>'+_migTot+'</b> · dilewati '+(res.skipped||0)+' · gagal '+(res.failed||0)+' (total '+res.total+')';
+      // Bila masih ada yang dipindah pada batch ini, lanjutkan batch berikutnya
+      if((res.moved||0)>0){ _migStep(false); }
+      else { showLoading(false); toast('Rapikan selesai: '+_migTot+' file dipindah','success'); }
+    })
+    .withFailureHandler(fail)
+    .serverMigrateDrive(dryRun);
 }
 /* ============== Kelola User (admin) ============== */
 var _usrEditEmail=null; // null = mode tambah

@@ -55,7 +55,7 @@ var BuktiPD = (function () {
       urutan++;
       var stamp = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyyMMdd_HHmmss');
       fdoc.namaFile = 'bukti_txn' + noTransaksi + '_' + urutan + '_' + stamp + '.' + _ext(fdoc.mimeType);
-      var up = DriveHelper.upload(fdoc);
+      var up = DriveHelper.upload(fdoc, {noTransaksi:noTransaksi});
       SheetRepo.appendRow(CONFIG.SHEETS.BUKTI_PD, [
         noTransaksi, urutan, up.fileId, up.namaFile, up.url, fdoc.mimeType || '',
         fdoc.jenisDok || '', now, fdoc.keterangan || '', FLAG_ACTIVE, '', ''
@@ -90,7 +90,7 @@ var BuktiPD = (function () {
     }
     if (!blobs.length) throw new Error('File bukti tidak dapat dibaca');
     var zip = Utilities.zip(blobs, namaZip || ('Bukti-PD-' + noTransaksi + '.zip'));
-    var folder = CONFIG.DRIVE_FOLDER_ID ? DriveApp.getFolderById(CONFIG.DRIVE_FOLDER_ID) : DriveApp.getRootFolder();
+    var folder = DriveHelper.exportFolder();
     var f = folder.createFile(zip);
     try { f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e) {}
     return { url: 'https://drive.google.com/uc?export=download&id=' + f.getId(), jml: blobs.length };

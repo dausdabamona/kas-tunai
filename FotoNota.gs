@@ -68,7 +68,7 @@ var FotoNota = (function () {
       var now = new Date();
       urutan++;
       foto.namaFile = _namaFile(noTransaksi, notaId, urutan, now);
-      var up = DriveHelper.upload(foto);
+      var up = DriveHelper.upload(foto, {noTransaksi:noTransaksi});
       var lat = (foto.lat == null ? '' : foto.lat);
       var lng = (foto.lng == null ? '' : foto.lng);
       var lokasi = (lat !== '' && lng !== '') ? (lat + ',' + lng) : '';

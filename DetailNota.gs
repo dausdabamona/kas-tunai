@@ -81,7 +81,7 @@ var DetailNota = (function () {
         var up = DriveHelper.upload({
           base64: it.foto.base64, mimeType: it.foto.mimeType || 'image/jpeg',
           namaFile: it.foto.namaFile || ('item_t' + noTransaksi + '_n' + notaUrutan + '_' + (i + 1) + '.jpg')
-        });
+        }, { noTransaksi: noTransaksi });
         fileId = up.fileId; namaFile = up.namaFile; url = up.url;
         lat = (it.foto.lat == null ? '' : it.foto.lat);
         lng = (it.foto.lng == null ? '' : it.foto.lng);
