@@ -677,15 +677,15 @@
 <div class="modal" id="modalSettings">
   <div class="sheet">
     <h2>&#9881; Pengaturan Penyimpanan</h2>
-    <div class="field"><label>Folder Drive penyimpanan foto &amp; dokumen (ID)</label>
-      <input type="text" id="stDrive" placeholder="kosong = root My Drive">
+    <div class="field"><label>Folder Drive penyimpanan (ID atau URL folder)</label>
+      <input type="text" id="stDrive" placeholder="tempel ID / URL folder — kosong = root My Drive">
       <div class="tgl" id="stDriveInfo" style="margin-top:2px"></div>
     </div>
-    <div class="field"><label>Folder Drive "kotak masuk hasil scan" (ID)</label>
+    <div class="field"><label>Folder "kotak masuk hasil scan" (ID atau URL)</label>
       <input type="text" id="stScan" placeholder="kosong = fitur Impor Scan nonaktif">
       <div class="tgl" id="stScanInfo" style="margin-top:2px"></div>
     </div>
-    <div class="tgl" style="margin-bottom:8px">Salin ID dari URL folder Drive: <code>drive.google.com/drive/folders/<b>&lt;ID&gt;</b></code>. Folder harus dimiliki/dibagikan ke pemilik aplikasi.</div>
+    <div class="tgl" style="margin-bottom:8px">Tempel <b>ID</b> atau <b>URL</b> folder (<code>drive.google.com/drive/folders/<b>&lt;ID&gt;</b></code>) — <b>bukan path/nama</b>. Pilih folder <b>induk</b> (mis. <code>…/Kas Tunai</code>); aplikasi otomatis membuat <code>Bukti Transaksi/</code> &amp; <code>Exports/</code> di dalamnya. Folder harus milik/di-share ke pemilik aplikasi.</div>
     <button class="btn" onclick="submitSettings()">Simpan Pengaturan</button>
     <hr>
     <div style="font-weight:600;font-size:13px;margin-bottom:4px">&#128193; Rapikan Penyimpanan Drive</div>

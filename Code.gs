@@ -158,9 +158,22 @@ function serverGetSettings() {
     };
   });
 }
+/** Ambil ID folder dari input: ID langsung, URL Drive, atau '' . Tolak bila berupa path. */
+function _folderIdFrom(v, label) {
+  v = String(v == null ? '' : v).trim();
+  if (!v) return '';
+  var m = v.match(/[-\w]{25,}/);            // ID Drive (>=25 char) di URL atau langsung
+  if (m && (v.indexOf('http') === 0 || v === m[0])) return m[0];
+  if (v.indexOf('/') >= 0 || v.indexOf(' ') >= 0) {
+    throw new Error(label + ': masukkan ID folder atau URL Drive, bukan path/nama folder. Buka folder di Drive → salin dari drive.google.com/drive/folders/<ID>');
+  }
+  return v;
+}
 function serverSetSettings(driveFolderId, scanFolderId) {
   return _run(function () {
     _requireAdmin();
+    driveFolderId = _folderIdFrom(driveFolderId, 'Folder penyimpanan');
+    scanFolderId  = _folderIdFrom(scanFolderId, 'Folder scan');
     // Validasi folder bila diisi
     if (driveFolderId) { try { DriveApp.getFolderById(driveFolderId); } catch (e) { throw new Error('Folder penyimpanan tidak ditemukan / tak bisa diakses'); } }
     if (scanFolderId)  { try { DriveApp.getFolderById(scanFolderId);  } catch (e) { throw new Error('Folder scan tidak ditemukan / tak bisa diakses'); } }
