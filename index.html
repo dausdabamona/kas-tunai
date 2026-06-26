@@ -689,7 +689,7 @@
     <button class="btn" onclick="submitSettings()">Simpan Pengaturan</button>
     <hr>
     <div style="font-weight:600;font-size:13px;margin-bottom:4px">&#128193; Rapikan Penyimpanan Drive</div>
-    <div class="tgl" style="margin-bottom:6px">Memindahkan file lama ke struktur rapi <code>Bukti Transaksi/Tahun/Bulan/Txn-No/</code>. Tautan/preview tetap valid (File ID tidak berubah). Upload baru sudah otomatis rapi.</div>
+    <div class="tgl" style="margin-bottom:6px">Memindahkan file lama (yang tercatat di sheet) <b>dan menyapu file "liar" di root My Drive</b> ber-nama <code>fn_txn…/bukti_txn…/item_t…</code> ke struktur rapi <code>Bukti Transaksi/Tahun/Bulan/Txn-No/</code>. Tautan/preview tetap valid (File ID tidak berubah). File pribadi lain tidak disentuh.</div>
     <button class="btn ghost" onclick="rapikanDrive(true)">&#128065; Pratinjau (dry run)</button>
     <button class="btn" style="background:#7c3aed" onclick="rapikanDrive(false)">&#128736; Jalankan Rapikan</button>
     <div id="stMigInfo" class="tgl" style="margin-top:6px"></div>

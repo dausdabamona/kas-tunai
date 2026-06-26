@@ -110,7 +110,12 @@ var DriveHelper = (function () {
     catch (e) { Logger.log('[DriveHelper] trash gagal (' + fileId + '): ' + e.message); }
   }
 
-  /* ---------- Migrasi file lama → struktur baru (berbasis sheet) ---------- */
+  /* ---------- Migrasi file lama → struktur baru ---------- */
+  /** Ambil No transaksi dari nama file ber-pola aplikasi (fn_txn/bukti_txn/item_t). */
+  function _noFromName(name) {
+    var m = String(name || '').match(/^(?:fn_txn|bukti_txn|item_t)(\d+)/);
+    return m ? m[1] : null;
+  }
   function _migrateCandidates() {
     var out = [], i;
     function add(fileId, no) { if (fileId && no != null && no !== '') out.push({ fileId: fileId, no: no }); }
@@ -155,6 +160,22 @@ var DriveHelper = (function () {
         moved++;
         if (log.length < 80) log.push(file.getName() + ' → ' + folder.getName());
       } catch (e) { failed++; if (log.length < 80) log.push('GAGAL ' + c.fileId + ': ' + e.message); }
+    }
+    // Sapu file "liar" di root My Drive yang ber-pola nama aplikasi (tak tercatat di sheet).
+    if (opts.sweepRoot !== false && ((new Date()).getTime() - startMs) <= TIME) {
+      var it = DriveApp.getRootFolder().getFiles();
+      while (it.hasNext()) {
+        if (moved >= limit || ((new Date()).getTime() - startMs) > TIME) break;
+        var fl = it.next();
+        var no = _noFromName(fl.getName());
+        if (!no) continue;
+        try {
+          var fol = ctxFolder({ noTransaksi: no });
+          if (dry) { if (log.length < 80) log.push('RENCANA(sapu): ' + fl.getName() + ' → Txn-' + ('000' + no).slice(-4)); moved++; continue; }
+          fl.moveTo(fol); moved++;
+          if (log.length < 80) log.push('(sapu) ' + fl.getName() + ' → ' + fol.getName());
+        } catch (e) { failed++; }
+      }
     }
     if (!dry) {
       try { AuditLog.write('MIGRATE_DRIVE', 'Drive', '', 'dipindah=' + moved + ' dilewati=' + skipped + ' gagal=' + failed); } catch (e) {}
