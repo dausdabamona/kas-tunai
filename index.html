@@ -557,6 +557,14 @@
       <input type="text" class="numfmt" id="pjNilaiDasar" inputmode="numeric" value="0" oninput="recalcPajak()">
       <div class="tgl" style="margin-top:2px">DPP = 100/111 &times; nilai ini (bila termasuk PPN). Isi sesuai nilai kontrak/nota bruto, bukan nilai bersih transfer.</div>
     </div>
+    <details style="margin-bottom:12px;border:1px solid #dde0e6;border-radius:8px;padding:8px 12px">
+      <summary style="cursor:pointer;font-size:13px;color:var(--c-primary);font-weight:600">&#8645; Gross-up &mdash; hitung nilai kontrak dari netto yang diterima rekanan</summary>
+      <div class="field" style="margin-top:10px"><label>Jumlah yang ingin diterima rekanan (netto, Rp)</label>
+        <input type="text" class="numfmt" id="pjNettoTarget" inputmode="numeric" value="0" oninput="recalcPajak()">
+      </div>
+      <button class="btn ghost" style="margin-top:0" onclick="hitungGrossUpUI()">&#8593; Hitung &amp; isi Nilai Kontrak</button>
+      <div id="pjGrossUpInfo" class="tgl" style="margin-top:8px;font-weight:600"></div>
+    </details>
     <div class="field"><label>Penyedia / Rekanan</label>
       <input type="text" id="pjPenyedia" list="pjPenyediaList" oninput="onPajakPenyediaInput()" autocomplete="off" placeholder="nama rekanan (Wajib Pajak)">
       <datalist id="pjPenyediaList"></datalist>
@@ -921,6 +929,35 @@ function hitungPajak(kegiatan, nominal, termasukPPN, adaNpwp, refOverride){
     totalPajak:pph+ppn, nettoRekanan:nominal-pph-ppn, catatan:ref.catatan,
     nonNpwp:!adaNpwp, kenaPPN:kenaPPN, nominal:nominal, termasukPPN:termasukPPN
   };
+}
+
+/**
+ * Hitung nilai kontrak BRUTO dari netto yang ingin diterima rekanan (gross-up).
+ * G = netto / faktor_sisa; faktor tergantung apakah termasukPPN dan kenaPPN.
+ */
+function hitungGrossUp(netto, ref, termasukPPN, adaNpwp) {
+  netto = parseFloat(netto) || 0;
+  var kenaPPN = ref.ppn > 0;
+  var tarif = ref.tarifPPh || 0;
+  var npwpX2 = (ref.jenisPPh === 'PPh Pasal 22' || ref.jenisPPh === 'PPh Pasal 23');
+  if (!adaNpwp && tarif > 0 && npwpX2) tarif = tarif * 2;
+  var gross;
+  if (kenaPPN && termasukPPN)       gross = (1 - tarif) > 0 ? netto * 1.11 / (1 - tarif) : netto;
+  else if (kenaPPN && !termasukPPN) gross = (1 - tarif - 0.11) > 0 ? netto / (1 - tarif - 0.11) : netto;
+  else                              gross = tarif > 0 && (1 - tarif) > 0 ? netto / (1 - tarif) : netto;
+  return Math.round(gross);
+}
+
+function hitungGrossUpUI() {
+  var netto = unfmt(document.getElementById('pjNettoTarget').value);
+  if (!netto) { toast('Isi jumlah netto rekanan terlebih dahulu', 'info'); return; }
+  var gross = hitungGrossUp(netto, _pjSelectedRef(),
+    document.getElementById('pjTermasukPPN').checked,
+    document.getElementById('pjAdaNpwp').checked);
+  document.getElementById('pjNilaiDasar').value = _grp(gross);
+  document.getElementById('pjGrossUpInfo').textContent =
+    'Nilai kontrak/bruto: ' + rupiah(gross) + ' → rekanan menerima ≈ ' + rupiah(netto);
+  recalcPajak();
 }
 
 /* ============== Util UI ============== */
@@ -3347,6 +3384,9 @@ function openModalPajak(noTransaksi){
     document.getElementById('pjPphManual').value='';
     document.getElementById('pjPpnManual').value='';
   }
+  // reset gross-up
+  document.getElementById('pjNettoTarget').value='0';
+  document.getElementById('pjGrossUpInfo').textContent='';
   // NPWP Poltek (pemungut) — diingat browser
   var npwpPoltek=''; try{ npwpPoltek=localStorage.getItem('kt_npwp_poltek')||''; }catch(e){}
   document.getElementById('pjNpwpPoltek').value=npwpPoltek||INST.npwpWP||'';
@@ -3417,6 +3457,17 @@ function recalcPajak(){
     +(pj.jenisPPh?baris('MAP / KJS', pj.mapPPh+' / '+pj.kjsPPh):'')
     +(pj.catatan?'<div class="tgl" style="margin-top:6px">'+esc(pj.catatan)+'</div>':'');
   function baris(l,v){return '<div class="row1" style="margin:3px 0"><span class="tgl">'+l+'</span><span>'+v+'</span></div>';}
+  // perbarui info gross-up bila netto target diisi
+  var elGu=document.getElementById('pjNettoTarget'), elGuInfo=document.getElementById('pjGrossUpInfo');
+  if(elGu&&elGuInfo){
+    var nettoTgt=unfmt(elGu.value||'0');
+    if(nettoTgt>0){
+      var gross=hitungGrossUp(nettoTgt,_pjSelectedRef(),
+        document.getElementById('pjTermasukPPN').checked,
+        document.getElementById('pjAdaNpwp').checked);
+      elGuInfo.textContent='Nilai kontrak/bruto: '+rupiah(gross)+' → rekanan menerima ≈ '+rupiah(nettoTgt);
+    } else { elGuInfo.textContent=''; }
+  }
 }
 
 /* ============== Simpan & Kuitansi Pajak ============== */
