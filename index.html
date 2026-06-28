@@ -581,6 +581,10 @@
       <button class="btn" onclick="cetakSSP('pph')">&#128424; SSP PPh</button>
       <button class="btn" onclick="cetakSSP('ppn')">&#128424; SSP PPN</button>
     </div>
+    <div class="row2" style="margin-top:8px">
+      <button class="btn" onclick="simpanPajakModal()">&#128190; Simpan Pajak</button>
+      <button class="btn ghost" onclick="cetakKuitansiPajakModal()">&#129534; Kuitansi Pajak</button>
+    </div>
     <button class="btn ghost" onclick="closeModal('modalPajak')">Tutup</button>
   </div>
 </div>
@@ -1254,6 +1258,24 @@ function _renderGroups(list, mode){
   return h;
 }
 
+/* Hitung pajak final untuk kartu/kuitansi: pakai data tersimpan bila ada. */
+function _cardPajak(t){
+  var dasar=(+t.nilaiSpby>0)?t.nilaiSpby:t.kredit;
+  var pj;
+  if(t.pajakKatIdx!==null && t.pajakKatIdx!==undefined){
+    var ref=(t.pajakKatIdx>=0 && t.pajakKatIdx<PAJAK_REF.length)?PAJAK_REF[t.pajakKatIdx]:PAJAK_DEFAULT;
+    pj=hitungPajak(t.kegiatan, dasar, true, true, ref);
+    // Terapkan nilai yang tersimpan sebagai override
+    if(t.pajakPph||t.pajakPpn){ pj.pph=t.pajakPph; pj.ppn=t.pajakPpn; pj.totalPajak=t.pajakPph+t.pajakPpn; pj.nettoRekanan=pj.nominal-pj.pph-pj.ppn; }
+    if(t.pajakDpp) pj.dpp=t.pajakDpp;
+    pj.isSaved=true;
+  } else {
+    pj=hitungPajak(t.kegiatan, dasar);
+    pj.isSaved=false;
+  }
+  return pj;
+}
+
 function _cardHtml(t, mode){
   var srcBadge = (t.sumber==='BANK')
     ? ' <span class="srcbadge bank">&#127974; Bank</span>'
@@ -1268,7 +1290,7 @@ function _cardHtml(t, mode){
   var fnJml=fotoCount(t), lunas=isNotaLunas(t);
   var kembali=(+t.kembalianTotal||0);
   // Dasar DPP pajak = nilai kontrak/nota bruto (Nilai SPBY bila diisi), bukan nilai bersih transfer
-  var pj=hitungPajak(t.kegiatan, (+t.nilaiSpby>0)?t.nilaiSpby:t.kredit);
+  var pj=_cardPajak(t);
   var sisa=_spbyTarget(t)-t.notaTotal-kembali; if(sisa<0) sisa=0;
   var st = t.noSpby ? 'st-spby'
     : (lunas && fnJml>0) ? 'st-sudah'
@@ -1308,14 +1330,16 @@ function _cardHtml(t, mode){
       +'</div>';
   }
   // baris pajak
+  var savedBadge=pj.isSaved?' <span class="chip ok" style="font-size:10px;padding:1px 5px">&#128190; tersimpan</span>':'';
   if(pj.ref===PAJAK_DEFAULT){
-    h+='<div class="lrow pajak"><span>&#9888; Cek pajak manual</span>'
+    h+='<div class="lrow pajak"><span>&#9888; Cek pajak manual'+savedBadge+'</span>'
       +'<button class="mini b-dark" onclick="openModalPajak('+t.no+')">Pajak</button></div>';
   } else if(pj.totalPajak>0){
-    h+='<div class="lrow pajak"><span>'+esc(pj.label)+': PPh = '+rupiah(pj.pph)+' &middot; PPN = '+rupiah(pj.ppn)+'</span>'
+    h+='<div class="lrow pajak"><span>'+esc(pj.label)+': PPh = '+rupiah(pj.pph)+' &middot; PPN = '+rupiah(pj.ppn)+savedBadge+'</span>'
+      +'<button class="mini b-dark" onclick="cetakKuitansiPajak('+t.no+')">Kuitansi Pajak</button>'
       +'<button class="mini b-dark" onclick="openModalPajak('+t.no+')">SSP</button></div>';
   } else {
-    h+='<div class="lrow ok"><span>'+esc(pj.label)+': &#10003; Bebas PPh &amp; PPN</span>'
+    h+='<div class="lrow ok"><span>'+esc(pj.label)+': &#10003; Bebas PPh &amp; PPN'+savedBadge+'</span>'
       +'<button class="mini b-dark" onclick="openModalPajak('+t.no+')">Pajak</button></div>';
   }
   // chips
@@ -3313,10 +3337,16 @@ function openModalPajak(noTransaksi){
   document.getElementById('pjNilaiDasar').value=_grp((+t.nilaiSpby>0)?t.nilaiSpby:t.kredit);
   document.getElementById('pjTermasukPPN').checked=true;
   document.getElementById('pjAdaNpwp').checked=true;
-  // Kategori pajak (default = auto-klasifikasi; bisa diubah manual)
-  _pjFillKategori(PAJAK_REF.indexOf(_klasifikasiPajak(t.kegiatan)));
-  document.getElementById('pjPphManual').value='';
-  document.getElementById('pjPpnManual').value='';
+  // Kategori pajak — prefill dari data tersimpan bila ada, else auto-klasifikasi
+  if(t.pajakKatIdx!==null && t.pajakKatIdx!==undefined){
+    _pjFillKategori(t.pajakKatIdx);
+    document.getElementById('pjPphManual').value=t.pajakPph>0?_grp(t.pajakPph):'';
+    document.getElementById('pjPpnManual').value=t.pajakPpn>0?_grp(t.pajakPpn):'';
+  } else {
+    _pjFillKategori(PAJAK_REF.indexOf(_klasifikasiPajak(t.kegiatan)));
+    document.getElementById('pjPphManual').value='';
+    document.getElementById('pjPpnManual').value='';
+  }
   // NPWP Poltek (pemungut) — diingat browser
   var npwpPoltek=''; try{ npwpPoltek=localStorage.getItem('kt_npwp_poltek')||''; }catch(e){}
   document.getElementById('pjNpwpPoltek').value=npwpPoltek||INST.npwpWP||'';
@@ -3387,6 +3417,92 @@ function recalcPajak(){
     +(pj.jenisPPh?baris('MAP / KJS', pj.mapPPh+' / '+pj.kjsPPh):'')
     +(pj.catatan?'<div class="tgl" style="margin-top:6px">'+esc(pj.catatan)+'</div>':'');
   function baris(l,v){return '<div class="row1" style="margin:3px 0"><span class="tgl">'+l+'</span><span>'+v+'</span></div>';}
+}
+
+/* ============== Simpan & Kuitansi Pajak ============== */
+function simpanPajakModal(){
+  var no=_sspTarget;
+  var t=_cariTransaksi(no); if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
+  var dasar=unfmt(document.getElementById('pjNilaiDasar').value)||t.kredit;
+  var pj=_pjApplyManual(hitungPajak(t.kegiatan, dasar,
+    document.getElementById('pjTermasukPPN').checked,
+    document.getElementById('pjAdaNpwp').checked, _pjSelectedRef()));
+  var katIdx=parseInt((document.getElementById('pjKategoriSel')||{}).value,10);
+  showLoading(true,'Menyimpan pajak...');
+  google.script.run
+    .withSuccessHandler(function(){
+      showLoading(false); toast('Pajak tersimpan'); closeModal('modalPajak'); loadAll();
+    })
+    .withFailureHandler(function(e){ showLoading(false); fail(e.message||String(e)); })
+    .serverSimpanPajak(no, {katIdx:katIdx, pph:pj.pph, ppn:pj.ppn, dpp:pj.dpp});
+}
+
+function cetakKuitansiPajak(no){
+  var t=_cariTransaksi(no); if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
+  var pj=_cardPajak(t);
+  if(!pj||pj.totalPajak<=0){ toast('Tidak ada pajak untuk transaksi ini','info'); return; }
+  _bukaPopup(_renderKuitansiPajakHtml(t, pj));
+}
+
+function cetakKuitansiPajakModal(){
+  var no=_sspTarget;
+  var t=_cariTransaksi(no); if(!t){ toast('Transaksi tidak ditemukan','error'); return; }
+  var dasar=unfmt(document.getElementById('pjNilaiDasar').value)||t.kredit;
+  var pj=_pjApplyManual(hitungPajak(t.kegiatan, dasar,
+    document.getElementById('pjTermasukPPN').checked,
+    document.getElementById('pjAdaNpwp').checked, _pjSelectedRef()));
+  if(!pj||pj.totalPajak<=0){ toast('Jumlah pajak = 0, tidak ada yang dicetak','info'); return; }
+  _bukaPopup(_renderKuitansiPajakHtml(t, pj));
+}
+
+function _renderKuitansiPajakHtml(t, pj){
+  var thn=new Date().getFullYear();
+  var noKwt='KP-'+t.no+'/'+thn;
+  var netto=pj.nettoRekanan;
+  var baris=function(l,v){ return '<tr><td class="l">'+l+'</td><td class="c">:</td><td>'+v+'</td></tr>'; };
+  var css=_kuitansiCss()
+    +'.kp-sec{margin-top:10px} .kp-head{font-weight:bold;border-bottom:1px solid #ccc;padding-bottom:4px;margin-bottom:6px;font-size:13px}'
+    +'.kp-total td{font-weight:bold;background:#f0f0f0} .kp-netto td{font-weight:bold;font-size:15px}';
+  var penyedia=t.penjab||'(…………………………)';
+
+  var body=''
+  +'<div class="page">'
+  +'<div class="kop"><div class="nm">'+esc(INST.namaWP).toUpperCase()+'</div>'
+  +'<div class="ad">'+esc(INST.alamatKop1)+'</div>'
+  +'<div class="ad">'+esc(INST.alamatKop2)+'</div></div>'
+  +'<hr class="hrt">'
+  +'<div class="judul">KUITANSI PEMOTONGAN PAJAK</div>'
+  +'<div class="nomor">Nomor: '+esc(noKwt)+'</div>'
+
+  +'<table class="b">'
+  +baris('Kegiatan / Uraian', esc(t.kegiatan))
+  +baris('Penyedia / Penerima', esc(penyedia))
+  +baris('Tanggal', esc(_tglPanjang(t.tanggal)))
+  +'</table>'
+
+  +'<div class="kp-sec"><div class="kp-head">Rincian Pemotongan Pajak</div>'
+  +'<table class="b">'
+  +baris('Nilai Kontrak / Nota', '<b>'+rupiah(pj.nominal)+'</b>')
+  +baris('DPP (Dasar Pengenaan Pajak)', rupiah(pj.dpp)+(pj.kenaPPN&&pj.termasukPPN?' <span style="font-size:11px;color:#555">(= nilai ÷ 1,11)</span>':''))
+  +(pj.pph>0?baris(esc(pj.jenisPPh||'PPh')+(pj.tarifPPhPct?' ('+pj.tarifPPhPct+'%)':'')+(pj.nonNpwp?' <i>(non-NPWP ×2)</i>':''), '<b>'+rupiah(pj.pph)+'</b>'):'')
+  +(pj.ppn>0?baris('PPN (11% × DPP)', '<b>'+rupiah(pj.ppn)+'</b>'):'')
+  +'<tr class="kp-total"><td class="l">Total Pemotongan Pajak</td><td class="c">:</td><td>'+rupiah(pj.totalPajak)+'</td></tr>'
+  +'<tr class="kp-netto"><td class="l">Netto Dibayarkan ke Rekanan</td><td class="c">:</td><td>'+rupiah(netto)+'</td></tr>'
+  +'<tr><td colspan="3" class="terb">Terbilang : <i>'+_terbilangTitle(netto)+'</i></td></tr>'
+  +'</table></div>'
+
+  +(pj.mapPPh?'<div class="tgl" style="margin-top:8px">MAP / KJS PPh : <b>'+esc(pj.mapPPh)+' / '+esc(pj.kjsPPh)+'</b></div>':'')
+
+  +'<table class="sig"><tr>'
+  +'<td>Rekanan / Penerima,<br>'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)+'<div class="nm">'+esc(penyedia)+'</div></td>'
+  +'<td>Bendahara Pengeluaran,<br>&nbsp;<div class="nm">'+esc(INST.bendahara||'')+'</div><span class="nip">NIP. '+esc(INST.nipBendahara||'')+'</span></td>'
+  +'<td>Mengetahui,<br>PPK Poltek KP Sorong<div class="nm">'+esc(INST.ppk||'')+'</div><span class="nip">NIP. '+esc(INST.nipPpk||'')+'</span></td>'
+  +'</tr></table>'
+  +'</div>';
+
+  return '<html><head><meta charset="utf-8"><title>Kuitansi Pajak No '+t.no+'</title><style>'+css+'</style></head><body>'
+  +'<div class="noprint" style="text-align:right;padding:10px 16mm 0"><button onclick="window.print()">Cetak / Simpan PDF</button></div>'
+  +body+'</body></html>';
 }
 
 /* ============== Kuitansi (Bendahara -> PUM, diketahui PPK) ============== */

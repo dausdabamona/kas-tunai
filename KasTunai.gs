@@ -43,7 +43,11 @@ var KasTunai = (function () {
       sumber:          (String(row[C.SUMBER]||'').toUpperCase()==='BANK') ? 'BANK' : 'TUNAI',
       refTransfer:     row[C.REF_TRANSFER] || '',
       akun:            row[C.AKUN] || '',
-      persediaan:      String(row[C.PERSEDIAAN]||'').toUpperCase()==='Y'
+      persediaan:      String(row[C.PERSEDIAAN]||'').toUpperCase()==='Y',
+      pajakKatIdx:     (row[C.PAJAK_KATEGORI_IDX] !== '' && row[C.PAJAK_KATEGORI_IDX] != null) ? Util.num(row[C.PAJAK_KATEGORI_IDX]) : null,
+      pajakPph:        Util.num(row[C.PAJAK_PPH]),
+      pajakPpn:        Util.num(row[C.PAJAK_PPN]),
+      pajakDpp:        Util.num(row[C.PAJAK_DPP])
     };
   }
   /** true bila baris adalah pemindahan dana antar kas (Pindah Dana), bukan belanja riil. */
@@ -450,6 +454,21 @@ var KasTunai = (function () {
     };
   }
 
+  /* -------------------------------------------------------- *
+   * Simpan data pajak (kategori & jumlah) ke baris transaksi
+   * -------------------------------------------------------- */
+  function simpanPajak(no, d) {
+    updateByTransactionId(no, Util.set(
+      C.PAJAK_KATEGORI_IDX, (d.katIdx != null ? d.katIdx : ''),
+      C.PAJAK_PPH,          Util.num(d.pph),
+      C.PAJAK_PPN,          Util.num(d.ppn),
+      C.PAJAK_DPP,          Util.num(d.dpp)));
+    DeferredFlush.mark();
+    AuditLog.write('SIMPAN_PAJAK', CONFIG.SHEETS.KAS_TUNAI, no,
+      'katIdx=' + d.katIdx + ' pph=' + d.pph + ' ppn=' + d.ppn + ' dpp=' + d.dpp);
+    return { success: true };
+  }
+
   return {
     getTransaksi: getTransaksi,
     ringkasanSaldo: ringkasanSaldo,
@@ -470,6 +489,7 @@ var KasTunai = (function () {
     hapusSpby: hapusSpby,
     uploadKuitansi: uploadKuitansi,
     hapusKuitansi: hapusKuitansi,
+    simpanPajak: simpanPajak,
     getRekap: getRekap
   };
 })();
