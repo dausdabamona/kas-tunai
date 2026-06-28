@@ -458,6 +458,7 @@ var KasTunai = (function () {
    * Simpan data pajak (kategori & jumlah) ke baris transaksi
    * -------------------------------------------------------- */
   function simpanPajak(no, d) {
+    SheetRepo.ensureMinCols(CONFIG.SHEETS.KAS_TUNAI, CONFIG.HEADERS.KAS_TUNAI.length);
     updateByTransactionId(no, Util.set(
       C.PAJAK_KATEGORI_IDX, (d.katIdx != null ? d.katIdx : ''),
       C.PAJAK_PPH,          Util.num(d.pph),

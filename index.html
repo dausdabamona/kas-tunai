@@ -955,6 +955,9 @@ function hitungGrossUpUI() {
     document.getElementById('pjTermasukPPN').checked,
     document.getElementById('pjAdaNpwp').checked);
   document.getElementById('pjNilaiDasar').value = _grp(gross);
+  // Bersihkan override manual agar hasil gross-up yang dipakai (bukan nilai lama)
+  document.getElementById('pjPphManual').value = '';
+  document.getElementById('pjPpnManual').value = '';
   document.getElementById('pjGrossUpInfo').textContent =
     'Nilai kontrak/bruto: ' + rupiah(gross) + ' → rekanan menerima ≈ ' + rupiah(netto);
   recalcPajak();

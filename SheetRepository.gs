@@ -169,6 +169,14 @@ var SheetRepo = (function () {
    * Isi label header yang KOSONG pada baris 1 tiap sheet (sesuai CONFIG.HEADERS),
    * tanpa menimpa label yang sudah ada. Idempotent. Kembalikan jumlah sheet diperbaiki.
    */
+  /** Perluas sheet ke minimal `minCols` kolom (idempotent). */
+  function ensureMinCols(name, minCols) {
+    var sh = ss().getSheetByName(name);
+    if (sh && sh.getMaxColumns() < minCols) {
+      sh.insertColumnsAfter(sh.getMaxColumns(), minCols - sh.getMaxColumns());
+    }
+  }
+
   function ensureHeaders() {
     var changed = 0;
     for (var key in CONFIG.SHEETS) {
@@ -177,6 +185,10 @@ var SheetRepo = (function () {
       if (!hdr || !hdr.length) continue;
       var sh = ss().getSheetByName(name);
       if (!sh) continue; // jangan buat sheet baru di sini
+      // Perluas kolom bila perlu sebelum membaca header (hindari out-of-bounds)
+      if (sh.getMaxColumns() < hdr.length) {
+        sh.insertColumnsAfter(sh.getMaxColumns(), hdr.length - sh.getMaxColumns());
+      }
       var range = sh.getRange(1, 1, 1, hdr.length);
       var row = range.getValues()[0];
       var dirty = false;
@@ -197,7 +209,8 @@ var SheetRepo = (function () {
     setRow: setRow,
     setCells: setCells,
     invalidate: invalidate,
-    ensureHeaders: ensureHeaders
+    ensureHeaders: ensureHeaders,
+    ensureMinCols: ensureMinCols
   };
 })();
 
