@@ -547,7 +547,10 @@
   <div class="sheet">
     <h2>&#9881; Hitung Pajak <span id="pjTxLabel"></span></h2>
     <div class="card status-belum" style="margin:0 0 12px">
-      <div class="keg" id="pjKategori" style="font-size:14px"></div>
+      <div class="field" style="margin-bottom:4px"><label>Kategori Pajak (boleh diubah manual)</label>
+        <select id="pjKategoriSel" onchange="recalcPajak()"></select>
+      </div>
+      <div class="tgl" id="pjKatInfo"></div>
       <div class="tgl" id="pjNominal"></div>
     </div>
     <div class="field"><label>Nilai Kontrak / Nota (dasar DPP)</label>
@@ -569,6 +572,10 @@
     <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:14px">
       <input type="checkbox" id="pjAdaNpwp" checked onchange="recalcPajak()"> Rekanan ber-NPWP
     </label>
+    <div class="row2">
+      <div class="field"><label>PPh manual (Rp) — kosong=otomatis</label><input type="text" class="numfmt" id="pjPphManual" inputmode="numeric" oninput="recalcPajak()"></div>
+      <div class="field"><label>PPN manual (Rp) — kosong=otomatis</label><input type="text" class="numfmt" id="pjPpnManual" inputmode="numeric" oninput="recalcPajak()"></div>
+    </div>
     <div id="pjRincian" class="card" style="margin:0 0 12px"></div>
     <div class="row2">
       <button class="btn" onclick="cetakSSP('pph')">&#128424; SSP PPh</button>
@@ -884,11 +891,11 @@ function _klasifikasiPajak(kegiatan){
  * @param termasukPPN default true  -> DPP = nilai / 1,11 (bila kena PPN)
  * @param adaNpwp     default true  -> bila false, tarif PPh x2
  */
-function hitungPajak(kegiatan, nominal, termasukPPN, adaNpwp){
+function hitungPajak(kegiatan, nominal, termasukPPN, adaNpwp, refOverride){
   if(termasukPPN===undefined) termasukPPN=true;
   if(adaNpwp===undefined) adaNpwp=true;
   nominal=parseFloat(nominal)||0;
-  var ref=_klasifikasiPajak(kegiatan);
+  var ref=refOverride||_klasifikasiPajak(kegiatan);
   var kenaPPN=ref.ppn>0;
 
   var dpp=(kenaPPN && termasukPPN) ? Math.round(nominal/1.11) : nominal;
@@ -1308,7 +1315,8 @@ function _cardHtml(t, mode){
     h+='<div class="lrow pajak"><span>'+esc(pj.label)+': PPh = '+rupiah(pj.pph)+' &middot; PPN = '+rupiah(pj.ppn)+'</span>'
       +'<button class="mini b-dark" onclick="openModalPajak('+t.no+')">SSP</button></div>';
   } else {
-    h+='<div class="lrow ok"><span>'+esc(pj.label)+': &#10003; Bebas PPh &amp; PPN</span></div>';
+    h+='<div class="lrow ok"><span>'+esc(pj.label)+': &#10003; Bebas PPh &amp; PPN</span>'
+      +'<button class="mini b-dark" onclick="openModalPajak('+t.no+')">Pajak</button></div>';
   }
   // chips
   var spjChip=lunas?'<span class="chip ok">&#9989; SPJ Lengkap</span>':'<span class="chip">&#8987; Belum SPJ</span>';
@@ -3305,6 +3313,10 @@ function openModalPajak(noTransaksi){
   document.getElementById('pjNilaiDasar').value=_grp((+t.nilaiSpby>0)?t.nilaiSpby:t.kredit);
   document.getElementById('pjTermasukPPN').checked=true;
   document.getElementById('pjAdaNpwp').checked=true;
+  // Kategori pajak (default = auto-klasifikasi; bisa diubah manual)
+  _pjFillKategori(PAJAK_REF.indexOf(_klasifikasiPajak(t.kegiatan)));
+  document.getElementById('pjPphManual').value='';
+  document.getElementById('pjPpnManual').value='';
   // NPWP Poltek (pemungut) — diingat browser
   var npwpPoltek=''; try{ npwpPoltek=localStorage.getItem('kt_npwp_poltek')||''; }catch(e){}
   document.getElementById('pjNpwpPoltek').value=npwpPoltek||INST.npwpWP||'';
@@ -3332,13 +3344,38 @@ function openModalPajak(noTransaksi){
   recalcPajak();
   openModal('modalPajak');
 }
+/* Isi dropdown kategori sekali; set ke autoIdx (-1 = Lain-lain/manual). */
+function _pjFillKategori(autoIdx){
+  var sel=document.getElementById('pjKategoriSel'); if(!sel) return;
+  if(!sel.options.length){
+    var h='<option value="-1">Lain-lain / manual (tanpa kategori)</option>';
+    for(var i=0;i<PAJAK_REF.length;i++){ var r=PAJAK_REF[i];
+      h+='<option value="'+i+'">'+esc(r.label)+(r.jenisPPh?(' — '+r.jenisPPh):' — bebas')+'</option>';
+    }
+    sel.innerHTML=h;
+  }
+  if(autoIdx!==undefined && autoIdx!==null) sel.value=String(autoIdx);
+}
+function _pjSelectedRef(){
+  var idx=parseInt((document.getElementById('pjKategoriSel')||{}).value,10);
+  return (idx>=0 && idx<PAJAK_REF.length) ? PAJAK_REF[idx] : PAJAK_DEFAULT;
+}
+/* Terapkan override jumlah PPh/PPN manual ke objek pj (bila field diisi). */
+function _pjApplyManual(pj){
+  var ep=document.getElementById('pjPphManual'), en=document.getElementById('pjPpnManual');
+  var manPph=ep&&ep.value.trim()!=='', manPpn=en&&en.value.trim()!=='';
+  if(manPph) pj.pph=unfmt(ep.value);
+  if(manPpn) pj.ppn=unfmt(en.value);
+  if(manPph||manPpn){ pj.totalPajak=pj.pph+pj.ppn; pj.nettoRekanan=pj.nominal-pj.pph-pj.ppn; }
+  return pj;
+}
 function recalcPajak(){
   var t=_cariTransaksi(_sspTarget); if(!t) return;
   var dasar=unfmt(document.getElementById('pjNilaiDasar').value)||t.kredit;
-  var pj=hitungPajak(t.kegiatan, dasar,
+  var pj=_pjApplyManual(hitungPajak(t.kegiatan, dasar,
     document.getElementById('pjTermasukPPN').checked,
-    document.getElementById('pjAdaNpwp').checked);
-  document.getElementById('pjKategori').textContent=pj.label+(pj.jenisPPh?(' — '+pj.jenisPPh):'');
+    document.getElementById('pjAdaNpwp').checked, _pjSelectedRef()));
+  document.getElementById('pjKatInfo').textContent=pj.label+(pj.jenisPPh?(' — '+pj.jenisPPh):' — bebas')+(pj.catatan?(' · '+pj.catatan):'');
   var npwpNote=pj.nonNpwp?' <span class="chip no">non-NPWP x2</span>':'';
   document.getElementById('pjRincian').innerHTML=''
     +baris('DPP', rupiah(pj.dpp)+(pj.kenaPPN&&pj.termasukPPN?' (÷ 1,11)':''))
@@ -3677,9 +3714,9 @@ function _kuitansiPage(t, o){
 function cetakSSP(jenis){
   var t=_cariTransaksi(_sspTarget); if(!t) return;
   var dasar=unfmt(document.getElementById('pjNilaiDasar').value)||t.kredit;
-  var pj=hitungPajak(t.kegiatan, dasar,
+  var pj=_pjApplyManual(hitungPajak(t.kegiatan, dasar,
     document.getElementById('pjTermasukPPN').checked,
-    document.getElementById('pjAdaNpwp').checked);
+    document.getElementById('pjAdaNpwp').checked, _pjSelectedRef()));
   if(jenis==='pph' && !pj.pph){ toast('Tidak ada PPh untuk transaksi ini','info'); return; }
   if(jenis==='ppn' && !pj.ppn){ toast('Tidak ada PPN untuk transaksi ini','info'); return; }
   var wp={
