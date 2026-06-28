@@ -945,7 +945,12 @@ function hitungGrossUp(netto, ref, termasukPPN, adaNpwp) {
   if (kenaPPN && termasukPPN)       gross = (1 - tarif) > 0 ? netto * 1.11 / (1 - tarif) : netto;
   else if (kenaPPN && !termasukPPN) gross = (1 - tarif - 0.11) > 0 ? netto / (1 - tarif - 0.11) : netto;
   else                              gross = tarif > 0 && (1 - tarif) > 0 ? netto / (1 - tarif) : netto;
-  return Math.round(gross);
+  gross = Math.round(gross);
+  // Koreksi ±1 akibat pembulatan bertingkat agar netto tepat
+  var chk = hitungPajak('', gross, termasukPPN, adaNpwp, ref);
+  if(chk.nettoRekanan < netto) gross++;
+  else if(chk.nettoRekanan > netto) gross--;
+  return gross;
 }
 
 function hitungGrossUpUI() {
@@ -958,8 +963,9 @@ function hitungGrossUpUI() {
   // Bersihkan override manual agar hasil gross-up yang dipakai (bukan nilai lama)
   document.getElementById('pjPphManual').value = '';
   document.getElementById('pjPpnManual').value = '';
+  var pjChk = hitungPajak('', gross, document.getElementById('pjTermasukPPN').checked, document.getElementById('pjAdaNpwp').checked, _pjSelectedRef());
   document.getElementById('pjGrossUpInfo').textContent =
-    'Nilai kontrak/bruto: ' + rupiah(gross) + ' → rekanan menerima ≈ ' + rupiah(netto);
+    'Nilai kontrak/bruto: ' + rupiah(gross) + ' → rekanan menerima tepat ' + rupiah(pjChk.nettoRekanan);
   recalcPajak();
 }
 
@@ -1306,7 +1312,12 @@ function _cardPajak(t){
     var ref=(t.pajakKatIdx>=0 && t.pajakKatIdx<PAJAK_REF.length)?PAJAK_REF[t.pajakKatIdx]:PAJAK_DEFAULT;
     pj=hitungPajak(t.kegiatan, dasar, true, true, ref);
     // Terapkan nilai yang tersimpan sebagai override
-    if(t.pajakPph||t.pajakPpn){ pj.pph=t.pajakPph; pj.ppn=t.pajakPpn; pj.totalPajak=t.pajakPph+t.pajakPpn; pj.nettoRekanan=pj.nominal-pj.pph-pj.ppn; }
+    if(t.pajakPph||t.pajakPpn){
+      pj.pph=t.pajakPph; pj.ppn=t.pajakPpn; pj.totalPajak=t.pajakPph+t.pajakPpn;
+      // Rekonstruksi nominal/bruto dari DPP+PPN agar netto kuitansi tepat (termasuk gross-up)
+      if(t.pajakDpp>0){ pj.nominal=t.pajakDpp+t.pajakPpn; }
+      pj.nettoRekanan=pj.nominal-pj.pph-pj.ppn;
+    }
     if(t.pajakDpp) pj.dpp=t.pajakDpp;
     pj.isSaved=true;
   } else {
