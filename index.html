@@ -712,6 +712,18 @@
     <button class="btn ghost" onclick="rapikanDrive(true)">&#128065; Pratinjau (dry run)</button>
     <button class="btn" style="background:#7c3aed" onclick="rapikanDrive(false)">&#128736; Jalankan Rapikan</button>
     <div id="stMigInfo" class="tgl" style="margin-top:6px"></div>
+    <hr>
+    <div style="font-weight:600;font-size:13px;margin-bottom:4px">&#128444; Logo Kop Surat Tugas</div>
+    <div class="tgl" style="margin-bottom:6px">Logo tampil di kiri kop <em>Surat Tugas</em> resmi. Disimpan di browser ini — ulangi jika ganti perangkat. Dianjurkan PNG transparan.</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <img id="stLogoPreview" src="" style="display:none;width:60px;height:60px;object-fit:contain;border:1px solid #ddd;border-radius:4px">
+      <div>
+        <input type="file" id="stLogoFile" accept="image/*" onchange="onLogoFileChange(event)" style="font-size:12px">
+        <div id="stLogoInfo" class="tgl" style="margin-top:2px"></div>
+      </div>
+    </div>
+    <button class="btn ghost" onclick="hapusLogo()" style="margin-bottom:8px">Hapus Logo</button>
+    <hr>
     <button class="btn ghost" onclick="closeModal('modalSettings')">Tutup</button>
   </div>
 </div>
@@ -833,6 +845,8 @@ var INST = {
   // Sumber dana untuk klausul "Untuk" pada Surat Tugas (boleh diganti No. SP DIPA lengkap)
   dipa: 'DIPA Politeknik Kelautan dan Perikanan Sorong Tahun Anggaran 2026'
 };
+// Muat logo dari localStorage (disimpan via Pengaturan)
+(function(){ var s=localStorage.getItem('kt_logo_garuda'); if(s) INST.logoGaruda=s; })();
 var MATERAI_MIN = 5000000; // pembayaran >= nilai ini wajib bermaterai Rp 10.000
 
 /* ============== Referensi pajak (19 kategori bendahara) ==============
@@ -1077,6 +1091,28 @@ function _applyRoleUI(){
   var bs=document.getElementById('btnSettings'); if(bs) bs.classList.toggle('hidden', !IS_ADMIN);
 }
 /* ============== Pengaturan Penyimpanan (admin) ============== */
+function _showLogoPreview(b64){
+  var el=document.getElementById('stLogoPreview'); if(!el) return;
+  if(b64){ el.src=b64; el.style.display=''; } else { el.src=''; el.style.display='none'; }
+}
+function onLogoFileChange(e){
+  var f=e.target.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(ev){
+    var b64=ev.target.result;
+    localStorage.setItem('kt_logo_garuda',b64);
+    INST.logoGaruda=b64;
+    _showLogoPreview(b64);
+    document.getElementById('stLogoInfo').textContent='Logo disimpan ('+Math.round(b64.length/1024)+' KB)';
+  };
+  r.readAsDataURL(f);
+}
+function hapusLogo(){
+  localStorage.removeItem('kt_logo_garuda');
+  INST.logoGaruda='';
+  _showLogoPreview('');
+  document.getElementById('stLogoInfo').textContent='Logo dihapus.';
+}
 function openModalSettings(){
   if(!IS_ADMIN){ toast('Khusus admin','error'); return; }
   document.getElementById('stDrive').value='';
@@ -1084,6 +1120,9 @@ function openModalSettings(){
   document.getElementById('stDriveInfo').textContent='Memuat...';
   document.getElementById('stScanInfo').textContent='';
   openModal('modalSettings');
+  _showLogoPreview(INST.logoGaruda||'');
+  document.getElementById('stLogoInfo').textContent=
+    INST.logoGaruda?('Logo tersimpan (~'+Math.round((INST.logoGaruda||'').length/1024)+' KB)'):'Belum ada logo.';
   google.script.run.withSuccessHandler(function(s){
     document.getElementById('stDrive').value=s.driveFolderId||'';
     document.getElementById('stScan').value=s.scanFolderId||'';
