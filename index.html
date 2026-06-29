@@ -486,12 +486,22 @@
       <div id="ntItemTotal" class="tgl" style="margin-top:8px;font-weight:600"></div>
       <div class="tgl" style="margin-top:2px">Nominal nota otomatis = jumlah subtotal item. Foto per item bersifat anjuran (tag = nama barang).</div>
     </div>
-    <div class="field"><label>Foto nota (opsional) &mdash; atau tekan <b>Ctrl+V</b> untuk tempel screenshot</label><input type="file" id="ntFile" accept="image/*" capture="environment" onchange="_showPastePreview(this)"></div>
+    <div class="field"><label>Foto nota/kuitansi (opsional)</label><input type="file" id="ntFile" accept="image/*" capture="environment" onchange="_showPastePreview(this)"></div>
     <button class="btn ghost scan-imp" style="display:none;margin-bottom:6px" onclick="importScanNota()">&#128247; Impor dari Folder Scan</button>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:4px">
-      <input type="checkbox" id="ntAsFotoBarang" checked> Sekaligus simpan foto sebagai <b>Foto Barang</b> (dengan lokasi GPS)
+      <input type="checkbox" id="ntAsFotoBarang" checked> Sekaligus simpan foto nota sebagai <b>Foto Barang</b> (dengan lokasi GPS)
     </label>
     <div id="ntGps" class="tgl" style="margin-bottom:8px"></div>
+    <div class="field" style="margin-top:2px">
+      <label>&#128247; Foto Barang / Bukti Penerimaan (opsional, bisa beberapa &mdash; atau <b>Ctrl+V</b> screenshot)</label>
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <button type="button" class="btn ghost" style="padding:5px 10px;font-size:12px" onclick="document.getElementById('ntBarangCam').click()">&#128247; Kamera</button>
+        <button type="button" class="btn ghost" style="padding:5px 10px;font-size:12px" onclick="document.getElementById('ntBarangFiles').click()">&#128444; Galeri</button>
+      </div>
+      <input type="file" id="ntBarangCam" accept="image/*" capture="environment" multiple style="display:none" onchange="_ntAddBarangFiles(this.files)">
+      <input type="file" id="ntBarangFiles" accept="image/*" multiple style="display:none" onchange="_ntAddBarangFiles(this.files)">
+      <div id="ntBarangPp" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
     <button class="btn" id="ntSubmitBtn" onclick="submitNota()">Tambah Nota</button>
     <button class="btn ghost" id="ntCancelBtn" onclick="_cancelEditNota()" style="display:none">Batal Edit</button>
     <button class="btn ghost" onclick="closeModal('modalNota')">Tutup</button>
@@ -2612,7 +2622,9 @@ function _onPasteUpload(e){
   if(document.getElementById('modalFoto').classList.contains('show')){ e.preventDefault(); _uploadFotoFiles(files); return; }
   // Form upload lain: isi <input type=file> pada modal yang sedang terbuka
   var modal=document.querySelector('.modal.show'); if(!modal) return;
-  var map={ modalNota:'ntFile', modalKuitansi:'kwFile', modalBukti:'bkFile' };
+  // modalNota: paste → foto barang (bukan nota receipt)
+  if(modal.id==='modalNota'){ e.preventDefault(); _ntAddBarangFiles(files); toast(files.length+' foto barang ditempel','success'); return; }
+  var map={ modalKuitansi:'kwFile', modalBukti:'bkFile' };
   var inpId=map[modal.id]; if(!inpId) return;
   var inp=document.getElementById(inpId); if(!inp) return;
   e.preventDefault();
@@ -2932,6 +2944,7 @@ var _notaList=[];          // cache nota transaksi yang sedang dibuka
 var _notaEditUrutan=null;  // null = mode tambah; selain itu = urutan nota yang diedit
 var _notaGps=null;         // lokasi GPS saat form nota dibuka (utk Foto Barang)
 var _ntPersediaan=false;   // transaksi akun persediaan → rincian barang per item
+var _ntBarangFiles=[];     // foto barang tambahan yang dikompres & siap diunggah
 function renderNotaList(list){
   _notaList=list||[];
   var box=document.getElementById('notaList');
@@ -2990,6 +3003,25 @@ function _cancelEditNota(){
   document.getElementById('ntDetailWrap').style.display=_ntPersediaan?'':'none';
   document.getElementById('ntNilai').readOnly=_ntPersediaan;
   if(_ntPersediaan){ document.getElementById('ntItemList').innerHTML=''; ntAddItem(); _ntRecalc(); }
+  _ntBarangFiles=[]; var bp=document.getElementById('ntBarangPp'); if(bp) bp.innerHTML='';
+}
+/** Kompres & simpan foto barang dari pilih/paste; tampilkan thumbnail (klik → hapus). */
+function _ntAddBarangFiles(files){
+  if(!files||!files.length) return;
+  var pp=document.getElementById('ntBarangPp');
+  for(var i=0;i<files.length;i++){
+    (function(f){
+      compressImage(f,function(c){
+        _ntBarangFiles.push(c);
+        var img=document.createElement('img');
+        img.src=c.base64;
+        img.style.cssText='width:56px;height:56px;object-fit:cover;border:1px solid #ccc;border-radius:6px;cursor:pointer';
+        img.title='Klik untuk hapus';
+        img.onclick=function(){ var idx=_ntBarangFiles.indexOf(c); if(idx>-1) _ntBarangFiles.splice(idx,1); img.remove(); };
+        if(pp) pp.appendChild(img);
+      });
+    })(files[i]);
+  }
 }
 /* ----- Rincian Barang (persediaan): baris item + foto per item ----- */
 function _ntItemRowHtml(it){
@@ -3228,6 +3260,12 @@ function sendNota(notaData){
                keterangan:'Nota: '+(notaData.namaPenyedia||'') };
       if(_notaGps){ fb.lat=_notaGps.lat; fb.lng=_notaGps.lng; }
       google.script.run.serverUploadFotoNota(_notaTarget, 1, [fb]);
+    }
+    // unggah Foto Barang tambahan langsung dari form nota (fire-and-forget)
+    if(_ntBarangFiles.length>0){
+      var arr=_ntBarangFiles.slice(); _ntBarangFiles=[];
+      if(_notaGps){ for(var bi=0;bi<arr.length;bi++){ arr[bi].lat=_notaGps.lat; arr[bi].lng=_notaGps.lng; } }
+      google.script.run.serverUploadFotoNota(_notaTarget, 1, arr);
     }
     openModalNota(_notaTarget);loadAll();
   };
