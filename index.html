@@ -1470,7 +1470,7 @@ function _cardHtml(t, mode){
       +'<button class="b-gray" onclick="openFoto('+t.no+')">Foto</button>'
       +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">'+(t.sumber==='BANK'?'Bukti Transfer':'Tanda Terima')+'</button>'
       +'<button class="b-spby" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+(t.noSpby?'SPBY &#10003;':'SPBY')+'</button>';
-    if(lunas) h+='<button class="b-dark" onclick="cetakSPJ('+t.no+')">Cetak SPJ</button>';
+    h+='<button class="b-dark" onclick="cetakSPJ('+t.no+')">'+(lunas?'Cetak SPJ':'SPJ Sementara')+'</button>';
     h+='<button class="b-spd" onclick="konversiKePd('+t.no+')" title="Jadikan transaksi ini Perjalanan Dinas">&#9992; Jadikan PD</button>'
       +'<button onclick="openModalPecah('+t.no+')" title="Pecah jadi beberapa transaksi">&#9986; Pecah</button>';
   }
