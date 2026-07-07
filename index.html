@@ -383,8 +383,18 @@
 <!-- ================= TAB PAPAN KERJA ================= -->
 <style>
   .pk-outer{background:#eef1f5;border-radius:22px;padding:28px;box-shadow:0 24px 60px -30px rgba(15,53,87,.45);color:#16324f}
-  .pk-top-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-bottom:16px}
-  @media(max-width:760px){.pk-top-grid{grid-template-columns:1fr}}
+  .pk-top-grid{display:grid;grid-template-columns:0.9fr 1.5fr 0.9fr;gap:16px;margin-bottom:16px}
+  @media(max-width:900px){.pk-top-grid{grid-template-columns:1fr}}
+  .pk-spby-tabs{display:flex;gap:6px;margin-bottom:10px}
+  .pk-spby-tab{font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:6px;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;cursor:pointer}
+  .pk-spby-tab.active{background:#0d3b66;color:#fff;border-color:#0d3b66}
+  .pk-spby-table{width:100%;border-collapse:collapse;font-size:12px}
+  .pk-spby-table th{font-size:10px;font-weight:700;color:#8496ab;text-transform:uppercase;padding:4px 6px;border-bottom:1px solid #eef2f7;text-align:left}
+  .pk-spby-table td{padding:6px 6px;border-bottom:1px solid #f4f6fa;vertical-align:middle}
+  .pk-spby-table tr:last-child td{border-bottom:none}
+  .pk-spby-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;border:none;cursor:pointer;white-space:nowrap}
+  .pk-spby-badge.sudah{background:#dcfce7;color:#166534}
+  .pk-spby-badge.belum{background:#fee2e2;color:#dc2626}
   .pk-card{background:#fff;border:1px solid #e6eaf0;border-radius:18px;padding:22px;box-shadow:0 1px 2px rgba(20,50,80,.05)}
   .pk-card h2{margin:0 0 12px;font-size:15px;font-weight:700;color:#16324f;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .pk-count-pill{font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px}
@@ -458,6 +468,29 @@
           <span id="pkAgendaToday" class="pk-count-pill today" style="display:none"></span>
         </h2>
         <div id="pkAgenda"></div>
+      </div>
+      <div class="pk-card" style="overflow:hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <h2 style="margin:0">Status SPBY</h2>
+          <div style="display:flex;gap:6px">
+            <span id="pkSpbyBelumPill" class="pk-count-pill late" style="display:none"></span>
+            <span id="pkSpbySudahPill" class="pk-count-pill" style="background:#dcfce7;color:#166534;display:none"></span>
+          </div>
+        </div>
+        <div class="pk-spby-tabs" id="pkSpbyTabs">
+          <button class="pk-spby-tab active" onclick="_pkSetSpbyFilter('semua')">Semua</button>
+          <button class="pk-spby-tab" onclick="_pkSetSpbyFilter('belum')">Belum SPBY</button>
+          <button class="pk-spby-tab" onclick="_pkSetSpbyFilter('sudah')">Sudah SPBY</button>
+        </div>
+        <div style="overflow-y:auto;max-height:260px">
+          <table class="pk-spby-table">
+            <thead><tr>
+              <th>No</th><th>Kegiatan</th><th>Penanggung Jawab</th><th>Nominal</th><th>Status SPBY</th>
+            </tr></thead>
+            <tbody id="pkSpbyList"></tbody>
+          </table>
+        </div>
+        <div style="font-size:11px;color:#8496ab;margin-top:8px">Klik tombol status untuk menandai transaksi sudah / belum terbit SPBY.</div>
       </div>
       <div class="pk-card">
         <h2>Kelengkapan Dokumen</h2>
@@ -4531,9 +4564,51 @@ function _pkUrgency(t){
   return 'soon';
 }
 
+var _pkSpbyFilter='semua';
+
+function _pkSetSpbyFilter(f){
+  _pkSpbyFilter=f;
+  var tabs=document.querySelectorAll('.pk-spby-tab');
+  var labels=['semua','belum','sudah'];
+  for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle('active',labels[i]===f);
+  var txns=(allTransaksi||[]).filter(function(t){ return !t.isDeleted&&t.kredit>0; });
+  _renderPkSpby(txns);
+}
+
+function _renderPkSpby(txns){
+  var belumN=0, sudahN=0;
+  var rows='';
+  for(var i=0;i<txns.length;i++){
+    var t=txns[i];
+    var isSudah=!!t.noSpby;
+    if(isSudah) sudahN++; else belumN++;
+    if(_pkSpbyFilter==='belum'&&isSudah) continue;
+    if(_pkSpbyFilter==='sudah'&&!isSudah) continue;
+    var ket=(t.kegiatan||'');
+    if(ket.length>28) ket=ket.substring(0,26)+'…';
+    var nom='Rp '+Number(t.kredit||0).toLocaleString('id-ID');
+    var badgeCls=isSudah?'sudah':'belum';
+    var badgeLbl=isSudah?'Sudah SPBY':'Belum SPBY';
+    rows+='<tr>'
+      +'<td style="color:#2563eb;font-weight:700;white-space:nowrap">'+_pkTrxRef(t.no)+'</td>'
+      +'<td>'+esc(ket||'-')+'</td>'
+      +'<td>'+esc(t.penjab||'—')+'</td>'
+      +'<td style="font-family:\'JetBrains Mono\',monospace;white-space:nowrap;font-size:11px">'+nom+'</td>'
+      +'<td><button class="pk-spby-badge '+badgeCls+'" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+badgeLbl+'</button></td>'
+      +'</tr>';
+  }
+  var tbody=document.getElementById('pkSpbyList');
+  if(tbody) tbody.innerHTML=rows||'<tr><td colspan="5" style="text-align:center;color:#8496ab;padding:16px">Tidak ada transaksi</td></tr>';
+  var bPill=document.getElementById('pkSpbyBelumPill');
+  var sPill=document.getElementById('pkSpbySudahPill');
+  if(bPill){ bPill.textContent=belumN+' belum SPBY'; bPill.style.display=belumN?'':'none'; }
+  if(sPill){ sPill.textContent=sudahN+' sudah SPBY'; sPill.style.display=sudahN?'':'none'; }
+}
+
 function renderPapanKerja(){
   var txns=(allTransaksi||[]).filter(function(t){ return !t.isDeleted&&t.kredit>0; });
   _renderPkAgenda(txns);
+  _renderPkSpby(txns);
   _renderPkKelengkapan(txns);
   _renderPkPipeline(txns);
 }
