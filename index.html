@@ -398,7 +398,7 @@
   .pk-urg-bar{width:4px;border-radius:2px;flex:0 0 4px;align-self:stretch}
   .pk-agenda-info{flex:1;min-width:0}
   .pk-agenda-info .lbl{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#16324f}
-  .pk-agenda-info .sub{font-size:12px;color:#8496ab;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pk-agenda-info .sub{font-size:12px;color:#2563eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pk-urg-chip{font-size:10px;font-weight:800;padding:4px 9px;border-radius:6px;white-space:nowrap;flex:0 0 auto}
   .pk-doc-row{margin-bottom:14px}
   .pk-doc-row:last-child{margin-bottom:0}
@@ -424,17 +424,17 @@
   .pk-txn{background:#fff;border:1px solid #e6eaf0;border-radius:11px;padding:12px;cursor:grab;box-shadow:0 1px 2px rgba(20,50,80,.05)}
   .pk-txn:active{cursor:grabbing}
   .pk-txn .tit{font-size:12.5px;font-weight:700;line-height:1.3;color:#16324f;margin-bottom:2px}
-  .pk-txn .sub2{font-size:11px;color:#8496ab;margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pk-txn .sub2{font-size:11px;color:#2563eb;margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pk-txn .amt2{font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:700;color:#16324f;margin-bottom:7px}
   .pk-chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
   .pk-chip{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:5px;border:1px solid;user-select:none}
   .pk-chip.ok{background:#dcfce7;color:#166534;border-color:#bbf7d0;cursor:pointer}
   .pk-chip.todo{background:#fff7ed;color:#c2410c;border-color:#fed7aa;cursor:pointer}
   .pk-chip.na{background:#f1f5f9;color:#94a3b8;border-color:#e2e8f0;cursor:default}
-  .pk-txn-foot{border-top:1px solid #f0f2f6;padding-top:8px;display:flex;align-items:center;gap:7px}
+  .pk-txn-foot{border-top:1px solid #f0f2f6;padding-top:8px;display:flex;justify-content:space-between;align-items:center;gap:6px}
   .pk-urg-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle}
-  .pk-next{font-size:11px;color:#5b7089;flex:1}
-  .pk-due{font-size:10px;font-weight:700;margin-top:6px}
+  .pk-next{font-size:11px;color:#5b7089;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pk-urg-time{font-size:10px;font-weight:700;white-space:nowrap;flex:0 0 auto}
 </style>
 <div id="viewPapanKerja" class="wrap hidden">
   <div class="pk-outer">
@@ -4682,18 +4682,29 @@ function _pkCardHtml(t, accent, stageKey){
     }
   }
   var stageNext={
-    input:'Verifikasi & catat transaksi',
-    nota:'Unggah / catat nota penyedia',
+    input:'Verifikasi & catat nota awal',
+    nota:'Unggah nota penyedia',
     foto:'Ambil foto barang',
-    spj:'Susun & ajukan SPJ',
-    arsip:'Terarsip — selesai'
+    spj:'Susun & tandatangani SPJ',
+    arsip:'Terarsip lengkap'
   };
   var amtStr='Rp '+Number(t.kredit||0).toLocaleString('id-ID');
   var nextTxt=stageNext[stageKey]||'Proses segera';
   var tglD=t.tanggal?new Date(t.tanggal):null;
   var diff=tglD?Math.floor((new Date()-tglD)/86400000):0;
-  var urgChipTxt=_pkUrgLabel(urg,Math.abs(diff));
-  var dueTxt=tglD?(tglD.getDate()+' '+_BULAN_ID[tglD.getMonth()]):'';
+  var absDiff=Math.abs(diff);
+  var cardUrgTime;
+  if(urg==='done'){
+    cardUrgTime=tglD?'Selesai '+tglD.getDate()+' '+_BULAN_ID[tglD.getMonth()]:'Selesai';
+  } else if(urg==='late'){
+    cardUrgTime=absDiff<=0?'Hari ini':'Telat '+absDiff+' hari';
+  } else if(urg==='today'){
+    cardUrgTime='Hari ini';
+  } else if(absDiff===1){
+    cardUrgTime='Besok';
+  } else {
+    cardUrgTime=absDiff+' hari lagi';
+  }
   return '<div class="pk-txn" draggable="true" style="border-top:3px solid '+accent+'"'
     +' ondragstart="_pkDragStart(event,'+t.no+')"'
     +' ondragend="_pkDragEnd()">'
@@ -4703,9 +4714,8 @@ function _pkCardHtml(t, accent, stageKey){
     +'<div class="pk-chips">'+chipsHtml+'</div>'
     +'<div class="pk-txn-foot">'
     +'<span class="pk-next"><span class="pk-urg-dot" style="background:'+uc.text+'"></span>'+nextTxt+'</span>'
-    +'<span class="pk-urg-chip" style="background:'+uc.bg+';color:'+uc.text+'">'+urgChipTxt+'</span>'
+    +'<span class="pk-urg-time" style="color:'+uc.text+'">'+cardUrgTime+'</span>'
     +'</div>'
-    +(dueTxt?'<div class="pk-due" style="color:'+uc.text+'">'+dueTxt+'</div>':'')
     +'</div>';
 }
 
