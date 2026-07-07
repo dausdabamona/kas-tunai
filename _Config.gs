@@ -44,7 +44,8 @@ var CONFIG = {
     BUKTI_PD:       'Bukti Perjalanan',
     AUDIT_LOG:      'Audit Log',
     USERS:          'Users',
-    DETAIL_NOTA:    'Detail Nota'
+    DETAIL_NOTA:    'Detail Nota',
+    SESSIONS:       'Sessions'
   },
 
   // Index kolom sheet Kas Tunai (0-based, A-X = 24 kolom inti + kolom kuitansi TTD)
@@ -112,7 +113,11 @@ var CONFIG = {
       'TIMESTAMP', 'ACTION', 'SHEET', 'ROW_REF', 'DETAIL', 'OPERATOR'
     ],
     USERS: [
-      'EMAIL', 'NAMA', 'ROLE', 'CREATED_AT', 'CREATED_BY'
+      'EMAIL', 'NAMA', 'ROLE', 'CREATED_AT', 'CREATED_BY',
+      'PASSWORD_HASH', 'SALT', 'MUST_CHANGE', 'FAILED_ATTEMPTS', 'LOCKED_UNTIL'
+    ],
+    SESSIONS: [
+      'TOKEN', 'EMAIL', 'CREATED_AT', 'EXPIRES_AT', 'LAST_SEEN', 'USER_AGENT'
     ],
     DETAIL_NOTA: [
       'NO_TRANSAKSI', 'ROW_INDEX', 'URUTAN', 'NAMA_BARANG', 'QTY', 'SATUAN',

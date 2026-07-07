@@ -190,7 +190,13 @@
 
 <header class="topbar">
   <div class="brand">&#128176; <span>Kas Tunai<small>Poltek KP Sorong &middot; <span id="userLabel"></span></small></span></div>
-  <div class="saldo-pill"><div class="l">Saldo</div><div class="v" id="saldoPill">-</div></div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="saldo-pill"><div class="l">Saldo</div><div class="v" id="saldoPill">-</div></div>
+    <button id="btnLogout" onclick="doLogout()" title="Keluar"
+      style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
+      &#128275; Keluar
+    </button>
+  </div>
 </header>
 
 <div class="tabs">
@@ -792,6 +798,51 @@
   </div>
 </div>
 
+<!-- ================= MODAL LOGIN ================= -->
+<div class="modal" id="modalLogin" style="z-index:500;background:rgba(0,0,0,.65)">
+  <div class="sheet" style="max-width:380px;width:100%;padding-bottom:28px">
+    <div style="text-align:center;margin-bottom:6px;font-size:28px">&#128176;</div>
+    <h2 style="text-align:center;margin-bottom:4px">Kas Tunai</h2>
+    <div style="text-align:center;color:var(--c-muted);font-size:13px;margin-bottom:20px">
+      Politeknik Kelautan dan Perikanan Sorong
+    </div>
+    <div class="field"><label>Email</label>
+      <input type="email" id="loginEmail" placeholder="nama@email.com" autocomplete="username"
+        onkeydown="if(event.key==='Enter')document.getElementById('loginPassword').focus()">
+    </div>
+    <div class="field"><label>Password</label>
+      <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div id="loginError" style="color:var(--c-err);font-size:13px;margin-bottom:10px;display:none;
+      background:#fff0f0;border:1px solid #fca5a5;border-radius:8px;padding:8px 10px"></div>
+    <button class="btn" id="loginBtn" onclick="doLogin()">&#128274; Masuk</button>
+  </div>
+</div>
+
+<!-- ================= MODAL GANTI PASSWORD ================= -->
+<div class="modal" id="modalGantiPw">
+  <div class="sheet">
+    <h2>&#128273; Ganti Password</h2>
+    <div class="tgl" style="margin-bottom:14px;color:var(--c-warn)">
+      &#9888; Kata sandi harus diganti sebelum melanjutkan.
+    </div>
+    <div class="field"><label>Password Lama</label>
+      <input type="password" id="gpwLama" placeholder="Password saat ini" autocomplete="current-password">
+    </div>
+    <div class="field"><label>Password Baru <span style="color:var(--c-muted)">(min. 8 karakter)</span></label>
+      <input type="password" id="gpwBaru" placeholder="Password baru" autocomplete="new-password">
+    </div>
+    <div class="field"><label>Ulangi Password Baru</label>
+      <input type="password" id="gpwBaru2" placeholder="Ulangi password baru" autocomplete="new-password"
+        onkeydown="if(event.key==='Enter')doGantiPassword()">
+    </div>
+    <div id="gpwError" style="color:var(--c-err);font-size:13px;margin-bottom:10px;display:none;
+      background:#fff0f0;border:1px solid #fca5a5;border-radius:8px;padding:8px 10px"></div>
+    <button class="btn" onclick="doGantiPassword()">Simpan Password Baru</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 <div id="loading"><div class="spinner"></div><div class="msg" id="loadingMsg">Memuat...</div></div>
 
@@ -803,6 +854,7 @@ var NAMA_USER     = '<?= appData.namaUser ?>';
 var ROLE_USER     = '<?= appData.roleUser ?>';
 var IS_ADMIN      = <?= appData.isAdmin ? 'true' : 'false' ?>;
 
+var _tok          = localStorage.getItem('kt_token') || '';
 var allTransaksi  = [];
 var currentFilter = 'belumfoto';
 var currentSearch = '';        // kata kunci pencarian (kegiatan/penjab)
@@ -4176,9 +4228,117 @@ function _bukaPopup(html){
   w.document.open(); w.document.write(html); w.document.close();
 }
 
+/* ============== Auth (Fase 1) ============== */
+
+function _showLoginModal() {
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginError').style.display = 'none';
+  openModal('modalLogin');
+  setTimeout(function(){ document.getElementById('loginEmail').focus(); }, 100);
+}
+
+function _checkAuth() {
+  if (_tok) {
+    // Token tersimpan — lanjut muat data (Fase 2 akan validasi ke server)
+    loadAll();
+  } else {
+    _showLoginModal();
+  }
+}
+
+function doLogin() {
+  var email = (document.getElementById('loginEmail').value || '').trim();
+  var pw    = document.getElementById('loginPassword').value || '';
+  var errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+  if (!email || !pw) {
+    errEl.textContent = 'Email dan password wajib diisi';
+    errEl.style.display = '';
+    return;
+  }
+  var btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Memproses...';
+  google.script.run
+    .withSuccessHandler(function(res) {
+      btn.disabled = false; btn.innerHTML = '&#128274; Masuk';
+      _tok = res.token;
+      localStorage.setItem('kt_token', res.token);
+      localStorage.setItem('kt_user', JSON.stringify({
+        email: email, role: res.role, namaUser: res.namaUser || ''
+      }));
+      ROLE_USER = res.role;
+      IS_ADMIN  = (res.role === 'admin');
+      isViewer  = (res.role === 'viewer');
+      NAMA_USER = res.namaUser || '';
+      closeModal('modalLogin');
+      document.getElementById('userLabel').textContent = email;
+      _applyRoleUI();
+      if (res.mustChange) {
+        document.getElementById('gpwLama').value  = '';
+        document.getElementById('gpwBaru').value  = '';
+        document.getElementById('gpwBaru2').value = '';
+        document.getElementById('gpwError').style.display = 'none';
+        openModal('modalGantiPw');
+      } else {
+        loadAll();
+      }
+    })
+    .withFailureHandler(function(e) {
+      btn.disabled = false; btn.innerHTML = '&#128274; Masuk';
+      errEl.textContent = (e && e.message) || 'Login gagal, coba lagi';
+      errEl.style.display = '';
+    })
+    .serverLogin(email, pw);
+}
+
+function doLogout() {
+  var t = _tok;
+  _tok = '';
+  localStorage.removeItem('kt_token');
+  localStorage.removeItem('kt_user');
+  allTransaksi = []; saldoInfo = null;
+  if (t) {
+    try { google.script.run.serverLogout(t); } catch(e) {}
+  }
+  _showLoginModal();
+}
+
+function doGantiPassword() {
+  var lama  = document.getElementById('gpwLama').value  || '';
+  var baru  = document.getElementById('gpwBaru').value  || '';
+  var baru2 = document.getElementById('gpwBaru2').value || '';
+  var errEl = document.getElementById('gpwError');
+  errEl.style.display = 'none';
+  if (!lama || !baru) { errEl.textContent = 'Semua field wajib diisi'; errEl.style.display = ''; return; }
+  if (baru.length < 8) { errEl.textContent = 'Password baru minimal 8 karakter'; errEl.style.display = ''; return; }
+  if (baru !== baru2) { errEl.textContent = 'Ulangi password tidak cocok'; errEl.style.display = ''; return; }
+  google.script.run
+    .withSuccessHandler(function() {
+      closeModal('modalGantiPw');
+      toast('Password berhasil diubah', 'success');
+      loadAll();
+    })
+    .withFailureHandler(function(e) {
+      errEl.textContent = (e && e.message) || 'Gagal mengganti password';
+      errEl.style.display = '';
+    })
+    .serverGantiPassword(_tok, lama, baru);
+}
+
 /* ============== Init ============== */
 (function init(){
-  document.getElementById('userLabel').textContent=CURRENT_USER||'tamu';
+  // Prefill role dari localStorage bila token sudah tersimpan
+  var _savedUser = null;
+  try { _savedUser = JSON.parse(localStorage.getItem('kt_user') || 'null'); } catch(e){}
+  if (_savedUser && _savedUser.role) {
+    ROLE_USER = _savedUser.role;
+    IS_ADMIN  = (_savedUser.role === 'admin');
+    isViewer  = (_savedUser.role === 'viewer');
+    NAMA_USER = _savedUser.namaUser || '';
+  }
+  document.getElementById('userLabel').textContent =
+    (_savedUser && _savedUser.email) || CURRENT_USER || 'tamu';
   var btns=document.querySelectorAll('#filterBar button');
   for(var i=0;i<btns.length;i++){
     btns[i].addEventListener('click',function(){
@@ -4193,7 +4353,7 @@ function _bukaPopup(html){
   google.script.run.withSuccessHandler(function(aktif){
     if(aktif){ var b=document.querySelectorAll('.scan-imp'); for(var i=0;i<b.length;i++) b[i].style.display=''; }
   }).serverScanAktif();
-  loadAll();
+  _checkAuth();
 })();
 </script>
 </body>

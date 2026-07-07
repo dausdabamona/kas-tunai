@@ -457,3 +457,154 @@ function serverHapusKuitansi(transactionId) {
 function serverGetRekap() {
   return _run(function () { return KasTunai.getRekap(); });
 }
+
+/* ============================================================
+ * Auth — hashing & sesi (Fase 1)
+ * ============================================================ */
+
+/** SHA-256(salt:password) → base64. Tidak pernah mengembalikan/mencetak password asli. */
+function _hash(salt, password) {
+  var bytes = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    String(salt || '') + ':' + String(password || ''));
+  return Utilities.base64Encode(bytes);
+}
+
+/** Perbandingan hash constant-time (cegah timing attack). */
+function _compareHash(a, b) {
+  a = String(a || ''); b = String(b || '');
+  if (a.length !== b.length) return false;
+  var diff = 0;
+  for (var i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/** Validasi token sesi; return {email, role, mustChange}. */
+function _auth(token) {
+  return Sessions.validate(token);
+}
+
+/**
+ * Login: verifikasi email+password, buat sesi, kembalikan token.
+ * TIDAK memanggil _run() — token belum ada.
+ */
+function serverLogin(email, password) {
+  var _norm = function (e) { return String(e || '').trim().toLowerCase(); };
+  email = _norm(email);
+  if (!email || !password) throw new Error('Email dan password wajib diisi');
+
+  var user = Users.findForLogin(email);
+  if (!user) {
+    Utilities.sleep(300);
+    throw new Error('Email atau password salah');
+  }
+
+  // Cek lockout
+  if (user.lockedUntil && !isNaN(user.lockedUntil.getTime()) &&
+      user.lockedUntil.getTime() > new Date().getTime()) {
+    var hh = ('0' + user.lockedUntil.getHours()).slice(-2);
+    var mm = ('0' + user.lockedUntil.getMinutes()).slice(-2);
+    throw new Error('Akun terkunci hingga pukul ' + hh + ':' + mm + '. Hubungi admin.');
+  }
+
+  if (!user.hash || !user.salt) {
+    Utilities.sleep(300);
+    throw new Error('Password belum diatur — minta admin untuk mengatur password Anda');
+  }
+
+  var hashed = _hash(user.salt, password);
+  if (!_compareHash(hashed, user.hash)) {
+    var lockInfo = Users.incrementFail(user.rowIndex);
+    DeferredFlush.commitAndInvalidate();
+    if (lockInfo && lockInfo.locked) {
+      throw new Error('Terlalu banyak percobaan gagal — akun dikunci 15 menit');
+    }
+    throw new Error('Email atau password salah');
+  }
+
+  // Berhasil
+  Users.resetFail(user.rowIndex);
+  var token = Sessions.create(email, user.role, user.mustChange, '');
+  DeferredFlush.commitAndInvalidate();
+  return { token: token, role: user.role, mustChange: user.mustChange, namaUser: user.nama };
+}
+
+/**
+ * Logout: invalidasi token.
+ * TIDAK memanggil _run() — token mungkin sudah kadaluarsa.
+ */
+function serverLogout(token) {
+  try {
+    Sessions.invalidate(String(token || ''));
+    DeferredFlush.commitAndInvalidate();
+  } catch (e) {
+    Logger.log('[Logout] ' + e.message);
+  }
+  return { success: true };
+}
+
+/** Ganti password (token harus valid; boleh dipanggil saat mustChange=Y). */
+function serverGantiPassword(token, passwordLama, passwordBaru) {
+  var auth = _auth(token);
+  if (!passwordBaru || passwordBaru.length < 8) throw new Error('Password baru minimal 8 karakter');
+
+  var user = Users.findForLogin(auth.email);
+  if (!user) throw new Error('Pengguna tidak ditemukan');
+
+  if (!user.hash || !user.salt) throw new Error('Password lama belum diatur');
+  var hashedLama = _hash(user.salt, passwordLama);
+  if (!_compareHash(hashedLama, user.hash)) throw new Error('Password lama salah');
+
+  if (passwordBaru === passwordLama) throw new Error('Password baru tidak boleh sama dengan password lama');
+
+  var saltBaru = Utilities.getUuid();
+  var hashBaru = _hash(saltBaru, passwordBaru);
+  Users.setPassword(auth.email, hashBaru, saltBaru, false);
+  AppCache.remove('sess_' + String(token || ''));
+  DeferredFlush.commitAndInvalidate();
+  return { success: true };
+}
+
+/**
+ * Admin atur password user lain (otomatis mustChange=true).
+ */
+function serverSetPasswordUser(token, targetEmail, passwordBaru) {
+  var auth = _auth(token);
+  if (auth.role !== 'admin') throw new Error('Akses ditolak: khusus admin');
+  if (!passwordBaru || passwordBaru.length < 8) throw new Error('Password minimal 8 karakter');
+  var targetNorm = String(targetEmail || '').trim().toLowerCase();
+  if (!targetNorm || targetNorm.indexOf('@') < 0) throw new Error('Email target tidak valid');
+
+  var salt = Utilities.getUuid();
+  var hash = _hash(salt, passwordBaru);
+  Users.setPassword(targetNorm, hash, salt, true);
+  DeferredFlush.commitAndInvalidate();
+  return { success: true };
+}
+
+/**
+ * Bootstrap: jalankan sekali dari editor GAS untuk menyiapkan password Super Admin.
+ * Contoh: setupSuperAdminPassword('password_sementara_anda')
+ */
+function setupSuperAdminPassword(passwordBaru) {
+  if (!passwordBaru || String(passwordBaru).length < 8) throw new Error('Password minimal 8 karakter');
+  var superEmail = String(CONFIG.SUPER_ADMIN || '').trim().toLowerCase();
+  if (!superEmail) throw new Error('CONFIG.SUPER_ADMIN belum dikonfigurasi');
+
+  var salt = Utilities.getUuid();
+  var hash = _hash(salt, passwordBaru);
+
+  var user = Users.findForLogin(superEmail);
+  if (user) {
+    Users.setPassword(superEmail, hash, salt, false);
+  } else {
+    // Super Admin belum ada di sheet Users — tambahkan
+    SheetRepo.appendRow(CONFIG.SHEETS.USERS,
+      [superEmail, '(Super Admin)', 'admin', new Date(), 'system',
+       hash, salt, '', 0, '']);
+    DeferredFlush.mark();
+  }
+  DeferredFlush.commitAndInvalidate();
+  Logger.log('Password Super Admin berhasil disiapkan. Email: ' + superEmail);
+  return { success: true, email: superEmail };
+}

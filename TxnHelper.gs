@@ -57,14 +57,19 @@ function findRows(sheetName, predicate) {
   return out;
 }
 
-/** NO transaksi berikutnya (max + 1, abaikan yang terhapus diabaikan). */
+/** NO transaksi berikutnya (max + 1). LockService mencegah nomor ganda saat tulis bersamaan. */
 function nextTransactionNo() {
-  var data = SheetRepo.getData(CONFIG.SHEETS.KAS_TUNAI);
-  var c = CONFIG.COLS;
-  var max = 0;
-  for (var i = 0; i < data.length; i++) {
-    var n = parseInt(data[i][c.NO], 10);
-    if (!isNaN(n) && n > max) max = n;
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(8000); } catch (e) { throw new Error('Sistem sibuk, coba lagi'); }
+  try {
+    var data = SheetRepo.getData(CONFIG.SHEETS.KAS_TUNAI);
+    var c = CONFIG.COLS, max = 0;
+    for (var i = 0; i < data.length; i++) {
+      var n = parseInt(data[i][c.NO], 10);
+      if (!isNaN(n) && n > max) max = n;
+    }
+    return max + 1;
+  } finally {
+    lock.releaseLock();
   }
-  return max + 1;
 }
