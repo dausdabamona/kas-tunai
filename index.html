@@ -417,7 +417,7 @@
   .pk-col{background:#f4f6fa;border:1px solid #eaeef4;border-radius:14px;padding:11px;display:flex;flex-direction:column;gap:10px;min-height:96px;transition:background .12s,border-color .12s}
   .pk-col.drag-over{background:#e7effb;border-color:#93c5fd}
   .pk-col-head{display:flex;align-items:center;gap:7px;margin-bottom:2px}
-  .pk-col-dot{width:9px;height:9px;border-radius:50%;flex:0 0 9px}
+  .pk-col-dot{width:9px;height:9px;border-radius:3px;flex:0 0 9px}
   .pk-col-title{font-size:12.5px;font-weight:800;color:#16324f;flex:1}
   .pk-col-count{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#8496ab}
   .pk-col-empty{border:1px dashed #d7dfe9;border-radius:8px;padding:16px;text-align:center;font-size:12px;color:#aab6c4}
@@ -431,10 +431,10 @@
   .pk-chip.ok{background:#dcfce7;color:#166534;border-color:#bbf7d0;cursor:pointer}
   .pk-chip.todo{background:#fff7ed;color:#c2410c;border-color:#fed7aa;cursor:pointer}
   .pk-chip.na{background:#f1f5f9;color:#94a3b8;border-color:#e2e8f0;cursor:default}
-  .pk-txn-foot{border-top:1px solid #f0f2f6;padding-top:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px}
+  .pk-txn-foot{border-top:1px solid #f0f2f6;padding-top:8px;display:flex;align-items:center;gap:7px}
   .pk-urg-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle}
   .pk-next{font-size:11px;color:#5b7089;flex:1}
-  .pk-due{font-size:10px;font-weight:700}
+  .pk-due{font-size:10px;font-weight:700;margin-top:6px}
 </style>
 <div id="viewPapanKerja" class="wrap hidden">
   <div class="pk-outer">
@@ -4451,13 +4451,21 @@ var _PK_URG = {
 };
 
 var _PK_DOCS_CFG = [
-  {label:'Nota',  color:'#ea7317'},
-  {label:'Foto',  color:'#2563eb'},
-  {label:'SPJ',   color:'#7c3aed'},
-  {label:'Pajak', color:'#dc2626'}
+  {key:'Nota',  label:'Nota belum lengkap',  color:'#ea7317'},
+  {key:'Foto',  label:'Foto barang kosong',  color:'#2563eb'},
+  {key:'SPJ',   label:'SPJ belum diajukan',  color:'#7c3aed'},
+  {key:'Pajak', label:'Pajak belum disetor', color:'#dc2626'}
 ];
 
 var _BULAN_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
+
+function _pkUrgLabel(urg,diff){
+  if(urg==='done')  return 'Selesai';
+  if(urg==='late')  return diff<=0?'Hari ini':'Telat '+diff+' hari';
+  if(urg==='today') return 'Hari ini';
+  if(diff===1)      return 'Besok';
+  return diff+' hari';
+}
 
 function _pkSetDate(){
   var el=document.getElementById('pkDate');
@@ -4475,6 +4483,8 @@ function _pkDeriveStage(t){
     if(t.persediaan&&!(t.fotoBarangJml||0)) return 'foto';
     return 'spj';
   }
+  var diff=t.tanggal?Math.floor((new Date()-new Date(t.tanggal))/86400000):99;
+  if(diff<=3) return 'input';
   return 'nota';
 }
 
@@ -4526,10 +4536,10 @@ function _renderPkAgenda(txns){
     if(urg==='done') continue;
     var uc=_PK_URG[urg];
     var d=t.tanggal?new Date(t.tanggal):new Date();
+    var diff=Math.floor((new Date()-d)/86400000);
     var dayNum=d.getDate();
     var monStr=_BULAN_ID[d.getMonth()];
     var dayCol=urg==='late'?'#dc2626':urg==='today'?'#ea7317':'#16324f';
-    var nextTxt=urg==='late'?'Belum ada nota/SPJ — terlambat':urg==='today'?'Selesaikan hari ini':'Segera selesaikan';
     if(urg==='late') lateN++;
     if(urg==='today') todayN++;
     rows+='<div class="pk-agenda-row">'
@@ -4537,7 +4547,7 @@ function _renderPkAgenda(txns){
       +'<div class="pk-urg-bar" style="background:'+uc.text+'"></div>'
       +'<div class="pk-agenda-info"><div class="lbl" title="'+esc(t.kegiatan||'')+'">'+esc(t.kegiatan||'(tanpa kegiatan)')+'</div>'
       +'<div class="sub">No.'+t.no+' &middot; '+esc(t.penjab||'-')+'</div></div>'
-      +'<span class="pk-urg-chip" style="background:'+uc.bg+';color:'+uc.text+'">'+uc.label+'</span>'
+      +'<span class="pk-urg-chip" style="background:'+uc.bg+';color:'+uc.text+'">'+_pkUrgLabel(urg,Math.abs(diff))+'</span>'
       +'</div>';
   }
   var el=document.getElementById('pkAgenda');
@@ -4564,8 +4574,8 @@ function _renderPkKelengkapan(txns){
   var html='';
   for(var k=0;k<_PK_DOCS_CFG.length;k++){
     var cfg=_PK_DOCS_CFG[k];
-    var tot=totals[cfg.label]||0;
-    var mis=missing[cfg.label]||0;
+    var tot=totals[cfg.key]||0;
+    var mis=missing[cfg.key]||0;
     var pct=tot>0?Math.round((1-mis/tot)*100):100;
     var cntColor=mis>0?'#c2410c':'#16a34a';
     html+='<div class="pk-doc-row">'
@@ -4627,7 +4637,7 @@ function _renderPkPipeline(txns){
       html+='<div class="pk-col-empty">Tidak ada</div>';
     } else {
       for(var ci=0;ci<cards.length;ci++){
-        html+=_pkCardHtml(cards[ci],stage.accent);
+        html+=_pkCardHtml(cards[ci],stage.accent,stage.key);
       }
     }
     html+='</div>';
@@ -4635,7 +4645,7 @@ function _renderPkPipeline(txns){
   kanbanEl.innerHTML=html;
 }
 
-function _pkCardHtml(t, accent){
+function _pkCardHtml(t, accent, stageKey){
   var urg=_pkUrgency(t);
   var uc=_PK_URG[urg];
   var docs=_pkDocs(t);
@@ -4650,9 +4660,19 @@ function _pkCardHtml(t, accent){
       chipsHtml+='<span class="'+chipCls+'">'+chiLbl+'</span>';
     }
   }
+  var stageNext={
+    input:'Verifikasi & catat transaksi',
+    nota:'Unggah / catat nota penyedia',
+    foto:'Ambil foto barang',
+    spj:'Susun & ajukan SPJ',
+    arsip:'Terarsip — selesai'
+  };
   var amtStr='Rp '+Number(t.kredit||0).toLocaleString('id-ID');
-  var nextTxt=urg==='late'?'Segera lunasi':urg==='today'?'Selesaikan hari ini':urg==='done'?'Lengkap':'Proses segera';
-  var dueTxt=t.tanggal?(new Date(t.tanggal).getDate()+' '+_BULAN_ID[new Date(t.tanggal).getMonth()]):'';
+  var nextTxt=stageNext[stageKey]||'Proses segera';
+  var tglD=t.tanggal?new Date(t.tanggal):null;
+  var diff=tglD?Math.floor((new Date()-tglD)/86400000):0;
+  var urgChipTxt=_pkUrgLabel(urg,Math.abs(diff));
+  var dueTxt=tglD?(tglD.getDate()+' '+_BULAN_ID[tglD.getMonth()]):'';
   return '<div class="pk-txn" draggable="true" style="border-top:3px solid '+accent+'"'
     +' ondragstart="_pkDragStart(event,'+t.no+')"'
     +' ondragend="_pkDragEnd()">'
@@ -4662,8 +4682,9 @@ function _pkCardHtml(t, accent){
     +'<div class="pk-chips">'+chipsHtml+'</div>'
     +'<div class="pk-txn-foot">'
     +'<span class="pk-next"><span class="pk-urg-dot" style="background:'+uc.text+'"></span>'+nextTxt+'</span>'
-    +(dueTxt?'<span class="pk-due" style="color:'+uc.text+'">'+dueTxt+'</span>':'')
+    +'<span class="pk-urg-chip" style="background:'+uc.bg+';color:'+uc.text+'">'+urgChipTxt+'</span>'
     +'</div>'
+    +(dueTxt?'<div class="pk-due" style="color:'+uc.text+'">'+dueTxt+'</div>':'')
     +'</div>';
 }
 
