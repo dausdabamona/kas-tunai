@@ -5,6 +5,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kas Tunai - Poltek KP Sorong</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --c-primary:#1565c0; --c-head1:#16456e; --c-head2:#1d6299;
@@ -203,6 +205,7 @@
   <button id="tabTransaksi" class="active" onclick="switchTab('transaksi')">&#128221; Transaksi</button>
   <button id="tabSpd" onclick="switchTab('spd')">&#9992; Perjalanan Dinas</button>
   <button id="tabLaporan" onclick="switchTab('laporan')">&#128202; Laporan</button>
+  <button id="tabPapanKerja" onclick="switchTab('papanKerja')">&#128203; Papan Kerja</button>
   <button id="btnUsers" class="hidden" onclick="openModalUsers()">&#128101; Kelola User</button>
   <button id="btnSettings" class="hidden" onclick="openModalSettings()">&#9881; Pengaturan</button>
 </div>
@@ -375,6 +378,103 @@
   <button class="btn" style="margin-top:8px" onclick="toast('Cetak SPJ/SSP PDF: lengkapi modul cetak','info')">
     Cetak Laporan SPJ / SSP
   </button>
+</div>
+
+<!-- ================= TAB PAPAN KERJA ================= -->
+<style>
+  .pk-outer{background:#eef1f5;border-radius:22px;padding:28px;box-shadow:0 24px 60px -30px rgba(15,53,87,.45);color:#16324f}
+  .pk-top-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-bottom:16px}
+  @media(max-width:760px){.pk-top-grid{grid-template-columns:1fr}}
+  .pk-card{background:#fff;border:1px solid #e6eaf0;border-radius:18px;padding:22px;box-shadow:0 1px 2px rgba(20,50,80,.05)}
+  .pk-card h2{margin:0 0 12px;font-size:15px;font-weight:700;color:#16324f;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .pk-count-pill{font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px}
+  .pk-count-pill.late{background:#fee2e2;color:#991b1b}
+  .pk-count-pill.today{background:#fff7ed;color:#c2410c}
+  .pk-agenda-row{display:flex;align-items:center;gap:14px;padding:12px 4px;border-bottom:1px solid #f0f2f6}
+  .pk-agenda-row:last-child{border-bottom:0}
+  .pk-date-block{width:52px;text-align:center;flex:0 0 52px}
+  .pk-date-block .day{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700}
+  .pk-date-block .mon{font-size:10px;color:#8496ab}
+  .pk-urg-bar{width:4px;border-radius:2px;flex:0 0 4px;align-self:stretch}
+  .pk-agenda-info{flex:1;min-width:0}
+  .pk-agenda-info .lbl{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#16324f}
+  .pk-agenda-info .sub{font-size:12px;color:#8496ab;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pk-urg-chip{font-size:10px;font-weight:800;padding:4px 9px;border-radius:6px;white-space:nowrap;flex:0 0 auto}
+  .pk-doc-row{margin-bottom:14px}
+  .pk-doc-row:last-child{margin-bottom:0}
+  .pk-doc-row .dtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+  .pk-doc-row .dlbl{font-size:13px;font-weight:600;color:#16324f}
+  .pk-doc-row .dcnt{font-size:12px;font-weight:700}
+  .pk-bar-track{height:9px;background:#eef2f7;border-radius:999px;overflow:hidden}
+  .pk-bar-fill{height:100%;border-radius:999px;transition:width .3s}
+  .pk-filter-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center}
+  .pk-filter-bar .flbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8496ab;margin-right:2px}
+  .pk-filter-btn{font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;border:1px solid #e6eaf0;background:#fff;color:#5b7089;cursor:pointer}
+  .pk-filter-btn.active{background:#16456e;color:#fff;border-color:#16456e}
+  .pk-kanban{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:start}
+  @media(max-width:900px){.pk-kanban{display:flex;overflow-x:auto;padding-bottom:8px}}
+  @media(max-width:900px){.pk-kanban>.pk-col{min-width:220px}}
+  .pk-col{background:#f4f6fa;border:1px solid #eaeef4;border-radius:14px;padding:11px;display:flex;flex-direction:column;gap:10px;min-height:96px;transition:background .12s,border-color .12s}
+  .pk-col.drag-over{background:#e7effb;border-color:#93c5fd}
+  .pk-col-head{display:flex;align-items:center;gap:7px;margin-bottom:2px}
+  .pk-col-dot{width:9px;height:9px;border-radius:50%;flex:0 0 9px}
+  .pk-col-title{font-size:12.5px;font-weight:800;color:#16324f;flex:1}
+  .pk-col-count{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#8496ab}
+  .pk-col-empty{border:1px dashed #d7dfe9;border-radius:8px;padding:16px;text-align:center;font-size:12px;color:#aab6c4}
+  .pk-txn{background:#fff;border:1px solid #e6eaf0;border-radius:11px;padding:12px;cursor:grab;box-shadow:0 1px 2px rgba(20,50,80,.05)}
+  .pk-txn:active{cursor:grabbing}
+  .pk-txn .tit{font-size:12.5px;font-weight:700;line-height:1.3;color:#16324f;margin-bottom:2px}
+  .pk-txn .sub2{font-size:11px;color:#8496ab;margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pk-txn .amt2{font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:700;color:#16324f;margin-bottom:7px}
+  .pk-chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+  .pk-chip{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:5px;border:1px solid;user-select:none}
+  .pk-chip.ok{background:#dcfce7;color:#166534;border-color:#bbf7d0;cursor:pointer}
+  .pk-chip.todo{background:#fff7ed;color:#c2410c;border-color:#fed7aa;cursor:pointer}
+  .pk-chip.na{background:#f1f5f9;color:#94a3b8;border-color:#e2e8f0;cursor:default}
+  .pk-txn-foot{border-top:1px solid #f0f2f6;padding-top:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px}
+  .pk-urg-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle}
+  .pk-next{font-size:11px;color:#5b7089;flex:1}
+  .pk-due{font-size:10px;font-weight:700}
+</style>
+<div id="viewPapanKerja" class="wrap hidden">
+  <div class="pk-outer">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px">
+          <span style="background:#16456e;color:#f6c343;font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px">&#128203; Bendahara</span>
+          <span style="font-size:23px;font-weight:800;letter-spacing:-.01em;color:#16324f">Papan Kerja Bendahara</span>
+        </div>
+        <div style="font-size:13px;color:#6b7280">Apa yang harus dikerjakan hari ini &middot; sampai mana tiap transaksi &middot; dokumen yang masih kurang</div>
+      </div>
+      <div style="text-align:right">
+        <div id="pkDate" style="font-size:13px;font-weight:700;color:#16324f"></div>
+        <div style="font-size:12px;color:#8496ab;margin-top:2px">Poltek KP Sorong &middot; BPP</div>
+      </div>
+    </div>
+    <div class="pk-top-grid">
+      <div class="pk-card">
+        <h2>Agenda &amp; Tenggat
+          <span id="pkAgendaLate" class="pk-count-pill late" style="display:none"></span>
+          <span id="pkAgendaToday" class="pk-count-pill today" style="display:none"></span>
+        </h2>
+        <div id="pkAgenda"></div>
+      </div>
+      <div class="pk-card">
+        <h2>Kelengkapan Dokumen</h2>
+        <div style="font-size:12px;color:#8496ab;margin-top:-8px;margin-bottom:12px">Berkas yang masih harus dikumpulkan</div>
+        <div id="pkKelengkapan"></div>
+      </div>
+    </div>
+    <div class="pk-card" style="margin-top:16px">
+      <h2 style="margin-bottom:4px">Alur Proses Transaksi</h2>
+      <div style="font-size:12px;color:#8496ab;margin-bottom:12px">Seret kartu antar kolom &middot; klik penanda dokumen untuk buka detail</div>
+      <div class="pk-filter-bar">
+        <span class="flbl">PENANGGUNG JAWAB</span>
+        <div id="pkFilters" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      </div>
+      <div class="pk-kanban" id="pkKanban"></div>
+    </div>
+  </div>
 </div>
 
 <button class="fab" onclick="openModal('modalPilihTx')">+</button>
@@ -1090,11 +1190,14 @@ function switchTab(tab){
   document.getElementById('viewTransaksi').classList.toggle('hidden',tab!=='transaksi');
   document.getElementById('viewSpd').classList.toggle('hidden',tab!=='spd');
   document.getElementById('viewLaporan').classList.toggle('hidden',tab!=='laporan');
+  document.getElementById('viewPapanKerja').classList.toggle('hidden',tab!=='papanKerja');
   document.getElementById('tabTransaksi').classList.toggle('active',tab==='transaksi');
   document.getElementById('tabSpd').classList.toggle('active',tab==='spd');
   document.getElementById('tabLaporan').classList.toggle('active',tab==='laporan');
+  document.getElementById('tabPapanKerja').classList.toggle('active',tab==='papanKerja');
   if(tab==='laporan') loadRekap();
   if(tab==='spd' && !document.getElementById('spdPpk').value) resetSpdForm();
+  if(tab==='papanKerja'){ _pkSetDate(); renderPapanKerja(); }
 }
 
 /* ============== Load transaksi ============== */
@@ -1111,6 +1214,7 @@ function loadAll(){
       _applyRoleUI();
       showLoading(false);
       renderList();
+      if(!document.getElementById('viewPapanKerja').classList.contains('hidden')) renderPapanKerja();
     })
     .withFailureHandler(fail)
     .serverGetDashboard();
@@ -4324,6 +4428,294 @@ function doGantiPassword() {
       errEl.style.display = '';
     })
     .serverGantiPassword(_tok, lama, baru);
+}
+
+/* ============== Papan Kerja Bendahara ============== */
+var _pkFilter = 'all';
+var _pkDrag   = null;
+var _pkOverrides = {}; // {no: stageKey} — drag visual override untuk sesi ini
+
+var _PK_STAGES = [
+  {key:'input', nama:'Input & Verifikasi', accent:'#64748b'},
+  {key:'nota',  nama:'Kelengkapan Nota',   accent:'#ea7317'},
+  {key:'foto',  nama:'Foto Barang',        accent:'#2563eb'},
+  {key:'spj',   nama:'Proses SPJ',         accent:'#7c3aed'},
+  {key:'arsip', nama:'Selesai / Arsip',    accent:'#16a34a'}
+];
+
+var _PK_URG = {
+  late:  {text:'#dc2626', bg:'#fee2e2', label:'Terlambat'},
+  today: {text:'#ea7317', bg:'#fff7ed', label:'Hari ini'},
+  soon:  {text:'#2563eb', bg:'#eff6ff', label:'Segera'},
+  done:  {text:'#16a34a', bg:'#dcfce7', label:'Selesai'}
+};
+
+var _PK_DOCS_CFG = [
+  {label:'Nota',  color:'#ea7317'},
+  {label:'Foto',  color:'#2563eb'},
+  {label:'SPJ',   color:'#7c3aed'},
+  {label:'Pajak', color:'#dc2626'}
+];
+
+var _BULAN_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
+
+function _pkSetDate(){
+  var el=document.getElementById('pkDate');
+  if(!el) return;
+  var d=new Date();
+  el.textContent=d.getDate()+' '+_BULAN_ID[d.getMonth()]+' '+d.getFullYear();
+}
+
+function _pkDeriveStage(t){
+  if(!t.kredit||t.kredit<=0) return 'arsip';
+  if(_pkOverrides[String(t.no)]) return _pkOverrides[String(t.no)];
+  var lunas=isNotaLunas(t);
+  if(t.statusSpj==='Lunas'||lunas) return 'arsip';
+  if((t.notaJml||0)>0){
+    if(t.persediaan&&!(t.fotoBarangJml||0)) return 'foto';
+    return 'spj';
+  }
+  return 'nota';
+}
+
+function _pkDocs(t){
+  var hasNota=(t.notaJml||0)>0;
+  var hasFoto=!t.persediaan||(t.fotoBarangJml||0)>0;
+  var lunas=isNotaLunas(t);
+  var spjOk=t.statusSpj==='Lunas'||lunas;
+  var pajakOk=(t.pajakKatIdx!==null&&t.pajakKatIdx!==undefined&&t.pajakKatIdx>=0);
+  return [
+    {label:'Nota', st: !t.kredit||t.kredit<=0?'na': hasNota?'ok':'todo'},
+    {label:'Foto', st: t.persediaan?(hasFoto?'ok':'todo'):'na'},
+    {label:'SPJ',  st: !t.kredit||t.kredit<=0?'na': (spjOk?'ok':(hasNota?'todo':'na'))},
+    {label:'Pajak',st: pajakOk?'ok':'na'}
+  ];
+}
+
+function _pkUrgency(t){
+  if(!t.kredit||t.kredit<=0) return 'done';
+  if(isNotaLunas(t)||t.statusSpj==='Lunas') return 'done';
+  var tgl=t.tanggal?new Date(t.tanggal):new Date();
+  var diff=Math.floor((new Date()-tgl)/86400000);
+  if(diff>14) return 'late';
+  if(diff>=0&&diff<=1) return 'today';
+  return 'soon';
+}
+
+function renderPapanKerja(){
+  var txns=(allTransaksi||[]).filter(function(t){ return !t.isDeleted&&t.kredit>0; });
+  _renderPkAgenda(txns);
+  _renderPkKelengkapan(txns);
+  _renderPkPipeline(txns);
+}
+
+function _renderPkAgenda(txns){
+  var sorted=txns.slice().sort(function(a,b){
+    var oa=['late','today','soon','done'];
+    var ia=oa.indexOf(_pkUrgency(a)), ib=oa.indexOf(_pkUrgency(b));
+    if(ia!==ib) return ia-ib;
+    var da=a.tanggal?new Date(a.tanggal).getTime():0;
+    var db=b.tanggal?new Date(b.tanggal).getTime():0;
+    return da-db;
+  });
+  var lateN=0, todayN=0;
+  var rows='';
+  for(var i=0;i<sorted.length;i++){
+    var t=sorted[i];
+    var urg=_pkUrgency(t);
+    if(urg==='done') continue;
+    var uc=_PK_URG[urg];
+    var d=t.tanggal?new Date(t.tanggal):new Date();
+    var dayNum=d.getDate();
+    var monStr=_BULAN_ID[d.getMonth()];
+    var dayCol=urg==='late'?'#dc2626':urg==='today'?'#ea7317':'#16324f';
+    var nextTxt=urg==='late'?'Belum ada nota/SPJ — terlambat':urg==='today'?'Selesaikan hari ini':'Segera selesaikan';
+    if(urg==='late') lateN++;
+    if(urg==='today') todayN++;
+    rows+='<div class="pk-agenda-row">'
+      +'<div class="pk-date-block"><div class="day" style="color:'+dayCol+'">'+dayNum+'</div><div class="mon">'+monStr+'</div></div>'
+      +'<div class="pk-urg-bar" style="background:'+uc.text+'"></div>'
+      +'<div class="pk-agenda-info"><div class="lbl" title="'+esc(t.kegiatan||'')+'">'+esc(t.kegiatan||'(tanpa kegiatan)')+'</div>'
+      +'<div class="sub">No.'+t.no+' &middot; '+esc(t.penjab||'-')+'</div></div>'
+      +'<span class="pk-urg-chip" style="background:'+uc.bg+';color:'+uc.text+'">'+uc.label+'</span>'
+      +'</div>';
+  }
+  var el=document.getElementById('pkAgenda');
+  if(!el) return;
+  el.innerHTML=rows||'<div style="text-align:center;color:#8496ab;padding:20px;font-size:13px">Tidak ada agenda tertunda &#10003;</div>';
+  var lEl=document.getElementById('pkAgendaLate');
+  var tEl=document.getElementById('pkAgendaToday');
+  if(lEl){ lEl.textContent=lateN+' terlambat'; lEl.style.display=lateN?'':'none'; }
+  if(tEl){ tEl.textContent=todayN+' hari ini'; tEl.style.display=todayN?'':'none'; }
+}
+
+function _renderPkKelengkapan(txns){
+  var totals={Nota:0,Foto:0,SPJ:0,Pajak:0};
+  var missing={Nota:0,Foto:0,SPJ:0,Pajak:0};
+  for(var i=0;i<txns.length;i++){
+    var docs=_pkDocs(txns[i]);
+    for(var j=0;j<docs.length;j++){
+      var d=docs[j];
+      if(d.st==='na') continue;
+      totals[d.label]++;
+      if(d.st==='todo') missing[d.label]++;
+    }
+  }
+  var html='';
+  for(var k=0;k<_PK_DOCS_CFG.length;k++){
+    var cfg=_PK_DOCS_CFG[k];
+    var tot=totals[cfg.label]||0;
+    var mis=missing[cfg.label]||0;
+    var pct=tot>0?Math.round((1-mis/tot)*100):100;
+    var cntColor=mis>0?'#c2410c':'#16a34a';
+    html+='<div class="pk-doc-row">'
+      +'<div class="dtop"><span class="dlbl">'+cfg.label+'</span>'
+      +'<span class="dcnt" style="color:'+cntColor+'">'+mis+' kurang / '+tot+'</span></div>'
+      +'<div class="pk-bar-track"><div class="pk-bar-fill" style="width:'+pct+'%;background:'+cfg.color+'"></div></div>'
+      +'</div>';
+  }
+  var el=document.getElementById('pkKelengkapan');
+  if(el) el.innerHTML=html;
+}
+
+function _renderPkPipeline(txns){
+  var fEl=document.getElementById('pkFilters');
+  if(!fEl) return;
+  // Build filter buttons
+  var penjabs=['all'];
+  var seen={};
+  for(var i=0;i<txns.length;i++){
+    var p=String(txns[i].penjab||'').trim();
+    if(p&&!seen[p]){ seen[p]=1; penjabs.push(p); }
+  }
+  var fbHtml='<button class="pk-filter-btn'+(_pkFilter==='all'?' active':'')
+    +'" onclick="_pkSetFilter(\'all\')">Semua</button>';
+  for(var pi=1;pi<penjabs.length;pi++){
+    var pj=penjabs[pi];
+    fbHtml+='<button class="pk-filter-btn'+(_pkFilter===pj?' active':'')+'"'
+      +' onclick="_pkSetFilter(\''+esc(pj).replace(/'/g,"\\'")+'\')">'
+      +esc(pj)+'</button>';
+  }
+  fEl.innerHTML=fbHtml;
+
+  // Group cards by stage
+  var filtered=txns.filter(function(t){
+    return _pkFilter==='all'||String(t.penjab||'')==_pkFilter;
+  });
+  var byStage={input:[],nota:[],foto:[],spj:[],arsip:[]};
+  for(var ti=0;ti<filtered.length;ti++){
+    var st=_pkDeriveStage(filtered[ti]);
+    if(byStage[st]) byStage[st].push(filtered[ti]);
+  }
+
+  var kanbanEl=document.getElementById('pkKanban');
+  if(!kanbanEl) return;
+  var html='';
+  for(var si=0;si<_PK_STAGES.length;si++){
+    var stage=_PK_STAGES[si];
+    var cards=byStage[stage.key]||[];
+    html+='<div class="pk-col" id="pkCol_'+stage.key+'"'
+      +' ondragover="_pkDragOver(event,\''+stage.key+'\')"'
+      +' ondrop="_pkDrop(event,\''+stage.key+'\')"'
+      +' ondragleave="_pkDragLeave(event)">'
+      +'<div class="pk-col-head">'
+      +'<span class="pk-col-dot" style="background:'+stage.accent+'"></span>'
+      +'<span class="pk-col-title">'+stage.nama+'</span>'
+      +'<span class="pk-col-count">'+cards.length+'</span>'
+      +'</div>';
+    if(cards.length===0){
+      html+='<div class="pk-col-empty">Tidak ada</div>';
+    } else {
+      for(var ci=0;ci<cards.length;ci++){
+        html+=_pkCardHtml(cards[ci],stage.accent);
+      }
+    }
+    html+='</div>';
+  }
+  kanbanEl.innerHTML=html;
+}
+
+function _pkCardHtml(t, accent){
+  var urg=_pkUrgency(t);
+  var uc=_PK_URG[urg];
+  var docs=_pkDocs(t);
+  var chipsHtml='';
+  for(var i=0;i<docs.length;i++){
+    var d=docs[i];
+    var chipCls='pk-chip '+d.st;
+    var chiLbl=d.label+(d.st==='ok'?' ✓':d.st==='na'?' –':'');
+    if(d.st!=='na'){
+      chipsHtml+='<span class="'+chipCls+'" onclick="_pkChipClick('+t.no+',\''+d.label+'\')">'+chiLbl+'</span>';
+    } else {
+      chipsHtml+='<span class="'+chipCls+'">'+chiLbl+'</span>';
+    }
+  }
+  var amtStr='Rp '+Number(t.kredit||0).toLocaleString('id-ID');
+  var nextTxt=urg==='late'?'Segera lunasi':urg==='today'?'Selesaikan hari ini':urg==='done'?'Lengkap':'Proses segera';
+  var dueTxt=t.tanggal?(new Date(t.tanggal).getDate()+' '+_BULAN_ID[new Date(t.tanggal).getMonth()]):'';
+  return '<div class="pk-txn" draggable="true" style="border-top:3px solid '+accent+'"'
+    +' ondragstart="_pkDragStart(event,'+t.no+')"'
+    +' ondragend="_pkDragEnd()">'
+    +'<div class="tit">'+esc(t.kegiatan||'(tanpa kegiatan)')+'</div>'
+    +'<div class="sub2">No.'+t.no+' &middot; '+esc(t.penjab||'-')+'</div>'
+    +'<div class="amt2">'+amtStr+'</div>'
+    +'<div class="pk-chips">'+chipsHtml+'</div>'
+    +'<div class="pk-txn-foot">'
+    +'<span class="pk-next"><span class="pk-urg-dot" style="background:'+uc.text+'"></span>'+nextTxt+'</span>'
+    +(dueTxt?'<span class="pk-due" style="color:'+uc.text+'">'+dueTxt+'</span>':'')
+    +'</div>'
+    +'</div>';
+}
+
+function _pkSetFilter(pj){
+  _pkFilter=pj;
+  var txns=(allTransaksi||[]).filter(function(t){ return !t.isDeleted&&t.kredit>0; });
+  _renderPkPipeline(txns);
+}
+
+function _pkDragStart(e,no){
+  _pkDrag=no;
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain',String(no));
+}
+
+function _pkDragEnd(){
+  _pkDrag=null;
+  var cols=document.querySelectorAll('.pk-col');
+  for(var i=0;i<cols.length;i++) cols[i].classList.remove('drag-over');
+}
+
+function _pkDragOver(e,stageKey){
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  var cols=document.querySelectorAll('.pk-col');
+  for(var i=0;i<cols.length;i++) cols[i].classList.remove('drag-over');
+  var el=document.getElementById('pkCol_'+stageKey);
+  if(el) el.classList.add('drag-over');
+}
+
+function _pkDragLeave(e){
+  if(!e.currentTarget.contains(e.relatedTarget)){
+    e.currentTarget.classList.remove('drag-over');
+  }
+}
+
+function _pkDrop(e,stageKey){
+  e.preventDefault();
+  var no=_pkDrag||e.dataTransfer.getData('text/plain');
+  if(!no) return;
+  _pkOverrides[String(no)]=stageKey;
+  _pkDrag=null;
+  var txns=(allTransaksi||[]).filter(function(t){ return !t.isDeleted&&t.kredit>0; });
+  _renderPkPipeline(txns);
+}
+
+function _pkChipClick(no,label){
+  // Open relevant modal based on doc type
+  if(label==='Nota') { openModalNota(no); }
+  else if(label==='Foto') { openFoto(no); }
+  else if(label==='SPJ') { cetakSPJ(no); }
+  else if(label==='Pajak') { openModalPajak(no); }
 }
 
 /* ============== Init ============== */
