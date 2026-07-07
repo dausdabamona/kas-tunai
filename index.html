@@ -3602,17 +3602,14 @@ function _renderKuitansiPajakHtml(t, pj){
   var noKwt='KP-'+t.no+'/'+thn;
   var netto=pj.nettoRekanan;
   var baris=function(l,v){ return '<tr><td class="l">'+l+'</td><td class="c">:</td><td>'+v+'</td></tr>'; };
-  var css=_kuitansiCss()
+  var css=_kuitansiCss()+_docCss()
     +'.kp-sec{margin-top:10px} .kp-head{font-weight:bold;border-bottom:1px solid #ccc;padding-bottom:4px;margin-bottom:6px;font-size:13px}'
     +'.kp-total td{font-weight:bold;background:#f0f0f0} .kp-netto td{font-weight:bold;font-size:15px}';
   var penyedia=t.penjab||'(…………………………)';
 
   var body=''
   +'<div class="page">'
-  +'<div class="kop"><div class="nm">'+esc(INST.namaWP).toUpperCase()+'</div>'
-  +'<div class="ad">'+esc(INST.alamatKop1)+'</div>'
-  +'<div class="ad">'+esc(INST.alamatKop2)+'</div></div>'
-  +'<hr class="hrt">'
+  +_docKopResmi()
   +'<div class="judul">KUITANSI PEMOTONGAN PAJAK</div>'
   +'<div class="nomor">Nomor: '+esc(noKwt)+'</div>'
 
@@ -3914,7 +3911,7 @@ function _renderKuitansiHtml(t, list){
     pages=_kuitansiPage(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'TANDA TERIMA UANG MUKA', noPpk:true });
   }
   return ''
-  +'<html><head><meta charset="utf-8"><title>'+esc(docTitle)+'</title><style>'+_kuitansiCss()
+  +'<html><head><meta charset="utf-8"><title>'+esc(docTitle)+'</title><style>'+_kuitansiCss()+_docCss()
   +'</style></head><body>'
   +'<div class="noprint" style="text-align:right;padding:10px 16mm 0">'
   +'<button onclick="window.print()">Cetak / Simpan PDF</button></div>'
@@ -3941,10 +3938,7 @@ function _kuitansiCss(){
 function _kuitansiPage(t, o){
   return ''
   +'<div class="page">'
-  +'<div class="kop"><div class="nm">'+esc(INST.namaWP).toUpperCase()+'</div>'
-  +'<div class="ad">'+esc(INST.alamatKop1)+'</div>'
-  +'<div class="ad">'+esc(INST.alamatKop2)+'</div></div>'
-  +'<hr class="hrt">'
+  +_docKopResmi()
 
   +'<div class="judul" style="letter-spacing:'+((o.judul&&o.judul.length>12)?'3px':'6px')+'">'+esc(o.judul||'K U I T A N S I')+'</div>'
   +'<div class="nomor">Nomor: '+o.noKwt+'</div>'
