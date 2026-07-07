@@ -4453,7 +4453,7 @@ var _PK_URG = {
 var _PK_DOCS_CFG = [
   {key:'Nota',  label:'Nota belum lengkap',  color:'#ea7317'},
   {key:'Foto',  label:'Foto barang kosong',  color:'#2563eb'},
-  {key:'SPJ',   label:'SPJ belum diajukan',  color:'#7c3aed'},
+  {key:'SPJ',   label:'SPJ belum lunas',     color:'#7c3aed'},
   {key:'Pajak', label:'Pajak belum disetor', color:'#dc2626'}
 ];
 
@@ -4465,6 +4465,25 @@ function _pkUrgLabel(urg,diff){
   if(urg==='today') return 'Hari ini';
   if(diff===1)      return 'Besok';
   return diff+' hari';
+}
+
+function _pkTrxRef(no){
+  var s=String(no||'');
+  while(s.length<4) s='0'+s;
+  return 'TRX-'+s;
+}
+
+function _pkActionLabel(t,stage){
+  var ket=(t.kegiatan||'').trim()
+    .replace(/^(Pembelian|Pengadaan|Belanja|Pembayaran|Biaya|Kegiatan)\s+/i,'');
+  var words=ket.split(/\s+/).slice(0,3).join(' ');
+  if(words.length>22) words=words.substring(0,20).trim();
+  words=words.toLowerCase();
+  if(stage==='input') return 'Verifikasi & catat transaksi baru';
+  if(stage==='nota')  return words?'Unggah nota '+words:'Unggah nota penyedia';
+  if(stage==='foto')  return words?'Ambil foto barang '+words:'Ambil foto barang';
+  if(stage==='spj')   return words?'Finalisasi SPJ '+words:'Susun & ajukan SPJ';
+  return words||'Proses segera';
 }
 
 function _pkSetDate(){
@@ -4540,13 +4559,15 @@ function _renderPkAgenda(txns){
     var dayNum=d.getDate();
     var monStr=_BULAN_ID[d.getMonth()];
     var dayCol=urg==='late'?'#dc2626':urg==='today'?'#ea7317':'#16324f';
+    var stage=_pkDeriveStage(t);
+    var actionLbl=_pkActionLabel(t,stage);
     if(urg==='late') lateN++;
     if(urg==='today') todayN++;
     rows+='<div class="pk-agenda-row">'
       +'<div class="pk-date-block"><div class="day" style="color:'+dayCol+'">'+dayNum+'</div><div class="mon">'+monStr+'</div></div>'
       +'<div class="pk-urg-bar" style="background:'+uc.text+'"></div>'
-      +'<div class="pk-agenda-info"><div class="lbl" title="'+esc(t.kegiatan||'')+'">'+esc(t.kegiatan||'(tanpa kegiatan)')+'</div>'
-      +'<div class="sub">No.'+t.no+' &middot; '+esc(t.penjab||'-')+'</div></div>'
+      +'<div class="pk-agenda-info"><div class="lbl">'+esc(actionLbl)+'</div>'
+      +'<div class="sub">'+_pkTrxRef(t.no)+' &middot; '+esc(t.penjab||'-')+'</div></div>'
       +'<span class="pk-urg-chip" style="background:'+uc.bg+';color:'+uc.text+'">'+_pkUrgLabel(urg,Math.abs(diff))+'</span>'
       +'</div>';
   }
@@ -4677,7 +4698,7 @@ function _pkCardHtml(t, accent, stageKey){
     +' ondragstart="_pkDragStart(event,'+t.no+')"'
     +' ondragend="_pkDragEnd()">'
     +'<div class="tit">'+esc(t.kegiatan||'(tanpa kegiatan)')+'</div>'
-    +'<div class="sub2">No.'+t.no+' &middot; '+esc(t.penjab||'-')+'</div>'
+    +'<div class="sub2">'+_pkTrxRef(t.no)+' &middot; '+esc(t.penjab||'-')+'</div>'
     +'<div class="amt2">'+amtStr+'</div>'
     +'<div class="pk-chips">'+chipsHtml+'</div>'
     +'<div class="pk-txn-foot">'
