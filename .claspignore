@@ -1,10 +1,10 @@
-# Abaikan semuanya...
-**/**
+# Abaikan semua file secara default...
+**
 
-# ...kecuali sumber proyek Apps Script yang boleh diunggah
+# ...kecuali sumber proyek Apps Script yang diunggah ke GAS
 !appsscript.json
-!**/*.gs
-!/index.html
+!*.gs
+!index.html
 
 # Halaman redirect GitHub Pages — JANGAN diunggah ke Apps Script
 docs/**
