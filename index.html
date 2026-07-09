@@ -1937,10 +1937,26 @@ function _pegRowHtml(p){
    +'<div class="field"><label>Nama Bank <span style="color:#c00">*</span></label><input type="text" class="pg-bank" value="'+_attr(p.bank)+'" placeholder="mis. BRI / Mandiri"></div></div>'
    +'<div class="field lk-only"><label>Tingkat Biaya Perjalanan Dinas (A/B/C/D)</label><input type="text" class="pg-tingkat" value="'+_attr(p.tingkatBiaya)+'"></div>'
    // ---- Komponen Luar Kota ----
-   +'<div class="peg-sub lk-only"><h5>Uang harian (lumpsum)</h5>'
+   +'<div class="peg-sub lk-only">'
+   +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+   +'<h5 style="margin:0">Uang harian</h5>'
+   +'<div style="font-size:11px;color:#64748b">Hari SPD: <b class="pg-hari-spd">—</b> &nbsp;Terpakai: <b class="pg-hari-used">0</b> &nbsp;Sisa: <b class="pg-hari-sisa">—</b></div>'
+   +'</div>'
+   +'<div style="font-size:12px;font-weight:700;color:#475569;margin-bottom:4px">① Lumpsum</div>'
    +'<div class="row2"><div class="field"><label>Tarif (Rp/hari)</label><input type="text" inputmode="numeric" class="pg-uhRate numfmt" value="'+_grp(+p.uangHarianRate||0)+'" oninput="hitungSemuaBiaya()"></div>'
-   +'<div class="field"><label>Jumlah hari</label><input type="number" class="pg-uhHari" value="'+(p.uangHarianHari!=null?(+p.uangHarianHari||0):'')+'" oninput="hitungSemuaBiaya()"></div></div>'
-   +'<div class="field"><label>Uang harian</label><input type="text" class="pg-uhTot" readonly></div></div>'
+   +'<div class="field"><label>Jumlah hari</label><input type="number" min="0" class="pg-uhHari" value="'+(p.uangHarianHari!=null?(+p.uangHarianHari||0):'')+'" oninput="hitungSemuaBiaya()"></div></div>'
+   +'<div class="field"><label>Subtotal lumpsum</label><input type="text" class="pg-uhTot" readonly></div>'
+   +'<div style="font-size:12px;font-weight:700;color:#475569;margin:8px 0 4px">② Diklat</div>'
+   +'<div class="row2"><div class="field"><label>Tarif (Rp/hari)</label><input type="text" inputmode="numeric" class="pg-uhDiklatRate numfmt" value="'+_grp(+p.uangHarianDiklatRate||0)+'" oninput="hitungSemuaBiaya()"></div>'
+   +'<div class="field"><label>Jumlah hari</label><input type="number" min="0" class="pg-uhDiklatHari" value="'+(+(p.uangHarianDiklatHari)||0)+'" oninput="hitungSemuaBiaya()"></div></div>'
+   +'<div class="field"><label>Subtotal diklat</label><input type="text" class="pg-uhDiklatTot" readonly></div>'
+   +'<div style="font-size:12px;font-weight:700;color:#475569;margin:8px 0 4px">③ Full Board</div>'
+   +'<div style="font-size:11px;color:#64748b;margin-bottom:4px">Penginapan &amp; makan ditanggung penyelenggara</div>'
+   +'<div class="row2"><div class="field"><label>Tarif (Rp/hari)</label><input type="text" inputmode="numeric" class="pg-uhFbRate numfmt" value="'+_grp(+p.uangHarianFbRate||0)+'" oninput="hitungSemuaBiaya()"></div>'
+   +'<div class="field"><label>Jumlah hari</label><input type="number" min="0" class="pg-uhFbHari" value="'+(+(p.uangHarianFbHari)||0)+'" oninput="hitungSemuaBiaya()"></div></div>'
+   +'<div class="field"><label>Subtotal full board</label><input type="text" class="pg-uhFbTot" readonly></div>'
+   +'<div class="field" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--c-line)"><label>Total uang harian</label><input type="text" class="pg-uhGrandTot" readonly style="font-weight:700"></div>'
+   +'</div>'
    +'<div class="peg-sub lk-only"><h5>Penginapan</h5>'
    +'<label style="display:block;margin-bottom:6px"><input type="checkbox" class="pg-menginap" '+(p.penginapanMenginap?'checked':'')+' onchange="hitungSemuaBiaya()"> Menginap di hotel (at-cost). Bila tidak: 30% × tarif × malam</label>'
    +'<div class="row2"><div class="field"><label>Jumlah malam</label><input type="number" class="pg-malam" value="'+(+p.penginapanMalam||0)+'" oninput="hitungSemuaBiaya()"></div>'
@@ -1982,16 +1998,32 @@ function _v(r,sel){ var e=r.querySelector(sel); return e?unfmt(e.value):0; }
 function _sumSub(r,sel){ var s=0, ns=r.querySelectorAll(sel+' .nom'); for(var i=0;i<ns.length;i++) s+=unfmt(ns[i].value); return s; }
 /* Hitung grand total satu baris pegawai (mode Luar Kota) */
 function _pegHitungLK(r, hariDefault){
+  // auto-fill lumpsum hari only if all three types are still at zero
   var hariEl=r.querySelector('.pg-uhHari');
-  if(hariEl && !hariEl.value) hariEl.value=hariDefault;
+  var diklatHariEl=r.querySelector('.pg-uhDiklatHari');
+  var fbHariEl=r.querySelector('.pg-uhFbHari');
+  if(hariEl && !+hariEl.value && !(diklatHariEl&&+diklatHariEl.value) && !(fbHariEl&&+fbHariEl.value)) hariEl.value=hariDefault;
   var hari=_v(r,'.pg-uhHari');
   var uangHarian=_v(r,'.pg-uhRate')*hari;
+  var uangHarianDiklat=_v(r,'.pg-uhDiklatRate')*_v(r,'.pg-uhDiklatHari');
+  var uangHarianFb=_v(r,'.pg-uhFbRate')*_v(r,'.pg-uhFbHari');
   r.querySelector('.pg-uhTot').value=rupiah(uangHarian);
+  r.querySelector('.pg-uhDiklatTot').value=rupiah(uangHarianDiklat);
+  r.querySelector('.pg-uhFbTot').value=rupiah(uangHarianFb);
+  var uhGrand=uangHarian+uangHarianDiklat+uangHarianFb;
+  r.querySelector('.pg-uhGrandTot').value=rupiah(uhGrand);
+  // hari counter
+  var hariUsed=_v(r,'.pg-uhHari')+_v(r,'.pg-uhDiklatHari')+_v(r,'.pg-uhFbHari');
+  var sisa=hariDefault-hariUsed;
+  var spdEl=r.querySelector('.pg-hari-spd'), usedEl=r.querySelector('.pg-hari-used'), sisaEl=r.querySelector('.pg-hari-sisa');
+  if(spdEl) spdEl.textContent=hariDefault;
+  if(usedEl) usedEl.textContent=hariUsed;
+  if(sisaEl){ sisaEl.textContent=sisa; sisaEl.style.color=sisa<0?'#dc2626':(sisa===0?'#16a34a':'#64748b'); }
   var menginap=r.querySelector('.pg-menginap').checked;
   var malam=_v(r,'.pg-malam'), hotel=_v(r,'.pg-hotel');
   var penginapan=menginap?(malam*hotel):(0.30*hotel*malam);
   r.querySelector('.pg-pgTot').value=rupiah(penginapan);
-  var grand=uangHarian+penginapan+_sumSub(r,'.pg-transport')+(_v(r,'.pg-rep')*hari)+_sumSub(r,'.pg-riil');
+  var grand=uhGrand+penginapan+_sumSub(r,'.pg-transport')+(_v(r,'.pg-rep')*hari)+_sumSub(r,'.pg-riil');
   r.querySelector('.pg-biaya').value=_grp(grand);
   return grand;
 }
@@ -2090,15 +2122,19 @@ function _gatherSpd(){
     if(luar){
       var hari=_v(r,'.pg-uhHari')||n;
       var uangHarian=_v(r,'.pg-uhRate')*hari;
+      var uangHarianDiklat=_v(r,'.pg-uhDiklatRate')*_v(r,'.pg-uhDiklatHari');
+      var uangHarianFb=_v(r,'.pg-uhFbRate')*_v(r,'.pg-uhFbHari');
       var menginap=r.querySelector('.pg-menginap').checked;
       var malam=_v(r,'.pg-malam'), hotel=_v(r,'.pg-hotel');
       var penginapan=menginap?(malam*hotel):(0.30*hotel*malam);
       var transport=_gatherSub(r,'.pg-transport'), riil=_gatherSub(r,'.pg-riil');
       var repRate=_v(r,'.pg-rep'), representasi=repRate*hari;
-      var grand=uangHarian+penginapan+_sumArr(transport)+representasi+_sumArr(riil);
+      var grand=uangHarian+uangHarianDiklat+uangHarianFb+penginapan+_sumArr(transport)+representasi+_sumArr(riil);
       var tEl=r.querySelector('.pg-tingkat');
       base.tingkatBiaya=(tEl&&tEl.value||'').trim();
       base.uangHarianRate=_v(r,'.pg-uhRate'); base.uangHarianHari=hari; base.uangHarian=uangHarian;
+      base.uangHarianDiklatRate=_v(r,'.pg-uhDiklatRate'); base.uangHarianDiklatHari=_v(r,'.pg-uhDiklatHari'); base.uangHarianDiklat=uangHarianDiklat;
+      base.uangHarianFbRate=_v(r,'.pg-uhFbRate'); base.uangHarianFbHari=_v(r,'.pg-uhFbHari'); base.uangHarianFb=uangHarianFb;
       base.transport=transport; base.penginapanMalam=malam; base.penginapanRate=hotel;
       base.penginapanMenginap=menginap; base.penginapan=penginapan;
       base.penginapanBendahara=!!(r.querySelector('.pg-pgBdh')&&r.querySelector('.pg-pgBdh').checked);
@@ -2653,7 +2689,11 @@ function _rincianPage(data, peg){
     return '<tr><td class="ct">'+(no++)+'</td><td>'+uraian+'</td><td class="rt">'+rupiah(jumlah||0)+'</td><td>'+(ket||'')+'</td></tr>';
   }
   var uhHari=(+peg.uangHarianHari||+data.jumlahHari||0), uhRate=(+peg.uangHarianRate||0);
-  rincian+=row('Uang harian '+uhHari+' hari &times; '+rupiah(uhRate), (+peg.uangHarian|| (uhRate*uhHari)), 'Lumpsum');
+  if(uhHari>0||uhRate>0) rincian+=row('Uang harian (lumpsum) '+uhHari+' hari &times; '+rupiah(uhRate), (+peg.uangHarian||(uhRate*uhHari)), 'Lumpsum');
+  var diklatHari=(+peg.uangHarianDiklatHari||0), diklatRate=(+peg.uangHarianDiklatRate||0);
+  if(diklatHari>0||diklatRate>0) rincian+=row('Uang harian (diklat) '+diklatHari+' hari &times; '+rupiah(diklatRate), (+peg.uangHarianDiklat||(diklatRate*diklatHari)), 'Diklat');
+  var fbHari=(+peg.uangHarianFbHari||0), fbRate=(+peg.uangHarianFbRate||0);
+  if(fbHari>0||fbRate>0) rincian+=row('Uang harian (full board) '+fbHari+' hari &times; '+rupiah(fbRate), (+peg.uangHarianFb||(fbRate*fbHari)), 'Full Board');
   var trans=peg.transport||[], dibayarBank=0;
   for(var i=0;i<trans.length;i++){
     var tBdh=!!trans[i].bendahara; if(tBdh) dibayarBank+=(+trans[i].jumlah||0);
