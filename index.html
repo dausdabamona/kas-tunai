@@ -1597,8 +1597,8 @@ function _cardHtml(t, mode){
   h+= lunas
     ? '<div class="lrow ok"><span>Keluar: '+rupiah(t.kredit)+' &middot; '+lunasTxt+'</span>'
       +'<button class="mini b-purple" onclick="openModalKembali('+t.no+')">Catat Kembali</button></div>'
-    : '<div class="lrow keluar"><span>Keluar: '+rupiah(t.kredit)+' &middot; Sisa: '+rupiah(sisa)
-      +(kembali>0?(' (nota '+rupiah(t.notaTotal)+' + kembali '+rupiah(kembali)+')'):'')+'</span>'
+    : '<div class="lrow keluar"><span>Keluar: '+rupiah(t.kredit)+' &middot; Nota: '+rupiah(t.notaTotal)
+      +(kembali>0?(' + Kembali '+rupiah(kembali)):'')+' &middot; Sisa: '+rupiah(sisa)+'</span>'
       +'<button class="mini b-purple" onclick="openModalKembali('+t.no+')">Catat Kembali</button></div>';
   // baris rekonsiliasi SPBY vs SPJ (bila Nilai SPBY diisi)
   if(+t.nilaiSpby>0){
