@@ -26,6 +26,9 @@ dan Perikanan Sorong. Backend: Google Sheets. Frontend: `index.html` (vanilla JS
 
 ## Deploy dengan clasp
 
+> Baru pertama kali / mulai dari nol (Windows)? Ikuti panduan lengkap
+> langkah-demi-langkah di **[`docs/SETUP-CLASP.md`](docs/SETUP-CLASP.md)**.
+
 Prasyarat sekali saja:
 
 1. Pasang Node.js, lalu clasp:
