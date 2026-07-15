@@ -982,11 +982,15 @@
 
 <script>
 /* ============== Global state ============== */
-var SALDO_AWAL_JS = Number('<?= appData.saldoAwal ?>') || 0;
-var CURRENT_USER  = '<?= appData.user ?>';
-var NAMA_USER     = '<?= appData.namaUser ?>';
-var ROLE_USER     = '<?= appData.roleUser ?>';
-var IS_ADMIN      = <?= appData.isAdmin ? 'true' : 'false' ?>;
+/* Identitas & role tidak lagi disuntik doGet (berbasis identitas Google yang
+   selalu kosong utk staf Gmail). Nilai asli di-set dari respons serverLogin,
+   serverGetDashboard, dan prefill kt_user di init(). SALDO_AWAL_JS hanya fallback
+   saat saldoInfo null — full/admin selalu dapat saldoInfo, viewer saldo disembunyikan. */
+var SALDO_AWAL_JS = 0;
+var CURRENT_USER  = '';
+var NAMA_USER     = '';
+var ROLE_USER     = 'viewer';
+var IS_ADMIN      = false;
 
 var _tok          = localStorage.getItem('kt_token') || '';
 var allTransaksi  = [];
@@ -1217,7 +1221,18 @@ document.addEventListener('input',function(e){
     try{ el.setSelectionRange(pos,pos); }catch(_){}
   }
 });
-function fail(e){showLoading(false);toast('Gagal: '+(e&&e.message?e.message:e),'error');}
+/* Sesi berakhir/invalid: _run() melempar 'SESI_BERAKHIR' → paksa login ulang. */
+function _isSesiError(e){ var m=(e&&e.message)?e.message:String(e||''); return m.indexOf('SESI_BERAKHIR')>=0; }
+function _forceLogin(){
+  _tok=''; localStorage.removeItem('kt_token'); localStorage.removeItem('kt_user');
+  toast('Sesi berakhir. Silakan masuk kembali.','error');
+  _showLoginModal();
+}
+function fail(e){
+  showLoading(false);
+  if(_isSesiError(e)){ _forceLogin(); return; }
+  toast('Gagal: '+(e&&e.message?e.message:e),'error');
+}
 
 /* ============== Tab ============== */
 function switchTab(tab){
@@ -1234,6 +1249,15 @@ function switchTab(tab){
   if(tab==='papanKerja'){ _pkSetDate(); renderPapanKerja(); }
 }
 
+/* Tampilkan tombol impor-scan bila folder scan aktif. Butuh sesi valid,
+   jadi dipanggil setelah dashboard termuat (bukan saat init sebelum login). */
+function _refreshScanAktif(){
+  if(!_tok) return;
+  google.script.run.withSuccessHandler(function(aktif){
+    if(aktif){ var b=document.querySelectorAll('.scan-imp'); for(var i=0;i<b.length;i++) b[i].style.display=''; }
+  }).withFailureHandler(function(){}).serverScanAktif(_tok);
+}
+
 /* ============== Load transaksi ============== */
 function loadAll(){
   showLoading(true,'Memuat transaksi...');
@@ -1246,12 +1270,13 @@ function loadAll(){
       if(d&&d.role) isViewer=(d.role==='viewer');
       if(d&&typeof d.isAdmin!=='undefined') IS_ADMIN=!!d.isAdmin;
       _applyRoleUI();
+      _refreshScanAktif();
       showLoading(false);
       renderList();
       if(!document.getElementById('viewPapanKerja').classList.contains('hidden')) renderPapanKerja();
     })
     .withFailureHandler(fail)
-    .serverGetDashboard();
+    .serverGetDashboard(_tok);
 }
 
 /* ============== Status & filter ============== */
@@ -1328,7 +1353,7 @@ function openModalSettings(){
     document.getElementById('stScan').value=s.scanFolderId||'';
     document.getElementById('stDriveInfo').innerHTML='Aktif: <b>'+esc(s.driveInfo.nama)+'</b>';
     document.getElementById('stScanInfo').innerHTML='Aktif: <b>'+esc(s.scanInfo.nama)+'</b>';
-  }).withFailureHandler(fail).serverGetSettings();
+  }).withFailureHandler(fail).serverGetSettings(_tok);
 }
 function submitSettings(){
   var drive=(document.getElementById('stDrive').value||'').trim();
@@ -1340,7 +1365,7 @@ function submitSettings(){
     document.getElementById('stScanInfo').innerHTML='Aktif: <b>'+esc(res.scanInfo.nama)+'</b>';
     // segarkan visibilitas tombol Impor Scan
     var b=document.querySelectorAll('.scan-imp'); for(var i=0;i<b.length;i++) b[i].style.display=res.scanInfo.id?'':'none';
-  }).withFailureHandler(fail).serverSetSettings(drive, scan);
+  }).withFailureHandler(fail).serverSetSettings(_tok, drive, scan);
 }
 /* Rapikan penyimpanan Drive (dry run / sungguhan); ulangi hingga sisa habis */
 var _migTot=0;
@@ -1368,7 +1393,7 @@ function _migStep(dryRun){
       else { showLoading(false); toast('Rapikan selesai: '+_migTot+' file dipindah','success'); }
     })
     .withFailureHandler(fail)
-    .serverMigrateDrive(dryRun);
+    .serverMigrateDrive(_tok, dryRun);
 }
 /* ============== Kelola User (admin) ============== */
 var _usrEditEmail=null; // null = mode tambah
@@ -1377,7 +1402,7 @@ function openModalUsers(){
   _cancelEditUser();
   document.getElementById('usersList').innerHTML='<div class="empty">Memuat...</div>';
   openModal('modalUsers');
-  google.script.run.withSuccessHandler(renderUsersList).withFailureHandler(fail).serverListUsers();
+  google.script.run.withSuccessHandler(renderUsersList).withFailureHandler(fail).serverListUsers(_tok);
 }
 function _roleLabel(r){ return r==='admin'?'Admin':(r==='full'?'Penuh':'Peninjau'); }
 function renderUsersList(list){
@@ -1426,19 +1451,19 @@ function submitUser(){
   if(!email){ toast('Email wajib diisi','error'); return; }
   showLoading(true,'Menyimpan user...');
   var ok=function(){ showLoading(false); toast('User tersimpan','success'); _cancelEditUser();
-    google.script.run.withSuccessHandler(renderUsersList).withFailureHandler(fail).serverListUsers(); };
+    google.script.run.withSuccessHandler(renderUsersList).withFailureHandler(fail).serverListUsers(_tok); };
   if(_usrEditEmail){
-    google.script.run.withSuccessHandler(ok).withFailureHandler(fail).serverUpdateUser(email,nama,role);
+    google.script.run.withSuccessHandler(ok).withFailureHandler(fail).serverUpdateUser(_tok, email,nama,role);
   }else{
-    google.script.run.withSuccessHandler(ok).withFailureHandler(fail).serverAddUser(email,nama,role);
+    google.script.run.withSuccessHandler(ok).withFailureHandler(fail).serverAddUser(_tok, email,nama,role);
   }
 }
 function deleteUser(email){
   if(!confirm('Hapus akses user '+email+'?')) return;
   showLoading(true,'Menghapus user...');
   google.script.run.withSuccessHandler(function(){ showLoading(false); toast('User dihapus','success');
-    google.script.run.withSuccessHandler(renderUsersList).withFailureHandler(fail).serverListUsers(); })
-    .withFailureHandler(fail).serverDeleteUser(email);
+    google.script.run.withSuccessHandler(renderUsersList).withFailureHandler(fail).serverListUsers(_tok); })
+    .withFailureHandler(fail).serverDeleteUser(_tok, email);
 }
 function updateSaldoBar(){
   if(isViewer){ _applyRoleUI(); return; } // peninjau tidak melihat saldo
@@ -1751,7 +1776,7 @@ function submitSpby(){
     .withSuccessHandler(function(){ showLoading(false); toast('SPBY tersimpan','success');
       closeModal('modalSpby'); loadAll(); })
     .withFailureHandler(fail)
-    .serverSimpanSpby(_spRow, no, document.getElementById('spTgl').value, nilai);
+    .serverSimpanSpby(_tok, _spRow, no, document.getElementById('spTgl').value, nilai);
 }
 function hapusSpbyTx(){
   if(!confirm('Hapus nomor SPBY transaksi ini?')) return;
@@ -1760,7 +1785,7 @@ function hapusSpbyTx(){
     .withSuccessHandler(function(){ showLoading(false); toast('SPBY dihapus','success');
       closeModal('modalSpby'); loadAll(); })
     .withFailureHandler(fail)
-    .serverHapusSpby(_spRow);
+    .serverHapusSpby(_tok, _spRow);
 }
 function cetakSPJ(no){
   var t=_cariTransaksi(no);
@@ -1770,7 +1795,7 @@ function cetakSPJ(no){
     .withSuccessHandler(function(res){ showLoading(false);
       _bukaPopup(_renderSpjHtml(t,(res&&res.notas)||[],(res&&res.fotoPerNota)||{},(res&&res.imgB64)||{})); })
     .withFailureHandler(fail)
-    .serverGetSpjData(no);
+    .serverGetSpjData(_tok, no);
 }
 function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
   imgB64=imgB64||{};
@@ -2190,7 +2215,7 @@ function simpanPerjalananDinas(){
         _bukaPopup(_renderSpdHtml(data));
         resetSpdForm(); switchTab('transaksi'); loadAll(); })
       .withFailureHandler(fail)
-      .serverUpdatePerjalananDinas(no, data);
+      .serverUpdatePerjalananDinas(_tok, no, data);
     return;
   }
   showLoading(true,'Menyimpan ke kas tunai...');
@@ -2200,7 +2225,7 @@ function simpanPerjalananDinas(){
       _bukaPopup(_renderSpdHtml(data));
       resetSpdForm(); switchTab('transaksi'); loadAll(); })
     .withFailureHandler(fail)
-    .serverSimpanPerjalananDinas(data);
+    .serverSimpanPerjalananDinas(_tok, data);
 }
 /* Konversi transaksi biasa (terlanjur dibuat) menjadi Perjalanan Dinas */
 function konversiKePd(no){
@@ -2224,7 +2249,7 @@ function batalkanPd(no){
   google.script.run
     .withSuccessHandler(function(){ showLoading(false); toast('Status PD dibatalkan','success'); loadAll(); })
     .withFailureHandler(fail)
-    .serverBatalkanPd(no);
+    .serverBatalkanPd(_tok, no);
 }
 /* ============== Pecah Transaksi ============== */
 var _pcTarget=null, _pcTotal=0;
@@ -2266,7 +2291,7 @@ function submitPecah(){
     .withSuccessHandler(function(res){ showLoading(false); toast('Transaksi dipecah jadi '+parts.length+' (baru: '+(res.baru||[]).join(', ')+')','success');
       closeModal('modalPecah'); loadAll(); })
     .withFailureHandler(fail)
-    .serverPecahTransaksi(_pcTarget, parts);
+    .serverPecahTransaksi(_tok, _pcTarget, parts);
 }
 /* ============== SPBY Gabungan ============== */
 function openModalSpbyGab(){
@@ -2300,7 +2325,7 @@ function submitSpbyGab(){
   google.script.run
     .withSuccessHandler(function(res){ showLoading(false); toast('SPBY diberikan ke '+res.jml+' transaksi','success'); closeModal('modalSpbyGab'); loadAll(); })
     .withFailureHandler(fail)
-    .serverSpbyGabungan(no, tgl, nos);
+    .serverSpbyGabungan(_tok, no, tgl, nos);
 }
 function cetakSpbyGab(){
   var no=(document.getElementById('sgNo').value||'').trim();
@@ -2337,7 +2362,7 @@ function openScanPicker(cb){
   google.script.run
     .withSuccessHandler(_renderScanList)
     .withFailureHandler(function(e){ document.getElementById('scList').innerHTML='<div class="empty">'+esc((e&&e.message)||'Folder scan belum diatur')+'</div>'; })
-    .serverListScan();
+    .serverListScan(_tok);
 }
 function _renderScanList(list){
   _scanFiles=list||[];
@@ -2360,11 +2385,11 @@ function _pickScan(idx){
     .withSuccessHandler(function(file){ showLoading(false);
       file.fileId=f.fileId;
       closeModal('modalScan');
-      if(document.getElementById('scArchive').checked){ google.script.run.serverArchiveScan(f.fileId); }
+      if(document.getElementById('scArchive').checked){ google.script.run.serverArchiveScan(_tok, f.fileId); }
       if(_scanCb) _scanCb(file);
     })
     .withFailureHandler(fail)
-    .serverGetScanFile(f.fileId);
+    .serverGetScanFile(_tok, f.fileId);
 }
 function importScanNota(){
   openScanPicker(function(file){
@@ -2381,7 +2406,7 @@ function importScanKuitansi(){
   openScanPicker(function(file){
     showLoading(true,'Mengunggah lampiran...');
     google.script.run.withSuccessHandler(function(){ showLoading(false); toast('Lampiran dari scan diunggah','success'); bukaModalKuitansi(_kwTarget); loadAll(); })
-      .withFailureHandler(fail).serverUploadKuitansi(_kwTarget, file);
+      .withFailureHandler(fail).serverUploadKuitansi(_tok, _kwTarget, file);
   });
 }
 function importScanBukti(){
@@ -2390,7 +2415,7 @@ function importScanBukti(){
     file.keterangan=(document.getElementById('bkKet')||{}).value||'';
     showLoading(true,'Mengunggah bukti...');
     google.script.run.withSuccessHandler(function(){ showLoading(false); toast('Bukti dari scan ditambahkan','success'); _muatBuktiList(); })
-      .withFailureHandler(fail).serverUploadBuktiPD(_bkTarget,[file]);
+      .withFailureHandler(fail).serverUploadBuktiPD(_tok, _bkTarget,[file]);
   });
 }
 /* Buka tab Perjalanan Dinas dalam mode edit, terisi data SPD tersimpan */
@@ -2402,7 +2427,7 @@ function editSpd(no){
       switchTab('spd'); _spdEditNo=no; _fillSpdForm(st); _setSpdMode(true);
       window.scrollTo(0,0); })
     .withFailureHandler(fail)
-    .serverGetSuratTugas(no);
+    .serverGetSuratTugas(_tok, no);
 }
 /* Cetak ulang SPD dari kartu transaksi perjalanan dinas */
 function cetakSpd(no){
@@ -2412,7 +2437,7 @@ function cetakSpd(no){
       if(!st){ toast('Data surat tugas tidak ditemukan','error'); return; }
       _bukaPopup(_renderSpdHtml(st)); })
     .withFailureHandler(fail)
-    .serverGetSuratTugas(no);
+    .serverGetSuratTugas(_tok, no);
 }
 /* Bukti Transfer biaya PD ke pelaksana (saat pembayaran ke Pelaksana via Bank) */
 function cetakBuktiTransferPd(no){
@@ -2422,7 +2447,7 @@ function cetakBuktiTransferPd(no){
       if(!st){ toast('Data surat tugas tidak ditemukan','error'); return; }
       _bukaPopup(_renderSpdTransferHtml(st)); })
     .withFailureHandler(fail)
-    .serverGetSuratTugas(no);
+    .serverGetSuratTugas(_tok, no);
 }
 /* CSS bersama semua dokumen cetak PD */
 function _docCss(){
@@ -2777,7 +2802,7 @@ function openFoto(no){
   document.getElementById('ftGaleri').innerHTML='<div class="empty">Memuat...</div>';
   openModal('modalFoto');
   _ambilGps();
-  google.script.run.withSuccessHandler(renderFotoGaleri).withFailureHandler(fail).serverGetNotaDanFoto(no);
+  google.script.run.withSuccessHandler(renderFotoGaleri).withFailureHandler(fail).serverGetNotaDanFoto(_tok, no);
 }
 function _ambilGps(){
   _captureGps('ftGps', function(g){ _fotoGps=g; });
@@ -2833,7 +2858,7 @@ function _uploadFotoFiles(files){
             .withSuccessHandler(function(){ showLoading(false); toast(n+' foto terupload','success');
               openFoto(_fotoTarget); loadAll(); })
             .withFailureHandler(fail)
-            .serverUploadFotoNota(_fotoTarget,_fotoNotaId,arr);
+            .serverUploadFotoNota(_tok, _fotoTarget,_fotoNotaId,arr);
         }
       });
     })(i);
@@ -2898,7 +2923,7 @@ function hapusFoto(urutan){
     .withSuccessHandler(function(){ showLoading(false); toast('Foto dihapus','success');
       openFoto(_fotoTarget); loadAll(); })
     .withFailureHandler(fail)
-    .serverHapusFotoNota(_fotoTarget,_fotoNotaId,urutan);
+    .serverHapusFotoNota(_tok, _fotoTarget,_fotoNotaId,urutan);
 }
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
@@ -2968,7 +2993,7 @@ function submitPindah(){
     .withSuccessHandler(function(){ showLoading(false); closeModal('modalPindah');
       toast('Pindah dana tersimpan','success'); loadAll(); })
     .withFailureHandler(fail)
-    .serverPindahDana(document.getElementById('pdArah').value, nominal,
+    .serverPindahDana(_tok, document.getElementById('pdArah').value, nominal,
       document.getElementById('pdTanggal').value, document.getElementById('pdKet').value.trim());
 }
 /* ====== Impor Rekening Koran (.xlsx) ====== */
@@ -2990,7 +3015,7 @@ function rkParse(){
     google.script.run
       .withSuccessHandler(function(rows){ showLoading(false); _rkRows=rows||[]; _rkBuildMap(); })
       .withFailureHandler(fail)
-      .serverParseRekKoran(b64, f.name);
+      .serverParseRekKoran(_tok, b64, f.name);
   };
   rd.readAsDataURL(f);
 }
@@ -3100,7 +3125,7 @@ function submitImporRk(){
     .withSuccessHandler(function(res){ showLoading(false); closeModal('modalImporRk');
       toast('Impor selesai: '+res.ditambah+' ditambah, '+res.dilewati+' dilewati (duplikat)','success'); loadAll(); })
     .withFailureHandler(fail)
-    .serverImporBank(rows);
+    .serverImporBank(_tok, rows);
 }
 function submitTransaksi(){
   var nilai=unfmt(document.getElementById('txNilai').value);
@@ -3124,7 +3149,7 @@ function submitTransaksi(){
       .withSuccessHandler(function(){showLoading(false);closeModal('modalTransaksi');
         _txEditNo=null; toast('Transaksi No '+no+' diperbarui','success');loadAll();})
       .withFailureHandler(fail)
-      .serverUpdateTransaksi(no, data);
+      .serverUpdateTransaksi(_tok, no, data);
     return;
   }
   showLoading(true,'Menyimpan...');
@@ -3132,7 +3157,7 @@ function submitTransaksi(){
     .withSuccessHandler(function(){showLoading(false);closeModal('modalTransaksi');
       toast('Transaksi tersimpan','success');loadAll();})
     .withFailureHandler(fail)
-    .serverTambahTransaksi(data);
+    .serverTambahTransaksi(_tok, data);
 }
 
 /* ============== Nota ============== */
@@ -3150,7 +3175,7 @@ function openModalNota(no){
   google.script.run
     .withSuccessHandler(renderNotaList)
     .withFailureHandler(fail)
-    .serverGetMultiNota(no);
+    .serverGetMultiNota(_tok, no);
 }
 function _isiDatalistNota(){
   var dl=document.getElementById('ntPenyediaList'); dl.innerHTML='';
@@ -3352,7 +3377,7 @@ function itParse(){
     google.script.run
       .withSuccessHandler(function(rows){ showLoading(false); _itRows=rows||[]; _itBuildMap(); })
       .withFailureHandler(fail)
-      .serverParseRekKoran(b64, f.name);
+      .serverParseRekKoran(_tok, b64, f.name);
   };
   rd.readAsDataURL(f);
 }
@@ -3482,29 +3507,29 @@ function sendNota(notaData){
     // simpan penyedia ke master untuk autocomplete berikutnya
     if(notaData.namaPenyedia){
       _allPenyedia=null;
-      google.script.run.serverSimpanPenyedia({nama:notaData.namaPenyedia,npwp:notaData.npwp,alamat:notaData.alamat});
+      google.script.run.serverSimpanPenyedia(_tok, {nama:notaData.namaPenyedia,npwp:notaData.npwp,alamat:notaData.alamat});
     }
     // unggah Foto Barang dari foto nota (fire-and-forget)
     if(jugaFotoBarang){
       var fb={ base64:notaData.file.base64, mimeType:notaData.file.mimeType, namaFile:notaData.file.namaFile,
                keterangan:'Nota: '+(notaData.namaPenyedia||'') };
       if(_notaGps){ fb.lat=_notaGps.lat; fb.lng=_notaGps.lng; }
-      google.script.run.serverUploadFotoNota(_notaTarget, 1, [fb]);
+      google.script.run.serverUploadFotoNota(_tok, _notaTarget, 1, [fb]);
     }
     // unggah Foto Barang tambahan langsung dari form nota (fire-and-forget)
     if(_ntBarangFiles.length>0){
       var arr=_ntBarangFiles.slice(); _ntBarangFiles=[];
       if(_notaGps){ for(var bi=0;bi<arr.length;bi++){ arr[bi].lat=_notaGps.lat; arr[bi].lng=_notaGps.lng; } }
-      google.script.run.serverUploadFotoNota(_notaTarget, 1, arr);
+      google.script.run.serverUploadFotoNota(_tok, _notaTarget, 1, arr);
     }
     openModalNota(_notaTarget);loadAll();
   };
   if(edit){
     google.script.run.withSuccessHandler(ok).withFailureHandler(fail)
-      .serverUpdateNota(_notaTarget,_notaEditUrutan,notaData);
+      .serverUpdateNota(_tok, _notaTarget,_notaEditUrutan,notaData);
   }else{
     google.script.run.withSuccessHandler(ok).withFailureHandler(fail)
-      .serverTambahNota(_notaTarget,notaData);
+      .serverTambahNota(_tok, _notaTarget,notaData);
   }
 }
 function hapusNota(no,urutan,fileId){
@@ -3514,7 +3539,7 @@ function hapusNota(no,urutan,fileId){
     .withSuccessHandler(function(){showLoading(false);toast('Nota dihapus','success');
       openModalNota(no);loadAll();})
     .withFailureHandler(fail)
-    .serverHapusNotaItem(no,urutan,fileId);
+    .serverHapusNotaItem(_tok, no,urutan,fileId);
 }
 
 /* ============== Pengembalian ============== */
@@ -3527,7 +3552,7 @@ function openModalKembali(no){
   document.getElementById('kbList').innerHTML='<div class="empty">Memuat...</div>';
   openModal('modalKembali');
   google.script.run.withSuccessHandler(renderKbList).withFailureHandler(fail)
-    .serverGetPengembalian(no);
+    .serverGetPengembalian(_tok, no);
 }
 function renderKbList(list){
   var box=document.getElementById('kbList');
@@ -3550,14 +3575,14 @@ function submitPengembalian(){
   showLoading(true,'Menyimpan...');
   google.script.run.withSuccessHandler(function(){showLoading(false);
     toast('Pengembalian ditambahkan','success');openModalKembali(_kbTarget);loadAll();})
-    .withFailureHandler(fail).serverTambahPengembalian(_kbTarget,data);
+    .withFailureHandler(fail).serverTambahPengembalian(_tok, _kbTarget,data);
 }
 function hapusKb(no,urutan){
   if(!confirm('Hapus pengembalian ini?'))return;
   showLoading(true,'Menghapus...');
   google.script.run.withSuccessHandler(function(){showLoading(false);
     toast('Dihapus','success');openModalKembali(no);loadAll();})
-    .withFailureHandler(fail).serverHapusPengembalian(no,urutan);
+    .withFailureHandler(fail).serverHapusPengembalian(_tok, no,urutan);
 }
 
 
@@ -3573,7 +3598,7 @@ function loadRekap(){
       +card('Dikembalikan',rupiah(r.totalKembali||0))
       +card('Saldo Akhir',rupiah(r.saldoAkhir))
       +card('Jml Transaksi',r.jmlTransaksi);
-  }).withFailureHandler(fail).serverGetRekap();
+  }).withFailureHandler(fail).serverGetRekap(_tok);
   function card(l,v){return '<div class="card"><div class="lbl">'+l+'</div><div class="val">'+v+'</div></div>';}
 }
 
@@ -3653,7 +3678,7 @@ function _muatPenyedia(cb){
   google.script.run
     .withSuccessHandler(function(list){_allPenyedia=list||[]; if(cb)cb(_allPenyedia);})
     .withFailureHandler(function(){_allPenyedia=[]; if(cb)cb(_allPenyedia);})
-    .serverGetAllPenyedia();
+    .serverGetAllPenyedia(_tok);
 }
 /* ============== Kalkulator Pajak ============== */
 function _isiDatalistPajak(){
@@ -3731,7 +3756,7 @@ function openModalPajak(noTransaksi){
       _pjNpwpChanged();
     })
     .withFailureHandler(function(){ recalcPajak(); })
-    .serverGetMultiNota(noTransaksi);
+    .serverGetMultiNota(_tok, noTransaksi);
   recalcPajak();
   openModal('modalPajak');
 }
@@ -3806,7 +3831,7 @@ function simpanPajakModal(){
       showLoading(false); toast('Pajak tersimpan'); closeModal('modalPajak'); loadAll();
     })
     .withFailureHandler(function(e){ showLoading(false); fail(e.message||String(e)); })
-    .serverSimpanPajak(no, {katIdx:katIdx, pph:pj.pph, ppn:pj.ppn, dpp:pj.dpp});
+    .serverSimpanPajak(_tok, no, {katIdx:katIdx, pph:pj.pph, ppn:pj.ppn, dpp:pj.dpp});
 }
 
 function cetakKuitansiPajak(no){
@@ -3886,7 +3911,7 @@ function bukaPdfKuitansi(noTransaksi){
         var list=(st&&st.pegawaiList&&st.pegawaiList.length)?st.pegawaiList:null;
         _bukaPopup(_renderKuitansiHtml(t, list)); })
       .withFailureHandler(fail)
-      .serverGetSuratTugas(noTransaksi);
+      .serverGetSuratTugas(_tok, noTransaksi);
     return;
   }
   if(t.sumber==='BANK'){
@@ -3975,7 +4000,7 @@ function openModalBukti(no){
   _muatBuktiList();
 }
 function _muatBuktiList(){
-  google.script.run.withSuccessHandler(renderBuktiList).withFailureHandler(fail).serverGetBuktiPD(_bkTarget,false);
+  google.script.run.withSuccessHandler(renderBuktiList).withFailureHandler(fail).serverGetBuktiPD(_tok, _bkTarget,false);
 }
 function renderBuktiList(list){
   var el=document.getElementById('bkList');
@@ -4007,20 +4032,20 @@ function _kirimBukti(arr){
   showLoading(true,'Mengunggah '+arr.length+' bukti...');
   google.script.run.withSuccessHandler(function(){ showLoading(false); toast('Bukti terunggah','success');
       document.getElementById('bkFile').value=''; _clearPastePreview('bkFile'); _muatBuktiList(); })
-    .withFailureHandler(fail).serverUploadBuktiPD(_bkTarget,arr);
+    .withFailureHandler(fail).serverUploadBuktiPD(_tok, _bkTarget,arr);
 }
 function hapusBukti(urutan){
   if(!confirm('Hapus bukti ini?')) return;
   showLoading(true,'Menghapus...');
   google.script.run.withSuccessHandler(function(){ showLoading(false); toast('Bukti dihapus','success'); _muatBuktiList(); })
-    .withFailureHandler(fail).serverHapusBuktiPD(_bkTarget,urutan);
+    .withFailureHandler(fail).serverHapusBuktiPD(_tok, _bkTarget,urutan);
 }
 function unduhZipBukti(no){
   if(!no){ toast('Buka bukti sebuah transaksi dulu','error'); return; }
   showLoading(true,'Membuat ZIP...');
   google.script.run.withSuccessHandler(function(res){ showLoading(false);
       toast('ZIP siap ('+res.jml+' file)','success'); window.open(res.url,'_blank'); })
-    .withFailureHandler(fail).serverZipBuktiPD(no,'SPJ-PD-'+no+'.zip');
+    .withFailureHandler(fail).serverZipBuktiPD(_tok, no,'SPJ-PD-'+no+'.zip');
 }
 
 /* ====== Cetak SPJ Perjalanan Dinas (bundel semua dokumen + lampiran bukti foto) ====== */
@@ -4030,8 +4055,8 @@ function cetakSpjPd(no){
   google.script.run.withSuccessHandler(function(st){
     google.script.run.withSuccessHandler(function(bukti){ showLoading(false);
         _bukaPopup(_renderSpjPdHtml(t, st||{}, bukti||[])); })
-      .withFailureHandler(fail).serverGetBuktiPD(no,true);
-  }).withFailureHandler(fail).serverGetSuratTugas(no);
+      .withFailureHandler(fail).serverGetBuktiPD(_tok, no,true);
+  }).withFailureHandler(fail).serverGetSuratTugas(_tok, no);
 }
 function _renderSpjPdHtml(t, data, bukti){
   var luar=(data.jenis==='LUAR_KOTA'), list=_spdList(data), pages='', i;
@@ -4102,7 +4127,7 @@ function submitUploadKuitansi(){
       .withSuccessHandler(function(){ showLoading(false); toast('Kuitansi TTD terupload','success');
         closeModal('modalKuitansi'); loadAll(); })
       .withFailureHandler(fail)
-      .serverUploadKuitansi(_kwTarget,file);
+      .serverUploadKuitansi(_tok, _kwTarget,file);
   });
 }
 function hapusKuitansiTtd(){
@@ -4112,7 +4137,7 @@ function hapusKuitansiTtd(){
     .withSuccessHandler(function(){ showLoading(false); toast('File dihapus','success');
       closeModal('modalKuitansi'); loadAll(); })
     .withFailureHandler(fail)
-    .serverHapusKuitansi(_kwTarget);
+    .serverHapusKuitansi(_tok, _kwTarget);
 }
 function _renderKuitansiHtml(t, list){
   var thn=(String(t.tanggal||'').split('-')[0])||(''+new Date().getFullYear());
@@ -4209,7 +4234,7 @@ function cetakSSP(jenis){
   };
   // Simpan/segarkan NPWP penyedia ke Master Penyedia (silent)
   if(wp.nama){
-    google.script.run.serverSimpanPenyedia({nama:wp.nama, npwp:wp.npwp, alamat:wp.alamat});
+    google.script.run.serverSimpanPenyedia(_tok, {nama:wp.nama, npwp:wp.npwp, alamat:wp.alamat});
     _allPenyedia=null; // paksa muat ulang berikutnya
   }
   _bukaPopup(_renderSspHtml(t, pj, jenis, wp)); // WP = penyedia, pemungut/penyetor = Bendahara Poltek
@@ -4418,7 +4443,8 @@ function _showLoginModal() {
 
 function _checkAuth() {
   if (_tok) {
-    // Token tersimpan — lanjut muat data (Fase 2 akan validasi ke server)
+    // Token tersimpan — muat data. Server memvalidasi token; bila kadaluarsa,
+    // serverGetDashboard melempar 'SESI_BERAKHIR' → fail() → _forceLogin().
     loadAll();
   } else {
     _showLoginModal();
@@ -4910,10 +4936,7 @@ function _pkChipClick(no,label){
   }
   document.addEventListener('paste', _onPasteUpload);
   _applyRoleUI();
-  google.script.run.withSuccessHandler(function(aktif){
-    if(aktif){ var b=document.querySelectorAll('.scan-imp'); for(var i=0;i<b.length;i++) b[i].style.display=''; }
-  }).serverScanAktif();
-  _checkAuth();
+  _checkAuth();   // bila token valid → loadAll() → _refreshScanAktif()
 })();
 </script>
 </body>
