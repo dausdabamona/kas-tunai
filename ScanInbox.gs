@@ -36,9 +36,14 @@ var ScanInbox = (function () {
     return arr;
   }
 
-  /** Ambil 1 file sbg {base64, mimeType, namaFile} untuk dipakai alur upload yang ada. */
+  /** Ambil 1 file sbg {base64, mimeType, namaFile} untuk dipakai alur upload yang ada.
+   *  Guard: file WAJIB anak folder scan — cegah pembacaan file Drive sembarang (IDOR). */
   function getFile(fileId) {
+    var scanId = Settings.scanFolderId();
     var f = DriveApp.getFileById(fileId);
+    var ok = false, ps = f.getParents();
+    while (ps.hasNext()) { if (ps.next().getId() === scanId) { ok = true; break; } }
+    if (!ok) throw new Error('File di luar folder scan');
     var blob = f.getBlob();
     return {
       base64: Utilities.base64Encode(blob.getBytes()),
