@@ -8,15 +8,14 @@
  * Posisi kolomnya diberikan oleh pemanggil agar generik.
  */
 
-/** Email operator aktif (fallback bila tidak tersedia). */
+/**
+ * Email operator aktif = pelaku sesi token. Diisi oleh _run() (Code.gs) via
+ * _ExecCache '__operator__' sebelum business logic jalan. Tidak lagi menebak
+ * lewat Session.getActiveUser()/getEffectiveUser() (yang salah atribusi ke akun
+ * deployer). Bila dipanggil di luar _run → 'unknown'.
+ */
 function getOperator() {
-  if (_ExecCache.has('__operator__')) return _ExecCache.get('__operator__');
-  var email = '';
-  try { email = Session.getActiveUser().getEmail() || ''; } catch (e) {}
-  if (!email) {
-    try { email = Session.getEffectiveUser().getEmail() || ''; } catch (e) {}
-  }
-  return _ExecCache.set('__operator__', email || 'unknown');
+  return _ExecCache.has('__operator__') ? _ExecCache.get('__operator__') : 'unknown';
 }
 
 /** Index kolom metadata soft-delete sebuah sheet (dari header). */
