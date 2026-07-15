@@ -47,9 +47,14 @@ var KasTunai = (function () {
       pajakKatIdx:     (row[C.PAJAK_KATEGORI_IDX] !== '' && row[C.PAJAK_KATEGORI_IDX] != null) ? Util.num(row[C.PAJAK_KATEGORI_IDX]) : null,
       pajakPph:        Util.num(row[C.PAJAK_PPH]),
       pajakPpn:        Util.num(row[C.PAJAK_PPN]),
-      pajakDpp:        Util.num(row[C.PAJAK_DPP])
+      pajakDpp:        Util.num(row[C.PAJAK_DPP]),
+      noKuitansi:      row[C.NO_KUITANSI] || '',   // kunci penghubung SAKTI (Fase 1)
+      noDrpp:          row[C.NO_DRPP] || '',
+      noSpp:           row[C.NO_SPP] || ''
     };
   }
+  /** Normalkan spasi No Kuitansi (kunci rekonsiliasi) tanpa mengubah isi lain. */
+  function _normKuitansi(v) { return String(v || '').replace(/\s+/g, ' ').trim(); }
   /** true bila baris adalah pemindahan dana antar kas (Pindah Dana), bukan belanja riil. */
   function _isTransfer(row) {
     return String(row[C.REF_TRANSFER] || '').indexOf('TF-') === 0;
@@ -122,7 +127,11 @@ var KasTunai = (function () {
     row[C.REF_TRANSFER] = data.refTransfer || '';
     row[C.AKUN]         = data.akun || '';
     row[C.PERSEDIAAN]   = data.persediaan ? 'Y' : '';
+    row[C.NO_KUITANSI]  = _normKuitansi(data.noKuitansi);   // kunci penghubung SAKTI
+    row[C.NO_DRPP]      = data.noDrpp || '';
+    row[C.NO_SPP]       = data.noSpp || '';
 
+    SheetRepo.ensureMinCols(CONFIG.SHEETS.KAS_TUNAI, CONFIG.HEADERS.KAS_TUNAI.length);
     SheetRepo.appendRow(CONFIG.SHEETS.KAS_TUNAI, row);
     DeferredFlush.mark();
     AuditLog.write('CREATE', CONFIG.SHEETS.KAS_TUNAI, no, 'kegiatan: ' + (data.kegiatan || ''));
@@ -165,6 +174,10 @@ var KasTunai = (function () {
     if (data.sumber) upd[C.SUMBER] = (String(data.sumber).toUpperCase()==='BANK') ? 'BANK' : 'TUNAI';
     if (data.akun !== undefined) upd[C.AKUN] = data.akun || '';
     if (data.persediaan !== undefined) upd[C.PERSEDIAAN] = data.persediaan ? 'Y' : '';
+    if (data.noKuitansi !== undefined) upd[C.NO_KUITANSI] = _normKuitansi(data.noKuitansi);
+    if (data.noDrpp !== undefined) upd[C.NO_DRPP] = data.noDrpp || '';
+    if (data.noSpp !== undefined) upd[C.NO_SPP] = data.noSpp || '';
+    SheetRepo.ensureMinCols(CONFIG.SHEETS.KAS_TUNAI, CONFIG.HEADERS.KAS_TUNAI.length); // aman utk tail-col
     var ok = updateByTransactionId(no, upd);
     if (ok) AuditLog.write('UPDATE', CONFIG.SHEETS.KAS_TUNAI, no, 'kegiatan: ' + (data.kegiatan || ''));
     return { success: ok, no: no };

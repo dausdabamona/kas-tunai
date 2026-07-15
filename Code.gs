@@ -54,10 +54,11 @@ function serverGetTransaksi(token) {
 /** Muat data dashboard awal dalam satu round-trip: transaksi + jumlah foto + surat tugas. */
 function serverGetDashboard(token) {
   return _run(token, function (auth) {
-    // Perbaiki label header kolom yang kosong (sekali per TTL cache; idempotent).
-    if (!AppCache.get('hdr_fixed_v2')) {
+    // Perbaiki/isi label header kolom yang kosong (sekali per TTL cache; idempotent).
+    // Bump kunci ke v3 agar kolom rekonsiliasi (No Kuitansi/DRPP/SPP) ikut ter-migrasi.
+    if (!AppCache.get('hdr_fixed_v3')) {
       try { SheetRepo.ensureHeaders(); } catch (e) { Logger.log('[ensureHeaders] ' + e.message); }
-      AppCache.put('hdr_fixed_v2', 1);
+      AppCache.put('hdr_fixed_v3', 1);
     }
     var role = auth.role;
     var full = (role === 'admin' || role === 'full');
@@ -97,6 +98,13 @@ function serverPerbaikiHeader(token) {
 
 /** Jalankan langsung dari editor Apps Script untuk mengisi header kosong sekarang juga. */
 function perbaikiHeader() {
+  return SheetRepo.ensureHeaders();
+}
+
+/** Migrasi Fase 1 rekonsiliasi: pastikan lebar kolom cukup lalu isi 3 label baru
+ *  (No Kuitansi/DRPP/SPP). Idempoten — aman dijalankan berulang dari editor GAS. */
+function migrasiKolomRekonsiliasi() {
+  SheetRepo.ensureMinCols(CONFIG.SHEETS.KAS_TUNAI, CONFIG.HEADERS.KAS_TUNAI.length);
   return SheetRepo.ensureHeaders();
 }
 
