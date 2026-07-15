@@ -548,6 +548,13 @@
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:10px">
         <input type="checkbox" id="txPersediaan" onchange="_onTxPersediaan()"> Akun <b>Persediaan</b> (perlu rincian barang &amp; foto per item di nota)
       </label>
+      <!-- Kunci penghubung rekonsiliasi SAKTI (Fase 1) — opsional, khusus belanja -->
+      <div class="field"><label>No. Kuitansi (opsional)</label>
+        <input type="text" id="txNoKuitansi" placeholder="mis. 00072/KW/634146/2026" autocomplete="off"></div>
+      <div class="field"><label>No. DRPP (opsional)</label>
+        <input type="text" id="txNoDrpp" placeholder="mis. 00001/DRPP/634146/2026" autocomplete="off"></div>
+      <div class="field"><label>No. SPP (opsional)</label>
+        <input type="text" id="txNoSpp" placeholder="mis. 00128T" autocomplete="off"></div>
     </div>
     <button class="btn" id="txSimpan" onclick="submitTransaksi()">Simpan</button>
     <button class="btn ghost" onclick="closeModal('modalTransaksi')">Batal</button>
@@ -2951,6 +2958,9 @@ function openModalTransaksi(mode){
   document.getElementById('txKeterangan').value='';
   document.getElementById('txAkun').value='';
   document.getElementById('txPersediaan').checked=false;
+  document.getElementById('txNoKuitansi').value='';
+  document.getElementById('txNoDrpp').value='';
+  document.getElementById('txNoSpp').value='';
   document.getElementById('txAkunWrap').style.display=masuk?'none':'';
   _onTxPersediaan();
   openModal('modalTransaksi');
@@ -2975,6 +2985,9 @@ function editTransaksi(no){
   document.getElementById('txKeterangan').value=t.keterangan||'';
   document.getElementById('txAkun').value=t.akun||'';
   document.getElementById('txPersediaan').checked=!!t.persediaan;
+  document.getElementById('txNoKuitansi').value=t.noKuitansi||'';
+  document.getElementById('txNoDrpp').value=t.noDrpp||'';
+  document.getElementById('txNoSpp').value=t.noSpp||'';
   document.getElementById('txAkunWrap').style.display=masuk?'none':'';
   openModal('modalTransaksi');
 }
@@ -3138,7 +3151,10 @@ function submitTransaksi(){
     sumber:document.getElementById('txSumber').value,
     keterangan:document.getElementById('txKeterangan').value.trim(),
     akun:(_txMode==='keluar')?document.getElementById('txAkun').value.trim():'',
-    persediaan:(_txMode==='keluar')&&document.getElementById('txPersediaan').checked
+    persediaan:(_txMode==='keluar')&&document.getElementById('txPersediaan').checked,
+    noKuitansi:(_txMode==='keluar')?document.getElementById('txNoKuitansi').value.trim():'',
+    noDrpp:(_txMode==='keluar')?document.getElementById('txNoDrpp').value.trim():'',
+    noSpp:(_txMode==='keluar')?document.getElementById('txNoSpp').value.trim():''
   };
   if(!data.kegiatan){toast('Kegiatan/uraian wajib diisi','error');return;}
   if(nilai<=0){toast('Nilai harus lebih dari 0','error');return;}
