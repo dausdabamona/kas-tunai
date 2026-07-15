@@ -1425,6 +1425,7 @@ function renderUsersList(list){
       +'<div class="acts">'
       +(u.locked?'<span class="tgl">Super Admin (tetap)</span>'
         :('<button class="b-edit" onclick="editUser(\''+esc(u.email)+'\')">&#9998; Edit</button>'
+         +'<button class="b-key" onclick="setPasswordUser(\''+esc(u.email)+'\')">&#128273; Set Password</button>'
          +'<button onclick="deleteUser(\''+esc(u.email)+'\')">Hapus</button>'))
       +'</div></div>';
   }
@@ -1464,6 +1465,18 @@ function submitUser(){
   }else{
     google.script.run.withSuccessHandler(ok).withFailureHandler(fail).serverAddUser(_tok, email,nama,role);
   }
+}
+function setPasswordUser(email){
+  var pw=prompt('Set password untuk '+email+'\n(min 8 karakter — user wajib menggantinya saat login pertama):','');
+  if(pw===null) return;                 // batal
+  pw=String(pw);
+  if(pw.length<8){ toast('Password minimal 8 karakter','error'); return; }
+  showLoading(true,'Menyetel password...');
+  google.script.run
+    .withSuccessHandler(function(){ showLoading(false);
+      toast('Password '+email+' berhasil disetel. User wajib ganti saat login pertama.','success'); })
+    .withFailureHandler(fail)
+    .serverSetPasswordUser(_tok, email, pw);
 }
 function deleteUser(email){
   if(!confirm('Hapus akses user '+email+'?')) return;
