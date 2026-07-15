@@ -225,6 +225,7 @@
     <div style="text-align:right;margin-top:8px">
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0" onclick="openModalPindah()">&#128181; Pindah Dana (Bank&#8596;Tunai)</button>
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalImporRk()">&#127974; Impor Rekening Koran</button>
+      <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalImporSakti()">&#128203; Impor SAKTI</button>
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalSpbyGab()">&#128203; SPBY Gabungan</button>
     </div>
   </div>
@@ -603,6 +604,42 @@
       <button class="btn" style="background:var(--c-ok)" onclick="submitImporRk()">Impor ke Kas Bank</button>
     </div>
     <button class="btn ghost" onclick="closeModal('modalImporRk')">Tutup</button>
+  </div>
+</div>
+
+<!-- ================= MODAL IMPOR SAKTI (rekonsiliasi Fase 2) ================= -->
+<div class="modal" id="modalImporSakti">
+  <div class="sheet">
+    <h2>&#128203; Impor SAKTI (.xlsx)</h2>
+    <div class="field"><label>File ekspor SAKTI (.xlsx)</label>
+      <input type="file" id="skFile" accept=".xlsx,.xls" onchange="skParse()"></div>
+    <div id="skMap" class="hidden">
+      <div style="font-size:12px;color:var(--c-muted);margin-bottom:6px">Cocokkan kolom (otomatis ditebak; ubah bila perlu). Pilih (tidak ada) bila kolom tak tersedia. Kolom bertanda * wajib.</div>
+      <div class="row2">
+        <div class="field"><label>Baris header</label><select id="skHeader" onchange="_skPopulateCols();skRenderPreview()"></select></div>
+        <div class="field"><label>No PB</label><select id="skColNoPb" onchange="skRenderPreview()"></select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>No Kuitansi *</label><select id="skColKuit" onchange="skRenderPreview()"></select></div>
+        <div class="field"><label>Nilai (Akun Belanja) *</label><select id="skColNilai" onchange="skRenderPreview()"></select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Akun</label><select id="skColAkun" onchange="skRenderPreview()"></select></div>
+        <div class="field"><label>Tgl PB</label><select id="skColTglPb" onchange="skRenderPreview()"></select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Tgl Kuitansi</label><select id="skColTglKuit" onchange="skRenderPreview()"></select></div>
+        <div class="field"><label>No DRPP</label><select id="skColDrpp" onchange="skRenderPreview()"></select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>No SPP/SSP</label><select id="skColSpp" onchange="skRenderPreview()"></select></div>
+        <div class="field"><label>No Bukti Pungut</label><select id="skColBukti" onchange="skRenderPreview()"></select></div>
+      </div>
+      <div id="skPreview" style="max-height:200px;overflow:auto;font-size:11px;border:1px solid var(--c-line);border-radius:8px;padding:6px;margin-bottom:8px"></div>
+      <button class="btn" style="background:var(--c-ok)" onclick="submitImporSakti()">Impor &amp; Cocokkan</button>
+    </div>
+    <div id="skHasil" style="margin-top:8px"></div>
+    <button class="btn ghost" onclick="closeModal('modalImporSakti')">Tutup</button>
   </div>
 </div>
 
@@ -3152,6 +3189,134 @@ function submitImporRk(){
       toast('Impor selesai: '+res.ditambah+' ditambah, '+res.dilewati+' dilewati (duplikat)','success'); loadAll(); })
     .withFailureHandler(fail)
     .serverImporBank(_tok, rows);
+}
+
+/* ============== Impor SAKTI (rekonsiliasi Fase 2) ============== */
+var _skRows=null, _skCols=0;
+function openModalImporSakti(){
+  _skRows=null; _skCols=0;
+  document.getElementById('skFile').value='';
+  document.getElementById('skMap').classList.add('hidden');
+  document.getElementById('skPreview').innerHTML='';
+  document.getElementById('skHasil').innerHTML='';
+  openModal('modalImporSakti');
+}
+function skParse(){
+  var f=document.getElementById('skFile').files[0]; if(!f) return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    var b64=String(rd.result).split(',')[1];
+    showLoading(true,'Membaca ekspor SAKTI...');
+    google.script.run
+      .withSuccessHandler(function(rows){ showLoading(false); _skRows=rows||[]; _skBuildMap(); })
+      .withFailureHandler(fail)
+      .serverParseRekKoran(_tok, b64, f.name);
+  };
+  rd.readAsDataURL(f);
+}
+function _skBuildMap(){
+  if(!_skRows||!_skRows.length){ toast('File kosong / tak terbaca','error'); return; }
+  _skCols=0; for(var r=0;r<_skRows.length;r++) _skCols=Math.max(_skCols,_skRows[r].length);
+  var hdr=0;
+  for(var i=0;i<Math.min(_skRows.length,25);i++){
+    var line=_skRows[i].join(' ').toLowerCase();
+    if(line.indexOf('kuitansi')>=0||line.indexOf('kwitansi')>=0||line.indexOf('no pb')>=0){ hdr=i; break; }
+  }
+  var hsel=document.getElementById('skHeader'); hsel.innerHTML='';
+  for(var i=0;i<Math.min(_skRows.length,25);i++){
+    var o=document.createElement('option'); o.value=i;
+    o.text='Baris '+(i+1)+': '+String(_skRows[i].slice(0,5).join(' | ')).slice(0,45);
+    if(i===hdr) o.selected=true; hsel.appendChild(o);
+  }
+  _skPopulateCols();
+  document.getElementById('skMap').classList.remove('hidden');
+  skRenderPreview();
+}
+function _skGuess(sel, headRow, kws){
+  for(var c=0;c<_skCols;c++){ var h=String(headRow[c]||'').toLowerCase();
+    for(var k=0;k<kws.length;k++) if(h.indexOf(kws[k])>=0){ sel.value=c; return; } }
+}
+function _skPopulateCols(){
+  var hdr=+document.getElementById('skHeader').value, headRow=_skRows[hdr]||[];
+  var defs=[['skColNoPb',['no pb','nomor pb','no. pb','perintah bayar','no sp2d']],
+            ['skColKuit',['kuitansi','kwitansi']],
+            ['skColNilai',['nilai','jumlah','bruto','rupiah']],
+            ['skColAkun',['akun','mak','kode akun','belanja']],
+            ['skColTglPb',['tgl pb','tanggal pb','tgl sp2d']],
+            ['skColTglKuit',['tgl kuitansi','tanggal kuitansi','tgl kwt']],
+            ['skColDrpp',['drpp']],
+            ['skColSpp',['spp','ssp']],
+            ['skColBukti',['bukti pungut','ntpn','bukti potong']]];
+  for(var d=0;d<defs.length;d++){
+    var sel=document.getElementById(defs[d][0]); if(!sel) continue;
+    sel.innerHTML='<option value="-1">(tidak ada)</option>';
+    for(var c=0;c<_skCols;c++){ var o=document.createElement('option'); o.value=c; o.text=_rkColLabel(c,headRow); sel.appendChild(o); }
+    _skGuess(sel, headRow, defs[d][1]);
+  }
+}
+function _skColVal(id){ return +((document.getElementById(id)||{}).value||-1); }
+function _skDataRows(){
+  var hdr=+document.getElementById('skHeader').value, out=[];
+  var cPb=_skColVal('skColNoPb'), cKu=_skColVal('skColKuit'), cNi=_skColVal('skColNilai'),
+      cAk=_skColVal('skColAkun'), cTp=_skColVal('skColTglPb'), cTk=_skColVal('skColTglKuit'),
+      cDr=_skColVal('skColDrpp'), cSp=_skColVal('skColSpp'), cBk=_skColVal('skColBukti');
+  function cell(r,c){ return (c>=0 && r[c]!=null)?String(r[c]).trim():''; }
+  for(var i=hdr+1;i<_skRows.length;i++){
+    var r=_skRows[i]; if(!r) continue;
+    var ku=cell(r,cKu), ak=cell(r,cAk), ni=(cNi>=0?_rkNum(r[cNi]):0);
+    if(!ku && ni===0 && !ak) continue;   // baris kosong
+    out.push({ tglPb:_rkToISO(cTp>=0?r[cTp]:''), noPb:cell(r,cPb), akun:ak, nilai:ni,
+      noKuitansi:ku, tglKuitansi:_rkToISO(cTk>=0?r[cTk]:''), noDrpp:cell(r,cDr),
+      noSpp:cell(r,cSp), noBuktiPungut:cell(r,cBk) });
+  }
+  return out;
+}
+function skRenderPreview(){
+  var rows=_skDataRows(), n=Math.min(rows.length,15), h='';
+  h+='<table style="width:100%;border-collapse:collapse"><tr><th style="text-align:left">No PB</th><th style="text-align:left">No Kuitansi</th><th style="text-align:left">Akun</th><th style="text-align:right">Nilai</th></tr>';
+  for(var i=0;i<n;i++){ var d=rows[i];
+    h+='<tr><td>'+esc(d.noPb)+'</td><td>'+esc(d.noKuitansi)+'</td><td>'+esc(d.akun)+'</td><td style="text-align:right">'+(d.nilai?rupiah(d.nilai):'')+'</td></tr>';
+  }
+  h+='</table>';
+  h+='<div style="margin-top:6px;font-weight:600">'+rows.length+' baris SAKTI siap diimpor'+(rows.length>n?(' (menampilkan '+n+')'):'')+'</div>';
+  document.getElementById('skPreview').innerHTML=h;
+}
+function submitImporSakti(){
+  if(_skColVal('skColKuit')<0||_skColVal('skColNilai')<0){ toast('Petakan kolom No Kuitansi & Nilai dulu','error'); return; }
+  var rows=_skDataRows();
+  if(!rows.length){ toast('Tidak ada baris terbaca. Cek pemetaan kolom.','error'); return; }
+  if(!confirm('Impor '+rows.length+' baris SAKTI lalu cocokkan otomatis?')) return;
+  showLoading(true,'Mengimpor & mencocokkan '+rows.length+' baris...');
+  google.script.run
+    .withSuccessHandler(function(res){ showLoading(false); _skShowRingkasan(res); loadAll(); })
+    .withFailureHandler(fail)
+    .serverImporSakti(_tok, rows);
+}
+function _skShowRingkasan(res){
+  res=res||{};
+  var h='<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px;font-size:12px">';
+  h+='<b>Ringkasan impor:</b><br>'+(res.saktiDiproses||0)+' baris SAKTI &middot; '
+    +(res.cocok||0)+' cocok &middot; '+(res.nilaiBeda||0)+' nilai beda &middot; '
+    +(res.tanpaPadanan||0)+' tanpa padanan &middot; '+(res.konflik||0)+' konflik';
+  if(typeof res.saktiDitambah!=='undefined') h+='<br><span style="color:var(--c-muted)">('+res.saktiDitambah+' baru, '+res.saktiDiperbarui+' diperbarui)</span>';
+  h+='</div>';
+  var lb=res.listNilaiBeda||[];
+  if(lb.length){
+    h+='<div style="margin-top:8px;font-size:12px"><b style="color:#9a3412">Nilai beda ('+lb.length+') — perlu ditinjau:</b>';
+    for(var i=0;i<Math.min(lb.length,20);i++){ var x=lb[i];
+      h+='<div>&bull; Kuitansi '+esc(x.kuitansi)+' (Trx '+esc(x.no)+'): kas '+rupiah(x.kredit)+' vs SAKTI '+rupiah(x.nilaiSakti)+' (selisih '+rupiah(x.selisih)+')</div>'; }
+    h+='</div>';
+  }
+  var lk=res.listKonflik||[];
+  if(lk.length){
+    h+='<div style="margin-top:8px;font-size:12px"><b style="color:#991b1b">Konflik kuitansi ('+lk.length+') — tidak auto-cocok:</b>';
+    for(var j=0;j<Math.min(lk.length,20);j++){ var y=lk[j];
+      h+='<div>&bull; Kuitansi '+esc(y.kuitansi)+': '+y.txn+' transaksi &times; '+y.sakti+' baris SAKTI</div>'; }
+    h+='</div>';
+  }
+  document.getElementById('skHasil').innerHTML=h;
+  document.getElementById('skMap').classList.add('hidden');
+  toast('Impor selesai: '+(res.cocok||0)+' cocok','success');
 }
 function submitTransaksi(){
   var nilai=unfmt(document.getElementById('txNilai').value);
