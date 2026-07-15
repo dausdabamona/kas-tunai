@@ -3255,16 +3255,23 @@ function _skPopulateCols(){
   }
 }
 function _skColVal(id){ return +((document.getElementById(id)||{}).value||-1); }
+function _skFindCol(headRow,kw){ for(var c=0;c<_skCols;c++){ if(String(headRow[c]||'').toLowerCase().indexOf(kw)>=0) return c; } return -1; }
 function _skDataRows(){
-  var hdr=+document.getElementById('skHeader').value, out=[];
+  var hdr=+document.getElementById('skHeader').value, headRow=_skRows[hdr]||[], out=[];
   var cPb=_skColVal('skColNoPb'), cKu=_skColVal('skColKuit'), cNi=_skColVal('skColNilai'),
       cAk=_skColVal('skColAkun'), cTp=_skColVal('skColTglPb'), cTk=_skColVal('skColTglKuit'),
       cDr=_skColVal('skColDrpp'), cSp=_skColVal('skColSpp'), cBk=_skColVal('skColBukti');
+  // Baris pajak SAKTI menaruh akun/nilai di kolom "Akun Pajak"/"Nilai Akun Pajak"
+  // (kolom Belanja kosong). Deteksi otomatis agar baris pajak tak hilang / tak bentrok.
+  var cAkP=_skFindCol(headRow,'akun pajak'), cNiP=_skFindCol(headRow,'nilai akun pajak');
   function cell(r,c){ return (c>=0 && r[c]!=null)?String(r[c]).trim():''; }
   for(var i=hdr+1;i<_skRows.length;i++){
     var r=_skRows[i]; if(!r) continue;
-    var pb=cell(r,cPb), ku=cell(r,cKu), ak=cell(r,cAk), ni=(cNi>=0?_rkNum(r[cNi]):0);
-    if(!pb && !ku && !ak && ni===0) continue;   // hanya lewati baris kosong total
+    var pb=cell(r,cPb), ku=cell(r,cKu);
+    var akB=cell(r,cAk), niB=(cNi>=0?_rkNum(r[cNi]):0);
+    var akP=cell(r,cAkP), niP=(cNiP>=0?_rkNum(r[cNiP]):0);
+    var ak=akB||akP, ni=(niB>0?niB:niP);          // akun/nilai efektif (belanja atau pajak)
+    if(!pb && !ku && !ak && ni===0) continue;      // hanya lewati baris kosong total
     out.push({ tglPb:_rkToISO(cTp>=0?r[cTp]:''), noPb:pb, akun:ak, nilai:ni,
       noKuitansi:ku, tglKuitansi:_rkToISO(cTk>=0?r[cTk]:''), noDrpp:cell(r,cDr),
       noSpp:cell(r,cSp), noBuktiPungut:cell(r,cBk) });
