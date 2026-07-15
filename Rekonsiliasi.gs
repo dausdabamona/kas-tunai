@@ -165,5 +165,47 @@ var Rekonsiliasi = (function () {
   /** Jalankan ulang pencocokan saja (tanpa impor baru). */
   function cocokUlang() { return cocok(_batchId()); }
 
-  return { impor: impor, cocok: cocokUlang, upsertSakti: upsertSakti };
+  /* ---------------- Backfill Kuitansi massal ---------------- */
+  /** Isi No Kuitansi/DRPP/SPP pada transaksi (cocok by kolom No) HANYA bila sel
+   *  kosong — tidak pernah menimpa. Sel terisi & beda → dicatat "bentrok".
+   *  list item: {noTransaksi, noKuitansi, noDrpp, noSpp}. Idempoten. */
+  function backfillKuitansi(list) {
+    var kName = CONFIG.SHEETS.KAS_TUNAI, data = SheetRepo.getData(kName);
+    var byNo = {};
+    for (var i = 0; i < data.length; i++) {
+      var r = data[i]; if (isDeleted(r[C.IS_DELETED])) continue;
+      byNo[_keyText(r[C.NO])] = { rowIndex: i + 2,
+        ku: _norm(r[C.NO_KUITANSI]), dr: _norm(r[C.NO_DRPP]), sp: _norm(r[C.NO_SPP]) };
+    }
+    var sum = { diproses: 0, diisi: 0, bentrok: 0, takDitemukan: 0,
+                listBentrok: [], listTakDitemukan: [] };
+    list = list || [];
+    for (var j = 0; j < list.length; j++) {
+      var it = list[j], no = _norm(it.noTransaksi);
+      if (!no) continue;
+      sum.diproses++;
+      var t = byNo[_keyText(no)];
+      if (!t) { sum.takDitemukan++; sum.listTakDitemukan.push(no); continue; }
+      var upd = {}, ctx = { filled: false, conflict: false, detail: [] };
+      _fill(t.ku, it.noKuitansi, C.NO_KUITANSI, 'No Kuitansi', upd, ctx);
+      _fill(t.dr, it.noDrpp, C.NO_DRPP, 'No DRPP', upd, ctx);
+      _fill(t.sp, it.noSpp, C.NO_SPP, 'No SPP', upd, ctx);
+      var keys = []; for (var k in upd) keys.push(k);
+      if (keys.length) { SheetRepo.setCells(kName, t.rowIndex, upd); sum.diisi++; }
+      if (ctx.conflict) { sum.bentrok++; sum.listBentrok.push({ no: no, detail: ctx.detail.join('; ') }); }
+    }
+    DeferredFlush.mark();
+    try { AuditLog.write('BACKFILL', kName, '-', sum.diisi + ' diisi, ' + sum.bentrok + ' bentrok'); } catch (e) {}
+    return sum;
+  }
+  /** Isi satu kolom bila kosong; catat bentrok bila terisi & beda. */
+  function _fill(cur, inc, col, label, upd, ctx) {
+    inc = _norm(inc); if (!inc) return;                          // tak ada data masuk
+    if (!cur) { upd[col] = inc; ctx.filled = true; return; }      // kosong → isi
+    if (_keyText(cur) === _keyText(inc)) return;                  // sudah sama → no-op
+    ctx.conflict = true; ctx.detail.push(label + ': "' + cur + '" != "' + inc + '"');  // beda → bentrok, jangan timpa
+  }
+
+  return { impor: impor, cocok: cocokUlang, upsertSakti: upsertSakti,
+           backfillKuitansi: backfillKuitansi };
 })();

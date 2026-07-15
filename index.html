@@ -226,6 +226,7 @@
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0" onclick="openModalPindah()">&#128181; Pindah Dana (Bank&#8596;Tunai)</button>
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalImporRk()">&#127974; Impor Rekening Koran</button>
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalImporSakti()">&#128203; Impor SAKTI</button>
+      <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalBackfill()">&#128273; Backfill Kuitansi</button>
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalSpbyGab()">&#128203; SPBY Gabungan</button>
     </div>
   </div>
@@ -640,6 +641,35 @@
     </div>
     <div id="skHasil" style="margin-top:8px"></div>
     <button class="btn ghost" onclick="closeModal('modalImporSakti')">Tutup</button>
+  </div>
+</div>
+
+<!-- ================= MODAL BACKFILL KUITANSI ================= -->
+<div class="modal" id="modalBackfill">
+  <div class="sheet">
+    <h2>&#128273; Backfill Kuitansi (massal)</h2>
+    <div style="font-size:12px;color:var(--c-muted);margin-bottom:6px">Isi No. Kuitansi/DRPP/SPP transaksi lama dari file. Hanya mengisi sel yang <b>kosong</b> — tak pernah menimpa.</div>
+    <div class="field"><label>File (.xlsx / .csv)</label>
+      <input type="file" id="bfFile" accept=".xlsx,.xls,.csv" onchange="bfParse()"></div>
+    <div id="bfMap" class="hidden">
+      <div style="font-size:12px;color:var(--c-muted);margin-bottom:6px">Cocokkan kolom (otomatis ditebak). Kolom bertanda * wajib.</div>
+      <div class="row2">
+        <div class="field"><label>Baris header</label><select id="bfHeader" onchange="_bfPopulateCols();bfRenderPreview()"></select></div>
+        <div class="field"><label>No Transaksi *</label><select id="bfColNo" onchange="bfRenderPreview()"></select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>No Kuitansi *</label><select id="bfColKuit" onchange="bfRenderPreview()"></select></div>
+        <div class="field"><label>No DRPP</label><select id="bfColDrpp" onchange="bfRenderPreview()"></select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>No SPP/SSP</label><select id="bfColSpp" onchange="bfRenderPreview()"></select></div>
+        <div class="field"></div>
+      </div>
+      <div id="bfPreview" style="max-height:200px;overflow:auto;font-size:11px;border:1px solid var(--c-line);border-radius:8px;padding:6px;margin-bottom:8px"></div>
+      <button class="btn" style="background:var(--c-ok)" onclick="submitBackfill()">Isi Kuitansi</button>
+    </div>
+    <div id="bfHasil" style="margin-top:8px"></div>
+    <button class="btn ghost" onclick="closeModal('modalBackfill')">Tutup</button>
   </div>
 </div>
 
@@ -3324,6 +3354,122 @@ function _skShowRingkasan(res){
   document.getElementById('skHasil').innerHTML=h;
   document.getElementById('skMap').classList.add('hidden');
   toast('Impor selesai: '+(res.cocok||0)+' cocok','success');
+}
+
+/* ============== Backfill Kuitansi massal ============== */
+var _bfRows=null, _bfCols=0;
+function openModalBackfill(){
+  _bfRows=null; _bfCols=0;
+  document.getElementById('bfFile').value='';
+  document.getElementById('bfMap').classList.add('hidden');
+  document.getElementById('bfPreview').innerHTML='';
+  document.getElementById('bfHasil').innerHTML='';
+  openModal('modalBackfill');
+}
+function bfParse(){
+  var f=document.getElementById('bfFile').files[0]; if(!f) return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    var b64=String(rd.result).split(',')[1];
+    showLoading(true,'Membaca file backfill...');
+    google.script.run
+      .withSuccessHandler(function(rows){ showLoading(false); _bfRows=rows||[]; _bfBuildMap(); })
+      .withFailureHandler(fail)
+      .serverParseRekKoran(_tok, b64, f.name);
+  };
+  rd.readAsDataURL(f);
+}
+function _bfBuildMap(){
+  if(!_bfRows||!_bfRows.length){ toast('File kosong / tak terbaca','error'); return; }
+  _bfCols=0; for(var r=0;r<_bfRows.length;r++) _bfCols=Math.max(_bfCols,_bfRows[r].length);
+  var hdr=0;
+  for(var i=0;i<Math.min(_bfRows.length,25);i++){
+    var line=_bfRows[i].join(' ').toLowerCase();
+    if(line.indexOf('transaksi')>=0||line.indexOf('kuitansi')>=0||line.indexOf('kwitansi')>=0){ hdr=i; break; }
+  }
+  var hsel=document.getElementById('bfHeader'); hsel.innerHTML='';
+  for(var i=0;i<Math.min(_bfRows.length,25);i++){
+    var o=document.createElement('option'); o.value=i;
+    o.text='Baris '+(i+1)+': '+String(_bfRows[i].slice(0,5).join(' | ')).slice(0,45);
+    if(i===hdr) o.selected=true; hsel.appendChild(o);
+  }
+  _bfPopulateCols();
+  document.getElementById('bfMap').classList.remove('hidden');
+  bfRenderPreview();
+}
+function _bfGuess(sel, headRow, kws){
+  for(var c=0;c<_bfCols;c++){ var h=String(headRow[c]||'').toLowerCase();
+    for(var k=0;k<kws.length;k++) if(h.indexOf(kws[k])>=0){ sel.value=c; return; } }
+}
+function _bfPopulateCols(){
+  var hdr=+document.getElementById('bfHeader').value, headRow=_bfRows[hdr]||[];
+  var defs=[['bfColNo',['no transaksi','no. transaksi','no trx','transaksi']],
+            ['bfColKuit',['kuitansi','kwitansi']],
+            ['bfColDrpp',['drpp']],
+            ['bfColSpp',['spp','ssp']]];
+  for(var d=0;d<defs.length;d++){
+    var sel=document.getElementById(defs[d][0]); if(!sel) continue;
+    sel.innerHTML='<option value="-1">(tidak ada)</option>';
+    for(var c=0;c<_bfCols;c++){ var o=document.createElement('option'); o.value=c; o.text=_rkColLabel(c,headRow); sel.appendChild(o); }
+    _bfGuess(sel, headRow, defs[d][1]);
+  }
+}
+function _bfColVal(id){ return +((document.getElementById(id)||{}).value||-1); }
+function _bfDataRows(){
+  var hdr=+document.getElementById('bfHeader').value, out=[];
+  var cNo=_bfColVal('bfColNo'), cKu=_bfColVal('bfColKuit'), cDr=_bfColVal('bfColDrpp'), cSp=_bfColVal('bfColSpp');
+  function cell(r,c){ return (c>=0 && r[c]!=null)?String(r[c]).trim():''; }
+  for(var i=hdr+1;i<_bfRows.length;i++){
+    var r=_bfRows[i]; if(!r) continue;
+    var no=cell(r,cNo);
+    if(!no) continue;                       // butuh No Transaksi
+    out.push({ noTransaksi:no, noKuitansi:cell(r,cKu), noDrpp:cell(r,cDr), noSpp:cell(r,cSp) });
+  }
+  return out;
+}
+function bfRenderPreview(){
+  var rows=_bfDataRows(), n=Math.min(rows.length,15), h='';
+  h+='<table style="width:100%;border-collapse:collapse"><tr><th style="text-align:left">No Trx</th><th style="text-align:left">No Kuitansi</th><th style="text-align:left">DRPP</th><th style="text-align:left">SPP</th></tr>';
+  for(var i=0;i<n;i++){ var d=rows[i];
+    h+='<tr><td>'+esc(d.noTransaksi)+'</td><td>'+esc(d.noKuitansi)+'</td><td>'+esc(d.noDrpp)+'</td><td>'+esc(d.noSpp)+'</td></tr>';
+  }
+  h+='</table>';
+  h+='<div style="margin-top:6px;font-weight:600">'+rows.length+' baris siap di-backfill'+(rows.length>n?(' (menampilkan '+n+')'):'')+'</div>';
+  document.getElementById('bfPreview').innerHTML=h;
+}
+function submitBackfill(){
+  if(_bfColVal('bfColNo')<0||_bfColVal('bfColKuit')<0){ toast('Petakan kolom No Transaksi & No Kuitansi dulu','error'); return; }
+  var rows=_bfDataRows();
+  if(!rows.length){ toast('Tidak ada baris terbaca. Cek pemetaan kolom.','error'); return; }
+  if(!confirm('Isi No. Kuitansi/DRPP/SPP untuk '+rows.length+' transaksi? (hanya sel kosong yang diisi)')) return;
+  showLoading(true,'Mengisi '+rows.length+' transaksi...');
+  google.script.run
+    .withSuccessHandler(function(res){ showLoading(false); _bfShowRingkasan(res); loadAll(); })
+    .withFailureHandler(fail)
+    .serverBackfillKuitansi(_tok, rows);
+}
+function _bfShowRingkasan(res){
+  res=res||{};
+  var h='<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px;font-size:12px">';
+  h+='<b>Ringkasan backfill:</b><br>'+(res.diproses||0)+' baris diproses &middot; '
+    +(res.diisi||0)+' diisi &middot; '+(res.bentrok||0)+' bentrok &middot; '
+    +(res.takDitemukan||0)+' transaksi tak ditemukan';
+  h+='</div>';
+  var lb=res.listBentrok||[];
+  if(lb.length){
+    h+='<div style="margin-top:8px;font-size:12px"><b style="color:#9a3412">Bentrok ('+lb.length+') — tidak ditimpa:</b>';
+    for(var i=0;i<Math.min(lb.length,20);i++){ var x=lb[i];
+      h+='<div>&bull; Trx '+esc(x.no)+': '+esc(x.detail)+'</div>'; }
+    h+='</div>';
+  }
+  var lt=res.listTakDitemukan||[];
+  if(lt.length){
+    h+='<div style="margin-top:8px;font-size:12px"><b style="color:#991b1b">Tak ditemukan ('+lt.length+'):</b> '+lt.slice(0,30).map(esc).join(', ');
+    h+='</div>';
+  }
+  document.getElementById('bfHasil').innerHTML=h;
+  document.getElementById('bfMap').classList.add('hidden');
+  toast('Backfill selesai: '+(res.diisi||0)+' diisi','success');
 }
 function submitTransaksi(){
   var nilai=unfmt(document.getElementById('txNilai').value);

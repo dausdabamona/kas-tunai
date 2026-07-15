@@ -343,6 +343,11 @@ function serverImporSakti(token, list) {
 function serverCocokRekon(token) {
   return _run(token, function (auth) { return Rekonsiliasi.cocok(); });
 }
+/** Backfill massal No Kuitansi/DRPP/SPP dari file (isi hanya bila sel kosong).
+ *  list: [{noTransaksi, noKuitansi, noDrpp, noSpp}]. Kembalikan ringkasan. */
+function serverBackfillKuitansi(token, list) {
+  return _run(token, function (auth) { return Rekonsiliasi.backfillKuitansi(list); });
+}
 
 /* ============================================================
  * Bukti Perjalanan Dinas (tiket/boarding) + SPJ bundel
