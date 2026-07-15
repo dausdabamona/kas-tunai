@@ -9,17 +9,10 @@
  * Entry point
  * ============================================================ */
 function doGet() {
-  var tpl = HtmlService.createTemplateFromFile('index');
-  var role = _currentRole();
-  var full = (role === 'admin' || role === 'full');
-  tpl.appData = {
-    user:      _safeEmail(),
-    namaUser:  '',
-    roleUser:  role,
-    isAdmin:   (role === 'admin'),
-    saldoAwal: full ? CONFIG.SALDO_AWAL : 0
-  };
-  return tpl.evaluate()
+  // Cangkang HTML saja. Identitas & role TIDAK lagi dari Session.getActiveUser()
+  // (staf pakai Gmail biasa → selalu kosong). Frontend memperoleh role dari
+  // respons serverLogin/serverGetDashboard yang berbasis sesi token.
+  return HtmlService.createTemplateFromFile('index').evaluate()
     .setTitle('Kas Tunai - Poltek KP Sorong')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -30,21 +23,18 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
-function _safeEmail() {
-  try { return Session.getActiveUser().getEmail() || ''; } catch (e) { return ''; }
-}
-
-/** Role pengguna saat ini: 'admin' | 'full' | 'viewer'. */
-function _currentRole() { return Users.getRole(_safeEmail()); }
-/** true bila boleh melihat saldo (admin atau full). */
-function _isFullAccess() { var r = _currentRole(); return r === 'admin' || r === 'full'; }
-function _isAdmin() { return _currentRole() === 'admin'; }
-function _requireAdmin() { if (!_isAdmin()) throw new Error('Akses ditolak: khusus admin'); }
-
-/** Bungkus pemanggilan modul + flush sekali di akhir. */
-function _run(fn) {
+/**
+ * Bungkus pemanggilan modul: validasi token sesi SEKALI di sini (satu-satunya
+ * gerbang identitas), suntik operator ke cache yang dibaca getOperator, jalankan
+ * business logic, flush sekali di akhir. Melempar bila token invalid/kadaluarsa.
+ */
+function _run(token, fn) {
+  var auth;
+  try { auth = Sessions.validate(token); }         // {email, role, mustChange}
+  catch (e) { throw new Error('SESI_BERAKHIR'); }   // penanda agar frontend redirect ke login
+  _ExecCache.set('__operator__', auth.email);        // getOperator membaca kunci ini
   try {
-    var result = fn();
+    var result = fn(auth);
     DeferredFlush.commitAndInvalidate();
     return result;
   } catch (e) {
@@ -57,19 +47,19 @@ function _run(fn) {
 /* ============================================================
  * Transaksi
  * ============================================================ */
-function serverGetTransaksi() {
-  return _run(function () { return KasTunai.getTransaksi(); });
+function serverGetTransaksi(token) {
+  return _run(token, function (auth) { return KasTunai.getTransaksi(); });
 }
 
 /** Muat data dashboard awal dalam satu round-trip: transaksi + jumlah foto + surat tugas. */
-function serverGetDashboard() {
-  return _run(function () {
+function serverGetDashboard(token) {
+  return _run(token, function (auth) {
     // Perbaiki label header kolom yang kosong (sekali per TTL cache; idempotent).
     if (!AppCache.get('hdr_fixed_v2')) {
       try { SheetRepo.ensureHeaders(); } catch (e) { Logger.log('[ensureHeaders] ' + e.message); }
       AppCache.put('hdr_fixed_v2', 1);
     }
-    var role = _currentRole();
+    var role = auth.role;
     var full = (role === 'admin' || role === 'full');
     var tx = KasTunai.getTransaksi();
     if (!full) { for (var i = 0; i < tx.length; i++) { delete tx[i].saldo; } } // sembunyikan saldo berjalan
@@ -87,22 +77,22 @@ function serverGetDashboard() {
 /* ============================================================
  * Manajemen User (khusus admin)
  * ============================================================ */
-function serverListUsers() {
-  return _run(function () { _requireAdmin(); return Users.list(); });
+function serverListUsers(token) {
+  return _run(token, function (auth) { if (auth.role !== 'admin') throw new Error('Akses ditolak: khusus admin'); return Users.list(); });
 }
-function serverAddUser(email, nama, role) {
-  return _run(function () { _requireAdmin(); return Users.add(email, nama, role); });
+function serverAddUser(token, email, nama, role) {
+  return _run(token, function (auth) { if (auth.role !== 'admin') throw new Error('Akses ditolak: khusus admin'); return Users.add(email, nama, role); });
 }
-function serverUpdateUser(email, nama, role) {
-  return _run(function () { _requireAdmin(); return Users.update(email, nama, role); });
+function serverUpdateUser(token, email, nama, role) {
+  return _run(token, function (auth) { if (auth.role !== 'admin') throw new Error('Akses ditolak: khusus admin'); return Users.update(email, nama, role); });
 }
-function serverDeleteUser(email) {
-  return _run(function () { _requireAdmin(); return Users.remove(email); });
+function serverDeleteUser(token, email) {
+  return _run(token, function (auth) { if (auth.role !== 'admin') throw new Error('Akses ditolak: khusus admin'); return Users.remove(email); });
 }
 
 /** Perbaiki header kolom kosong secara manual (dari frontend bila perlu). */
-function serverPerbaikiHeader() {
-  return _run(function () { return SheetRepo.ensureHeaders(); });
+function serverPerbaikiHeader(token) {
+  return _run(token, function (auth) { return SheetRepo.ensureHeaders(); });
 }
 
 /** Jalankan langsung dari editor Apps Script untuk mengisi header kosong sekarang juga. */
@@ -111,28 +101,28 @@ function perbaikiHeader() {
 }
 
 /** Pindah dana antar kas (Bank <-> Tunai). arah: 'BANK_TUNAI' | 'TUNAI_BANK'. */
-function serverPindahDana(arah, nominal, tanggal, keterangan) {
-  return _run(function () { return KasTunai.pindahDana(arah, nominal, tanggal, keterangan); });
+function serverPindahDana(token, arah, nominal, tanggal, keterangan) {
+  return _run(token, function (auth) { return KasTunai.pindahDana(arah, nominal, tanggal, keterangan); });
 }
 /** SPBY gabungan: beri 1 nomor SPBY ke beberapa transaksi. */
-function serverSpbyGabungan(noSpby, tglSpby, nos) {
-  return _run(function () { return KasTunai.spbyGabungan(noSpby, tglSpby, nos); });
+function serverSpbyGabungan(token, noSpby, tglSpby, nos) {
+  return _run(token, function (auth) { return KasTunai.spbyGabungan(noSpby, tglSpby, nos); });
 }
 /** Pecah 1 transaksi pengeluaran menjadi beberapa transaksi. */
-function serverPecahTransaksi(no, parts) {
-  return _run(function () { return KasTunai.pecahTransaksi(no, parts); });
+function serverPecahTransaksi(token, no, parts) {
+  return _run(token, function (auth) { return KasTunai.pecahTransaksi(no, parts); });
 }
 
 /* ============================================================
  * Impor lampiran dari folder scan (EPSON Scan-to-Drive)
  * ============================================================ */
-function serverScanAktif() {
-  return _run(function () { return !!Settings.scanFolderId(); });
+function serverScanAktif(token) {
+  return _run(token, function (auth) { return !!Settings.scanFolderId(); });
 }
 
 /* ---- Rapikan penyimpanan Drive (pindah file lama ke folder per transaksi) ---- */
-function serverMigrateDrive(dryRun) {
-  return _run(function () { _requireAdmin(); return DriveHelper.migrateDriveStorage({ dryRun: !!dryRun }); });
+function serverMigrateDrive(token, dryRun) {
+  return _run(token, function (auth) { if (auth.role !== 'admin') throw new Error('Akses ditolak: khusus admin'); return DriveHelper.migrateDriveStorage({ dryRun: !!dryRun }); });
 }
 /** Jalankan langsung dari editor Apps Script: pratinjau rencana migrasi. */
 function rapikanDriveDryRun() { return DriveHelper.migrateDriveStorage({ dryRun: true }); }
@@ -147,9 +137,9 @@ function _folderInfo(id) {
   try { return { id: id, nama: DriveApp.getFolderById(id).getName(), ok: true }; }
   catch (e) { return { id: id, nama: '(tidak dapat diakses!)', ok: false }; }
 }
-function serverGetSettings() {
-  return _run(function () {
-    _requireAdmin();
+function serverGetSettings(token) {
+  return _run(token, function (auth) {
+    if (auth.role !== 'admin') throw new Error('Akses ditolak: khusus admin');
     return {
       driveFolderId: Settings.get('DRIVE_FOLDER_ID', ''),
       scanFolderId:  Settings.get('SCAN_FOLDER_ID', ''),
@@ -169,9 +159,9 @@ function _folderIdFrom(v, label) {
   }
   return v;
 }
-function serverSetSettings(driveFolderId, scanFolderId) {
-  return _run(function () {
-    _requireAdmin();
+function serverSetSettings(token, driveFolderId, scanFolderId) {
+  return _run(token, function (auth) {
+    if (auth.role !== 'admin') throw new Error('Akses ditolak: khusus admin');
     driveFolderId = _folderIdFrom(driveFolderId, 'Folder penyimpanan');
     scanFolderId  = _folderIdFrom(scanFolderId, 'Folder scan');
     // Validasi folder bila diisi
@@ -182,14 +172,14 @@ function serverSetSettings(driveFolderId, scanFolderId) {
     return { success: true, driveInfo: _folderInfo(Settings.driveFolderId()), scanInfo: _folderInfo(Settings.scanFolderId()) };
   });
 }
-function serverListScan() {
-  return _run(function () { return ScanInbox.list(60); });
+function serverListScan(token) {
+  return _run(token, function (auth) { return ScanInbox.list(60); });
 }
-function serverGetScanFile(fileId) {
-  return _run(function () { return ScanInbox.getFile(fileId); });
+function serverGetScanFile(token, fileId) {
+  return _run(token, function (auth) { return ScanInbox.getFile(fileId); });
 }
-function serverArchiveScan(fileId) {
-  return _run(function () { return ScanInbox.archive(fileId); });
+function serverArchiveScan(token, fileId) {
+  return _run(token, function (auth) { return ScanInbox.archive(fileId); });
 }
 
 /* ============================================================
@@ -235,8 +225,8 @@ function _pdBendaharaRow(meta, no) {
     penjab: meta.penjab, kegiatan: 'Tiket/Hotel dibayar Bendahara — ' + meta.kegiatan,
     keterangan: 'Dibayar langsung oleh Bendahara (' + srcLbl + '), ref PD No ' + no };
 }
-function serverSimpanPerjalananDinas(data) {
-  return _run(function () {
+function serverSimpanPerjalananDinas(token, data) {
+  return _run(token, function (auth) {
     var meta = _pdMeta(data);
     var res = KasTunai.tambahTransaksi(_pdPokokRow(meta));
     var no = res.no;
@@ -248,8 +238,8 @@ function serverSimpanPerjalananDinas(data) {
     return { success: true, no: no };
   });
 }
-function serverUpdatePerjalananDinas(no, data) {
-  return _run(function () {
+function serverUpdatePerjalananDinas(token, no, data) {
+  return _run(token, function (auth) {
     var meta = _pdMeta(data);
     KasTunai.updateTransaksi(no, _pdPokokRow(meta));
     var refNo = KasTunai.findByRef('PD-' + no);            // baris porsi bendahara (sumber apa pun)
@@ -264,22 +254,22 @@ function serverUpdatePerjalananDinas(no, data) {
     return { success: true, no: no };
   });
 }
-function serverGetSuratTugas(noTransaksi) {
-  return _run(function () { return SuratTugas.get(noTransaksi); });
+function serverGetSuratTugas(token, noTransaksi) {
+  return _run(token, function (auth) { return SuratTugas.get(noTransaksi); });
 }
 /** Batalkan status Perjalanan Dinas: hapus record Surat Tugas (transaksi kas tetap
  *  ada sebagai pengeluaran biasa). Baris porsi bendahara (bila ada) dibiarkan. */
-function serverBatalkanPd(noTransaksi) {
-  return _run(function () { return SuratTugas.remove(noTransaksi); });
+function serverBatalkanPd(token, noTransaksi) {
+  return _run(token, function (auth) { return SuratTugas.remove(noTransaksi); });
 }
-function serverTambahTransaksi(data) {
-  return _run(function () { return KasTunai.tambahTransaksi(data); });
+function serverTambahTransaksi(token, data) {
+  return _run(token, function (auth) { return KasTunai.tambahTransaksi(data); });
 }
-function serverUpdateTransaksi(no, data) {
-  return _run(function () { return KasTunai.updateTransaksi(no, data); });
+function serverUpdateTransaksi(token, no, data) {
+  return _run(token, function (auth) { return KasTunai.updateTransaksi(no, data); });
 }
-function serverSimpanPajak(no, d) {
-  return _run(function () { return KasTunai.simpanPajak(no, d); });
+function serverSimpanPajak(token, no, d) {
+  return _run(token, function (auth) { return KasTunai.simpanPajak(no, d); });
 }
 
 /* ============================================================
@@ -287,7 +277,8 @@ function serverSimpanPajak(no, d) {
  * ============================================================ */
 /** Konversi .xlsx (base64) ke Google Sheet sementara, baca semua sel, lalu hapus.
  *  Kembalikan array 2D (tanggal di-format string) untuk pratinjau & pemetaan di frontend. */
-function serverParseRekKoran(base64, filename) {
+function serverParseRekKoran(token, base64, filename) {
+  Sessions.validate(token);   // gerbang sesi (endpoint ini tidak lewat _run)
   var blob = Utilities.newBlob(Utilities.base64Decode(base64), MimeType.MICROSOFT_EXCEL, filename || 'rk.xlsx');
   var tmp = Drive.Files.insert({ title: 'tmp_rk_' + Date.now(), mimeType: MimeType.GOOGLE_SHEETS }, blob, { convert: true });
   var tz = Session.getScriptTimeZone();
@@ -307,8 +298,8 @@ function serverParseRekKoran(base64, filename) {
 /** Simpan mutasi rekening koran sbg transaksi BANK (dedup via REF 'RK-...').
  *  list: [{tanggal, uraian, debet, kredit}] — perspektif REKENING:
  *  debet rekening = uang KELUAR (kredit app), kredit rekening = uang MASUK (debet app). */
-function serverImporBank(list) {
-  return _run(function () {
+function serverImporBank(token, list) {
+  return _run(token, function (auth) {
     var hasil = { ditambah: 0, dilewati: 0 };
     list = list || [];
     for (var i = 0; i < list.length; i++) {
@@ -333,17 +324,17 @@ function serverImporBank(list) {
 /* ============================================================
  * Bukti Perjalanan Dinas (tiket/boarding) + SPJ bundel
  * ============================================================ */
-function serverGetBuktiPD(no, withB64) {
-  return _run(function () { return BuktiPD.getBukti(no, withB64); });
+function serverGetBuktiPD(token, no, withB64) {
+  return _run(token, function (auth) { return BuktiPD.getBukti(no, withB64); });
 }
-function serverUploadBuktiPD(no, fileArr) {
-  return _run(function () { return BuktiPD.uploadBukti(no, fileArr); });
+function serverUploadBuktiPD(token, no, fileArr) {
+  return _run(token, function (auth) { return BuktiPD.uploadBukti(no, fileArr); });
 }
-function serverHapusBuktiPD(no, urutan) {
-  return _run(function () { return BuktiPD.hapusBukti(no, urutan); });
+function serverHapusBuktiPD(token, no, urutan) {
+  return _run(token, function (auth) { return BuktiPD.hapusBukti(no, urutan); });
 }
-function serverZipBuktiPD(no, namaZip) {
-  return _run(function () { return BuktiPD.zipBukti(no, namaZip); });
+function serverZipBuktiPD(token, no, namaZip) {
+  return _run(token, function (auth) { return BuktiPD.zipBukti(no, namaZip); });
 }
 
 /** Penanda unik baris rekening koran untuk anti-duplikat. */
@@ -357,112 +348,114 @@ function _rkRef(tanggal, nominal, uraian) {
 /* ============================================================
  * Multi Nota
  * ============================================================ */
-function serverGetMultiNota(transactionId) {
-  return _run(function () { return KasTunai.getMultiNota(transactionId); });
+function serverGetMultiNota(token, transactionId) {
+  return _run(token, function (auth) { return KasTunai.getMultiNota(transactionId); });
 }
-function serverTambahNota(transactionId, notaData) {
-  return _run(function () { return KasTunai.tambahNota(transactionId, notaData); });
+function serverTambahNota(token, transactionId, notaData) {
+  return _run(token, function (auth) { return KasTunai.tambahNota(transactionId, notaData); });
 }
-function serverUpdateNota(transactionId, urutan, notaData) {
-  return _run(function () { return KasTunai.updateNota(transactionId, urutan, notaData); });
+function serverUpdateNota(token, transactionId, urutan, notaData) {
+  return _run(token, function (auth) { return KasTunai.updateNota(transactionId, urutan, notaData); });
 }
-function serverHapusNotaItem(transactionId, urutan, fileId) {
-  return _run(function () { return KasTunai.hapusNotaItem(transactionId, urutan, fileId); });
+function serverHapusNotaItem(token, transactionId, urutan, fileId) {
+  return _run(token, function (auth) { return KasTunai.hapusNotaItem(transactionId, urutan, fileId); });
 }
-function serverRestoreNota(transactionId, urutan) {
-  return _run(function () { return KasTunai.restoreNota(transactionId, urutan); });
+function serverRestoreNota(token, transactionId, urutan) {
+  return _run(token, function (auth) { return KasTunai.restoreNota(transactionId, urutan); });
 }
 
 /* ============================================================
  * Foto Nota
  * ============================================================ */
-function serverGetJmlFotoPerTransaksi() {
-  return _run(function () { return FotoNota.getJmlFotoPerTransaksi(); });
+function serverGetJmlFotoPerTransaksi(token) {
+  return _run(token, function (auth) { return FotoNota.getJmlFotoPerTransaksi(); });
 }
-function serverGetFotoNota(noTransaksi, notaId) {
-  return _run(function () { return FotoNota.getFotoNota(noTransaksi, notaId); });
+function serverGetFotoNota(token, noTransaksi, notaId) {
+  return _run(token, function (auth) { return FotoNota.getFotoNota(noTransaksi, notaId); });
 }
-function serverUploadFotoNota(noTransaksi, notaId, fotoArr) {
-  return _run(function () { return FotoNota.uploadFotoNota(noTransaksi, notaId, fotoArr); });
+function serverUploadFotoNota(token, noTransaksi, notaId, fotoArr) {
+  return _run(token, function (auth) { return FotoNota.uploadFotoNota(noTransaksi, notaId, fotoArr); });
 }
-function serverHapusFotoNota(noTransaksi, notaId, urutan) {
-  return _run(function () { return FotoNota.hapusFotoNota(noTransaksi, notaId, urutan); });
+function serverHapusFotoNota(token, noTransaksi, notaId, urutan) {
+  return _run(token, function (auth) { return FotoNota.hapusFotoNota(noTransaksi, notaId, urutan); });
 }
-function serverGetNotaDanFoto(noTransaksi) {
-  return _run(function () { return FotoNota.getNotaDanFoto(noTransaksi); });
+function serverGetNotaDanFoto(token, noTransaksi) {
+  return _run(token, function (auth) { return FotoNota.getNotaDanFoto(noTransaksi); });
 }
-function serverGetSpjData(noTransaksi) {
-  return _run(function () { return FotoNota.getSpjData(noTransaksi); });
+function serverGetSpjData(token, noTransaksi) {
+  return _run(token, function (auth) { return FotoNota.getSpjData(noTransaksi); });
 }
 
 /* ============================================================
  * Foto Barang
  * ============================================================ */
-function serverUploadFotoBarang(transactionId, fotoArr) {
-  return _run(function () { return KasTunai.tambahFotoBarang(transactionId, fotoArr); });
+function serverUploadFotoBarang(token, transactionId, fotoArr) {
+  return _run(token, function (auth) { return KasTunai.tambahFotoBarang(transactionId, fotoArr); });
 }
 
 /* ============================================================
  * Pengembalian
  * ============================================================ */
-function serverGetPengembalian(transactionId) {
-  return _run(function () { return Pengembalian.getPengembalian(transactionId); });
+function serverGetPengembalian(token, transactionId) {
+  return _run(token, function (auth) { return Pengembalian.getPengembalian(transactionId); });
 }
-function serverTambahPengembalian(transactionId, data) {
-  return _run(function () { return Pengembalian.tambahPengembalian(transactionId, data); });
+function serverTambahPengembalian(token, transactionId, data) {
+  return _run(token, function (auth) { return Pengembalian.tambahPengembalian(transactionId, data); });
 }
-function serverHapusPengembalian(transactionId, urutan) {
-  return _run(function () { return Pengembalian.hapusPengembalian(transactionId, urutan); });
+function serverHapusPengembalian(token, transactionId, urutan) {
+  return _run(token, function (auth) { return Pengembalian.hapusPengembalian(transactionId, urutan); });
 }
-function serverRestorePengembalian(transactionId, urutan) {
-  return _run(function () { return Pengembalian.restorePengembalian(transactionId, urutan); });
+function serverRestorePengembalian(token, transactionId, urutan) {
+  return _run(token, function (auth) { return Pengembalian.restorePengembalian(transactionId, urutan); });
 }
 
 /* ============================================================
  * Master Penyedia
  * ============================================================ */
-function serverGetAllPenyedia() {
-  return _run(function () { return MasterPenyedia.getAll(); });
+function serverGetAllPenyedia(token) {
+  return _run(token, function (auth) { return MasterPenyedia.getAll(); });
 }
-function serverSimpanPenyedia(data) {
-  return _run(function () { return MasterPenyedia.simpan(data); });
+function serverSimpanPenyedia(token, data) {
+  return _run(token, function (auth) { return MasterPenyedia.simpan(data); });
 }
-function serverCariPenyedia(keyword) {
-  return _run(function () { return MasterPenyedia.cari(keyword); });
+function serverCariPenyedia(token, keyword) {
+  return _run(token, function (auth) { return MasterPenyedia.cari(keyword); });
 }
 
 /* ============================================================
  * SPBY
  * ============================================================ */
-function serverSimpanSpby(rowIndex, noSpby, tglSpby, nilaiSpby) {
-  return _run(function () { return KasTunai.simpanSpby(rowIndex, noSpby, tglSpby, nilaiSpby); });
+function serverSimpanSpby(token, rowIndex, noSpby, tglSpby, nilaiSpby) {
+  return _run(token, function (auth) { return KasTunai.simpanSpby(rowIndex, noSpby, tglSpby, nilaiSpby); });
 }
-function serverHapusSpby(rowIndex) {
-  return _run(function () { return KasTunai.hapusSpby(rowIndex); });
+function serverHapusSpby(token, rowIndex) {
+  return _run(token, function (auth) { return KasTunai.hapusSpby(rowIndex); });
 }
 
 /* ============================================================
  * Kuitansi ber-TTD (upload scan/foto)
  * ============================================================ */
-function serverUploadKuitansi(transactionId, file) {
-  return _run(function () { return KasTunai.uploadKuitansi(transactionId, file); });
+function serverUploadKuitansi(token, transactionId, file) {
+  return _run(token, function (auth) { return KasTunai.uploadKuitansi(transactionId, file); });
 }
-function serverHapusKuitansi(transactionId) {
-  return _run(function () { return KasTunai.hapusKuitansi(transactionId); });
+function serverHapusKuitansi(token, transactionId) {
+  return _run(token, function (auth) { return KasTunai.hapusKuitansi(transactionId); });
 }
 
 /* ============================================================
  * Rekap
  * ============================================================ */
-function serverGetRekap() {
-  return _run(function () { return KasTunai.getRekap(); });
+function serverGetRekap(token) {
+  return _run(token, function (auth) { return KasTunai.getRekap(); });
 }
 
 /* ============================================================
  * Auth — hashing & sesi (Fase 1)
  * ============================================================ */
 
-/** SHA-256(salt:password) → base64. Tidak pernah mengembalikan/mencetak password asli. */
+/** SHA-256(salt:password) → base64. Tidak pernah mengembalikan/mencetak password asli.
+ *  TODO(keamanan): bila ancaman "sheet bocor" jadi nyata, ganti ke key-stretching
+ *  (iterasi computeDigest N kali / PBKDF2). Untuk sekarang salt per-user + lockout memadai. */
 function _hash(salt, password) {
   var bytes = Utilities.computeDigest(
     Utilities.DigestAlgorithm.SHA_256,
