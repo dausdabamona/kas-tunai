@@ -151,7 +151,7 @@ var SheetRepo = (function () {
 
   // Akronim yang tetap huruf besar saat membuat label header ramah-baca.
   var _HDR_ACRONYM = { ID:1, URL:1, NPWP:1, NIP:1, SPBY:1, SPJ:1, PPK:1, KPA:1,
-                       JSON:1, LAT:1, LNG:1, PD:1, DIPA:1, DRPP:1, SPP:1 };
+                       JSON:1, LAT:1, LNG:1, PD:1, DIPA:1, DRPP:1, SPP:1, PB:1, SSP:1 };
 
   /** Ubah token CONFIG.HEADERS (mis. 'KUITANSI_FILE_ID') jadi label rapi ('Kuitansi File ID'). */
   function _friendlyHeader(token) {

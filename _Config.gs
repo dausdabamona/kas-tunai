@@ -45,7 +45,8 @@ var CONFIG = {
     AUDIT_LOG:      'Audit Log',
     USERS:          'Users',
     DETAIL_NOTA:    'Detail Nota',
-    SESSIONS:       'Sessions'
+    SESSIONS:       'Sessions',
+    SAKTI_SPBY:     'SAKTI_SPBy'
   },
 
   // Index kolom sheet Kas Tunai (0-based, A-X = 24 kolom inti + kolom kuitansi TTD)
@@ -59,7 +60,9 @@ var CONFIG = {
     SUMBER: 27, REF_TRANSFER: 28, NILAI_SPBY: 29, AKUN: 30, PERSEDIAAN: 31,
     PAJAK_KATEGORI_IDX: 32, PAJAK_PPH: 33, PAJAK_PPN: 34, PAJAK_DPP: 35,
     // Kunci penghubung rekonsiliasi SAKTI (Fase 1) — ditambah di kanan.
-    NO_KUITANSI: 36, NO_DRPP: 37, NO_SPP: 38
+    NO_KUITANSI: 36, NO_DRPP: 37, NO_SPP: 38,
+    // Status rekonsiliasi SAKTI (Fase 2) — diisi engine, jangan diketik manual.
+    STATUS_REKON: 39, REKON_REF_PB: 40, REKON_BATCH: 41
   },
 
   // Header tiap sheet (urut sesuai kolom FISIK sheet asli)
@@ -73,7 +76,8 @@ var CONFIG = {
       'KUITANSI_FILE_ID', 'KUITANSI_NAMA_FILE', 'KUITANSI_URL',
       'SUMBER', 'REF_TRANSFER', 'NILAI_SPBY', 'AKUN', 'PERSEDIAAN',
       'PAJAK_KATEGORI_IDX', 'PAJAK_PPH', 'PAJAK_PPN', 'PAJAK_DPP',
-      'NO_KUITANSI', 'NO_DRPP', 'NO_SPP'
+      'NO_KUITANSI', 'NO_DRPP', 'NO_SPP',
+      'STATUS_REKON', 'REKON_REF_PB', 'REKON_BATCH'
     ],
     MULTI_NOTA: [
       'NO_TRANSAKSI', 'ROW_INDEX', 'URUTAN', 'NAMA_NOTA', 'NOMINAL',
@@ -127,6 +131,12 @@ var CONFIG = {
       'HARGA_SATUAN', 'SUBTOTAL', 'KETERANGAN', 'NOTA_URUTAN', 'FILE_ID',
       'NAMA_FILE', 'URL_FILE', 'LAT', 'LNG', 'MAPS_URL', 'WAKTU',
       'IS_DELETED', 'DELETED_AT', 'DELETED_BY'
+    ],
+    // Acuan ekspor SAKTI (Fase 2) — ditulis hanya oleh impor & engine cocok.
+    SAKTI_SPBY: [
+      'TGL_PB', 'NO_PB', 'AKUN_BELANJA', 'NILAI_AKUN_BELANJA', 'NO_KUITANSI',
+      'TGL_KUITANSI', 'NO_DRPP', 'NO_SPP_SSP', 'AKUN_PAJAK', 'NILAI_PAJAK',
+      'NO_BUKTI_PUNGUT', 'STATUS_VALIDASI', 'IMPORT_BATCH', 'MATCHED', 'MATCHED_TXN_NO'
     ]
   },
 

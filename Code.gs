@@ -329,6 +329,21 @@ function serverImporBank(token, list) {
     return hasil;
   });
 }
+
+/* ============================================================
+ * Rekonsiliasi SAKTI (Fase 2) — impor + auto-cocok Tier 0
+ * ============================================================ */
+/** Impor baris ekspor SAKTI (sudah dipetakan di frontend) → upsert SAKTI_SPBy +
+ *  jalankan pencocokan Tier 0. list: [{tglPb,noPb,akun,nilai,noKuitansi,tglKuitansi,
+ *  noDrpp,noSpp,noBuktiPungut,statusValidasi}]. Kembalikan ringkasan hasil. */
+function serverImporSakti(token, list) {
+  return _run(token, function (auth) { return Rekonsiliasi.impor(list); });
+}
+/** Jalankan ulang pencocokan Tier 0 tanpa impor baru (idempoten). */
+function serverCocokRekon(token) {
+  return _run(token, function (auth) { return Rekonsiliasi.cocok(); });
+}
+
 /* ============================================================
  * Bukti Perjalanan Dinas (tiket/boarding) + SPJ bundel
  * ============================================================ */

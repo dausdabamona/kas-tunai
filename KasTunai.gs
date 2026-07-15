@@ -50,7 +50,10 @@ var KasTunai = (function () {
       pajakDpp:        Util.num(row[C.PAJAK_DPP]),
       noKuitansi:      row[C.NO_KUITANSI] || '',   // kunci penghubung SAKTI (Fase 1)
       noDrpp:          row[C.NO_DRPP] || '',
-      noSpp:           row[C.NO_SPP] || ''
+      noSpp:           row[C.NO_SPP] || '',
+      statusRekon:     row[C.STATUS_REKON] || '',  // status rekonsiliasi SAKTI (Fase 2)
+      rekonRefPb:      row[C.REKON_REF_PB] || '',
+      rekonBatch:      row[C.REKON_BATCH] || ''
     };
   }
   /** Normalkan spasi No Kuitansi (kunci rekonsiliasi) tanpa mengubah isi lain. */
