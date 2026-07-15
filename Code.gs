@@ -609,3 +609,40 @@ function setupSuperAdminPassword(passwordBaru) {
   Logger.log('Password Super Admin berhasil disiapkan. Email: ' + superEmail);
   return { success: true, email: superEmail };
 }
+
+/**
+ * BREAK-GLASS: reset password + buka lockout, dijalankan langsung dari editor GAS
+ * (bukan lewat web app). Dipakai bila admin terkunci / lupa password.
+ * Cara pakai: edit dua konstanta di bawah, lalu klik Run. Setelah bisa masuk,
+ * ganti password lewat menu aplikasi. JANGAN commit password asli ke repo.
+ */
+function resetPasswordDarurat() {
+  // ====== EDIT DUA BARIS INI, lalu klik Run ======
+  var EMAIL         = 'dausdaba@polikpsorong.ac.id'; // email yang mau direset
+  var PASSWORD_BARU = 'GANTI_MIN_8_KARAKTER';        // password sementara (min 8 karakter)
+  // ================================================
+
+  var email = String(EMAIL || '').trim().toLowerCase();
+  if (!email || email.indexOf('@') < 0) throw new Error('EMAIL tidak valid');
+  if (PASSWORD_BARU === 'GANTI_MIN_8_KARAKTER')
+    throw new Error('Ganti PASSWORD_BARU dulu sebelum menjalankan');
+  if (!PASSWORD_BARU || PASSWORD_BARU.length < 8)
+    throw new Error('Password minimal 8 karakter');
+
+  var salt = Utilities.getUuid();
+  var hash = _hash(salt, PASSWORD_BARU);
+  var user = Users.findForLogin(email);
+  if (user) {
+    Users.setPassword(email, hash, salt, false);        // set password + buka lockout
+  } else if (email === String(CONFIG.SUPER_ADMIN || '').trim().toLowerCase()) {
+    // Super Admin belum punya baris di sheet Users — tambahkan (spt setupSuperAdminPassword)
+    SheetRepo.appendRow(CONFIG.SHEETS.USERS,
+      [email, '(Super Admin)', 'admin', new Date(), 'system', hash, salt, '', 0, '']);
+    DeferredFlush.mark();
+  } else {
+    throw new Error('User ' + email + ' belum terdaftar. Tambahkan via Kelola User dulu.');
+  }
+  DeferredFlush.commitAndInvalidate();
+  Logger.log('[resetPasswordDarurat] password direset & lockout dibuka: ' + email);
+  return { success: true, email: email };
+}
