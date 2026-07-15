@@ -13,9 +13,16 @@ var Rekonsiliasi = (function () {
   function _norm(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); }
   /** Baris pajak SAKTI: Akun diawali '411' (mis. 411xxx). */
   function _isPajak(akun) { return String(akun || '').replace(/\s+/g, '').indexOf('411') === 0; }
-  /** Kunci dedup baris SAKTI = No PB | No Kuitansi | Nilai (dibulatkan ke rupiah). */
+  /** Kanonisasi ID agar tahan koersi tipe Google Sheets: teks "00001" bisa
+   *  tersimpan sbg angka 1. Angka murni → parseInt (buang nol depan); selain itu
+   *  teks di-trim + huruf besar. Konsisten utk baris lama & baru. */
+  function _keyText(v) {
+    var s = String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+    return /^\d+$/.test(s) ? String(parseInt(s, 10)) : s.toUpperCase();
+  }
+  /** Kunci dedup baris SAKTI = No PB | No Kuitansi | Nilai (tanpa tanggal). */
   function _dedupKey(noPb, noKuitansi, nilai) {
-    return _norm(noPb) + '|' + _norm(noKuitansi) + '|' + Math.round(Util.num(nilai));
+    return _keyText(noPb) + '|' + _keyText(noKuitansi) + '|' + Math.round(Util.num(nilai));
   }
   function _batchId() {
     return 'B' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmmss');
@@ -48,34 +55,26 @@ var Rekonsiliasi = (function () {
     SheetRepo.sheet(name);                                // pastikan sheet ada (auto-create)
     var sc = SC(), width = CONFIG.HEADERS.SAKTI_SPBY.length;
     var data = SheetRepo.getData(name);
-    var idx = {}, pbToRows = {};                          // dedupKey->rowIndex ; noPb->[rowIndex]
+    var idx = {};                                         // dedupKey -> rowIndex (1-based)
     for (var i = 0; i < data.length; i++) {
       var r = data[i];
       idx[_dedupKey(r[sc.NO_PB], r[sc.NO_KUITANSI], r[sc.NILAI_AKUN_BELANJA])] = i + 2;
-      var pb0 = _norm(r[sc.NO_PB]); if (pb0) { (pbToRows[pb0] = pbToRows[pb0] || []).push(i + 2); }
     }
-    var res = { ditambah: 0, diperbarui: 0 }, pajak = [];
+    // Simpan SETIAP baris data sbg baris SAKTI_SPBy (termasuk baris pajak 411xxx —
+    // dikecualikan dari pencocokan oleh engine, bukan dibuang). Idempoten: kunci
+    // sudah ada → update; belum → tambah.
+    var res = { ditambah: 0, diperbarui: 0 };
     list = list || [];
     for (var j = 0; j < list.length; j++) {
       var it = list[j];
-      if (_isPajak(it.akun)) { pajak.push(it); continue; }      // baris pajak → lampirkan nanti
       var key = _dedupKey(it.noPb, it.noKuitansi, it.nilai);
       if (idx[key]) {
         SheetRepo.setCells(name, idx[key], _saktiUpdates(it, batch, sc));
         res.diperbarui++;
       } else {
-        var newRow = SheetRepo.appendRow(name, _saktiRow(it, batch, sc, width));
-        idx[key] = newRow;
-        var pb = _norm(it.noPb); if (pb) { (pbToRows[pb] = pbToRows[pb] || []).push(newRow); }
+        idx[key] = SheetRepo.appendRow(name, _saktiRow(it, batch, sc, width));
         res.ditambah++;
       }
-    }
-    // Lampirkan baris pajak (411xxx) sebagai atribut baris belanja ber-No PB sama.
-    for (var p = 0; p < pajak.length; p++) {
-      var pj = pajak[p], rows = pbToRows[_norm(pj.noPb)] || [];
-      var upd = Util.set(sc.AKUN_PAJAK, _norm(pj.akun), sc.NILAI_PAJAK, Util.num(pj.nilai),
-                         sc.NO_BUKTI_PUNGUT, _norm(pj.noBuktiPungut));
-      for (var q = 0; q < rows.length; q++) SheetRepo.setCells(name, rows[q], upd);
     }
     DeferredFlush.mark();
     return res;

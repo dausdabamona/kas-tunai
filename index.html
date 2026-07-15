@@ -3263,9 +3263,9 @@ function _skDataRows(){
   function cell(r,c){ return (c>=0 && r[c]!=null)?String(r[c]).trim():''; }
   for(var i=hdr+1;i<_skRows.length;i++){
     var r=_skRows[i]; if(!r) continue;
-    var ku=cell(r,cKu), ak=cell(r,cAk), ni=(cNi>=0?_rkNum(r[cNi]):0);
-    if(!ku && ni===0 && !ak) continue;   // baris kosong
-    out.push({ tglPb:_rkToISO(cTp>=0?r[cTp]:''), noPb:cell(r,cPb), akun:ak, nilai:ni,
+    var pb=cell(r,cPb), ku=cell(r,cKu), ak=cell(r,cAk), ni=(cNi>=0?_rkNum(r[cNi]):0);
+    if(!pb && !ku && !ak && ni===0) continue;   // hanya lewati baris kosong total
+    out.push({ tglPb:_rkToISO(cTp>=0?r[cTp]:''), noPb:pb, akun:ak, nilai:ni,
       noKuitansi:ku, tglKuitansi:_rkToISO(cTk>=0?r[cTk]:''), noDrpp:cell(r,cDr),
       noSpp:cell(r,cSp), noBuktiPungut:cell(r,cBk) });
   }
