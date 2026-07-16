@@ -13,6 +13,7 @@
     --c-bg:#eef1f5; --c-card:#fff; --c-line:#e2e6ec;
     --c-text:#1f2937; --c-muted:#6b7280; --c-ok:#16a34a; --c-warn:#ea580c;
     --c-err:#dc2626; --c-purple:#7c3aed; --radius:12px;
+    --c-teal:#0d9488; --c-teal-bg:#f0fdfa;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{margin:0;font-family:-apple-system,Roboto,"Segoe UI",sans-serif;
@@ -187,6 +188,38 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   #loading .msg{font-size:14px;color:var(--c-text);font-weight:600}
   .hidden{display:none!important}
+
+  /* ===== Fase 3: Rekonsiliasi (token desain teal) ===== */
+  .tnum{font-variant-numeric:tabular-nums}
+  .kk{background:var(--c-teal-bg);border:1px solid #99f6e4;border-radius:var(--radius);padding:14px;margin-bottom:12px}
+  .kk-lbl{font-size:12px;font-weight:700;color:var(--c-teal);letter-spacing:.02em}
+  .kk-num{font-size:30px;font-weight:800;color:#0f766e;line-height:1.1;margin:2px 0 8px}
+  .kk-badge{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:7px 13px;font-size:13px;font-weight:700}
+  .kk-badge svg{width:17px;height:17px;flex:none}
+  .kk-badge.g{background:#dcfce7;color:#166534} .kk-badge.y{background:#fef9c3;color:#854d0e} .kk-badge.r{background:#fee2e2;color:#991b1b} .kk-badge.n{background:#e2e8f0;color:#475569}
+  .kk-hr{border:0;border-top:1px solid #99f6e4;margin:12px 0}
+  .kk-work-t{font-size:12px;font-weight:700;color:var(--c-muted);margin-bottom:6px}
+  .kk-work{display:flex;align-items:center;gap:8px;min-height:44px;padding:6px 4px;border-bottom:1px dashed #cbd5e1}
+  .kk-work:last-child{border-bottom:0}
+  .kk-work .ic{flex:none;display:inline-flex} .kk-work .ic svg{width:18px;height:18px}
+  .kk-work .tx{flex:1;font-size:13px;color:var(--c-text)}
+  .kk-work button{min-height:38px;border:0;border-radius:8px;padding:0 14px;font-size:12.5px;font-weight:700;color:#fff;background:var(--c-teal)}
+  .kk-work button.ghost{background:#fff;color:var(--c-teal);border:1px solid var(--c-teal)}
+  /* Layar Rekonsiliasi */
+  #tabRekon.active{color:var(--c-teal)}
+  .rk-filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+  .rk-filters select{min-height:44px;border:1px solid var(--c-line);border-radius:9px;padding:0 10px;font-size:13px;background:#fff}
+  .rk-row{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--c-line);border-radius:10px;margin-bottom:7px;background:#fff}
+  .rk-row.click{cursor:pointer} .rk-row.click:active{background:#f8fafc}
+  .rk-badge{display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;flex:none;min-width:96px}
+  .rk-badge svg{width:14px;height:14px}
+  .rk-badge.g{background:#dcfce7;color:#166534} .rk-badge.y{background:#fef9c3;color:#854d0e} .rk-badge.r{background:#fee2e2;color:#991b1b} .rk-badge.n{background:#eef2f7;color:#64748b}
+  .rk-mid{flex:1;min-width:0} .rk-mid .keg{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rk-mid .sub{font-size:11px;color:var(--c-muted)}
+  .rk-amt{font-size:13px;font-weight:700;text-align:right;flex:none}
+  .rk-delta{color:var(--c-err);font-size:11px;font-weight:700}
+
+  @media (prefers-reduced-motion:reduce){ *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important} }
 </style>
 </head>
 <body>
@@ -207,6 +240,7 @@
   <button id="tabSpd" onclick="switchTab('spd')">&#9992; Perjalanan Dinas</button>
   <button id="tabLaporan" onclick="switchTab('laporan')">&#128202; Laporan</button>
   <button id="tabPapanKerja" onclick="switchTab('papanKerja')">&#128203; Papan Kerja</button>
+  <button id="tabRekon" onclick="switchTab('rekon')">&#128260; Rekonsiliasi</button>
   <button id="btnUsers" class="hidden" onclick="openModalUsers()">&#128101; Kelola User</button>
   <button id="btnSettings" class="hidden" onclick="openModalSettings()">&#9881; Pengaturan</button>
 </div>
@@ -230,6 +264,8 @@
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalSpbyGab()">&#128203; SPBY Gabungan</button>
     </div>
   </div>
+
+  <div id="kartuKetenangan" class="kk hidden"></div>
 
   <div class="search">&#128269;
     <input type="text" id="searchBox" placeholder="Cari kegiatan atau penjab..." oninput="onSearch()">
@@ -449,6 +485,27 @@
   .pk-next{font-size:11px;color:#5b7089;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pk-urg-time{font-size:10px;font-weight:700;white-space:nowrap;flex:0 0 auto}
 </style>
+<div id="viewRekon" class="wrap hidden">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+    <div style="font-size:19px;font-weight:800;color:#0f766e;display:flex;align-items:center;gap:8px">&#128260; Rekonsiliasi SAKTI</div>
+    <button class="btn" style="width:auto;padding:10px 16px;margin:0;min-height:44px;background:var(--c-teal)" onclick="cetakRekon()">&#128424; Cetak Kertas Kerja</button>
+  </div>
+  <div id="rekonRingkas" style="font-size:13px;color:var(--c-muted);margin-bottom:10px"></div>
+  <div class="rk-filters">
+    <select id="rkFilterBulan" onchange="renderRekon()"><option value="">Semua bulan</option></select>
+    <select id="rkFilterStatus" onchange="renderRekon()">
+      <option value="">Semua status</option>
+      <option value="COCOK">COCOK</option>
+      <option value="BELUM">BELUM</option>
+      <option value="NILAI_BEDA">NILAI BEDA</option>
+      <option value="NON_REKON">Non-rekon</option>
+    </select>
+    <select id="rkFilterDrpp" onchange="renderRekon()"><option value="">Semua DRPP</option></select>
+    <select id="rkFilterSpp" onchange="renderRekon()"><option value="">Semua SPP</option></select>
+  </div>
+  <div id="rekonList"></div>
+</div>
+
 <div id="viewPapanKerja" class="wrap hidden">
   <div class="pk-outer">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:8px">
@@ -1314,13 +1371,16 @@ function switchTab(tab){
   document.getElementById('viewSpd').classList.toggle('hidden',tab!=='spd');
   document.getElementById('viewLaporan').classList.toggle('hidden',tab!=='laporan');
   document.getElementById('viewPapanKerja').classList.toggle('hidden',tab!=='papanKerja');
+  document.getElementById('viewRekon').classList.toggle('hidden',tab!=='rekon');
   document.getElementById('tabTransaksi').classList.toggle('active',tab==='transaksi');
   document.getElementById('tabSpd').classList.toggle('active',tab==='spd');
   document.getElementById('tabLaporan').classList.toggle('active',tab==='laporan');
   document.getElementById('tabPapanKerja').classList.toggle('active',tab==='papanKerja');
+  document.getElementById('tabRekon').classList.toggle('active',tab==='rekon');
   if(tab==='laporan') loadRekap();
   if(tab==='spd' && !document.getElementById('spdPpk').value) resetSpdForm();
   if(tab==='papanKerja'){ _pkSetDate(); renderPapanKerja(); }
+  if(tab==='rekon') renderRekon();
 }
 
 /* Tampilkan tombol impor-scan bila folder scan aktif. Butuh sesi valid,
@@ -1345,12 +1405,169 @@ function loadAll(){
       if(d&&typeof d.isAdmin!=='undefined') IS_ADMIN=!!d.isAdmin;
       _applyRoleUI();
       _refreshScanAktif();
+      _refreshRingkasanRekon();
       showLoading(false);
       renderList();
       if(!document.getElementById('viewPapanKerja').classList.contains('hidden')) renderPapanKerja();
     })
     .withFailureHandler(fail)
     .serverGetDashboard(_tok);
+}
+
+/* ============== Rekonsiliasi Fase 3: Kartu Ketenangan ============== */
+var _rekonInfo=null, _rekonBedaMap={};
+/* Ikon status (SVG gaya Lucide) — warna dari currentColor. */
+function _ikonRekon(s){
+  var p={
+    g:'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+    y:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+    r:'<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
+  }[s]||'';
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';
+}
+function _refreshRingkasanRekon(){
+  if(!_tok) return;
+  google.script.run.withSuccessHandler(function(res){
+    _rekonInfo=res||null; _rekonBedaMap={};
+    if(res&&res.nilaiBeda) for(var i=0;i<res.nilaiBeda.length;i++) _rekonBedaMap[String(res.nilaiBeda[i].no)]=res.nilaiBeda[i].selisih;
+    renderKartuKetenangan();
+    if(!document.getElementById('viewRekon').classList.contains('hidden')) renderRekon();
+  }).withFailureHandler(function(){}).serverRingkasanRekon(_tok,'');
+}
+function renderKartuKetenangan(){
+  var el=document.getElementById('kartuKetenangan'); if(!el) return;
+  if(isViewer || !_rekonInfo){ el.classList.add('hidden'); return; }
+  var c=_rekonInfo.counts||{}, li=_rekonInfo.lastImport;
+  // lencana JUJUR: merah > kuning > hijau
+  var badge, cls, ikon;
+  if((c.nilaiBeda||0)>0){ cls='r'; ikon='r'; badge=(c.nilaiBeda)+' nilai beda vs SAKTI — perlu ditelusuri'; }
+  else if((c.belum||0)>0){ cls='y'; ikon='y'; badge='Belum direkonsiliasi — '+(c.belum)+' transaksi belum ada No. Kuitansi'; }
+  else if((c.cocok||0)>0){ cls='g'; ikon='g'; badge='Semua cocok dengan SAKTI ('+(c.cocok)+' transaksi)'; }
+  else { cls='n'; ikon='y'; badge='Belum ada data rekonsiliasi'; }
+  var saldo=(_rekonInfo.saldo&&_rekonInfo.saldo.total)||0;
+  var h='<div class="kk-lbl">SALDO YANG BISA DIPERTANGGUNGJAWABKAN</div>'
+    +'<div class="kk-num tnum">'+rupiah(saldo)+'</div>'
+    +'<span class="kk-badge '+cls+'">'+_ikonRekon(ikon)+'<span>'+esc(badge)+'</span></span>'
+    +'<hr class="kk-hr"><div class="kk-work-t">Perlu dikerjakan</div>';
+  if((c.belum||0)>0)
+    h+='<div class="kk-work"><span class="ic" style="color:#854d0e">'+_ikonRekon('y')+'</span>'
+      +'<span class="tx">'+c.belum+' transaksi belum ada kuitansi</span>'
+      +'<button onclick="bukaRekon(\'BELUM\')">Buka</button></div>';
+  if((c.nilaiBeda||0)>0)
+    h+='<div class="kk-work"><span class="ic" style="color:#991b1b">'+_ikonRekon('r')+'</span>'
+      +'<span class="tx">'+c.nilaiBeda+' nilai beda (telusuri)</span>'
+      +'<button onclick="bukaRekon(\'NILAI_BEDA\')">Buka</button></div>';
+  var imp = li ? ('terakhir impor SAKTI: '+(li.hariLalu===0?'hari ini':(li.hariLalu!=null?li.hariLalu+' hari lalu':li.tanggal))) : 'SAKTI belum pernah diimpor';
+  h+='<div class="kk-work"><span class="ic" style="color:#0d9488">'+_ikonRekon('g')+'</span>'
+    +'<span class="tx">'+esc(imp)+'</span>'
+    +'<button class="ghost" onclick="openModalImporSakti()">Impor</button></div>';
+  el.innerHTML=h; el.classList.remove('hidden');
+}
+function bukaRekon(status){
+  switchTab('rekon');
+  var sel=document.getElementById('rkFilterStatus'); if(sel){ sel.value=status; }
+  renderRekon();
+}
+/* ============== Layar Rekonsiliasi ============== */
+function _rekonStatusJS(t){
+  var ref=String(t.refTransfer||'');
+  if(!((+t.kredit>0) && ref.indexOf('TF-')!==0 && ref.indexOf('RK-')!==0)) return 'NON_REKON';
+  var s=String(t.statusRekon||'').toUpperCase();
+  return (s==='COCOK'||s==='NILAI_BEDA')?s:'BELUM';
+}
+function _rkBadge(s){
+  var m={COCOK:['g','COCOK','g'],BELUM:['y','BELUM','y'],NILAI_BEDA:['r','BEDA','r'],NON_REKON:['n','Non-rekon','']}[s]||['n','-',''];
+  return '<span class="rk-badge '+m[0]+'">'+(m[2]?_ikonRekon(m[2]):'')+m[1]+'</span>';
+}
+function _fillSelect(id, values, allLabel){
+  var sel=document.getElementById(id); if(!sel) return;
+  var cur=sel.value; values.sort();
+  var h='<option value="">'+allLabel+'</option>';
+  for(var i=0;i<values.length;i++) h+='<option value="'+esc(values[i])+'">'+esc(values[i])+'</option>';
+  sel.innerHTML=h; sel.value=cur;
+}
+function _fillRekonFilters(){
+  var bulan={},drpp={},spp={};
+  for(var i=0;i<allTransaksi.length;i++){ var t=allTransaksi[i];
+    var b=String(t.tanggal||'').slice(0,7); if(b) bulan[b]=1;
+    if(t.noDrpp) drpp[String(t.noDrpp)]=1;
+    if(t.noSpp) spp[String(t.noSpp)]=1;
+  }
+  _fillSelect('rkFilterBulan',Object.keys(bulan),'Semua bulan');
+  _fillSelect('rkFilterDrpp',Object.keys(drpp),'Semua DRPP');
+  _fillSelect('rkFilterSpp',Object.keys(spp),'Semua SPP');
+}
+/* Hitung baris terfilter + jumlah per status (dipakai layar & cetak). */
+function _rekonCompute(){
+  var fB=(document.getElementById('rkFilterBulan')||{}).value||'',
+      fS=(document.getElementById('rkFilterStatus')||{}).value||'',
+      fD=(document.getElementById('rkFilterDrpp')||{}).value||'',
+      fP=(document.getElementById('rkFilterSpp')||{}).value||'';
+  var rows=[], cnt={COCOK:0,BELUM:0,NILAI_BEDA:0,NON_REKON:0};
+  for(var i=0;i<allTransaksi.length;i++){ var t=allTransaksi[i], st=_rekonStatusJS(t);
+    cnt[st]=(cnt[st]||0)+1;
+    if(fS&&st!==fS) continue;
+    if(fB&&String(t.tanggal||'').slice(0,7)!==fB) continue;
+    if(fD&&String(t.noDrpp||'')!==fD) continue;
+    if(fP&&String(t.noSpp||'')!==fP) continue;
+    rows.push({t:t,st:st});
+  }
+  return {rows:rows, cnt:cnt};
+}
+function renderRekon(){
+  var box=document.getElementById('rekonList'); if(!box) return;
+  _fillRekonFilters();
+  var res=_rekonCompute(), rows=res.rows, c=res.cnt;
+  document.getElementById('rekonRingkas').innerHTML=
+    'Rekonsiliabel: '+(c.COCOK+c.BELUM+c.NILAI_BEDA)+' &middot; '
+    +'<b style="color:#166534">'+c.COCOK+' cocok</b> &middot; '
+    +'<b style="color:#854d0e">'+c.BELUM+' belum</b> &middot; '
+    +'<b style="color:#991b1b">'+c.NILAI_BEDA+' nilai beda</b> &middot; '
+    +c.NON_REKON+' non-rekon';
+  if(!rows.length){ box.innerHTML='<div style="text-align:center;color:var(--c-muted);padding:20px">Tidak ada transaksi untuk filter ini.</div>'; return; }
+  var h='';
+  for(var j=0;j<rows.length;j++){ var t=rows[j].t, st=rows[j].st;
+    var act=(st==='BELUM'||st==='NILAI_BEDA');
+    var d=(st==='NILAI_BEDA'&&_rekonBedaMap[String(t.no)]!=null)?('<div class="rk-delta">&Delta; '+rupiah(Math.abs(_rekonBedaMap[String(t.no)]))+'</div>'):'';
+    var sub=esc(t.tanggal||'')+(t.rekonRefPb?(' &middot; '+esc(t.rekonRefPb)):'')+(t.noKuitansi?(' &middot; '+esc(t.noKuitansi)):'');
+    h+='<div class="rk-row'+(act?' click':'')+'"'+(act?(' onclick="editTransaksi(\''+esc(String(t.no))+'\')"'):'')+'>'
+      +_rkBadge(st)
+      +'<div class="rk-mid"><div class="keg">'+esc(t.kegiatan||'-')+'</div><div class="sub">'+sub+'</div></div>'
+      +'<div class="rk-amt tnum">'+rupiah(+t.kredit||0)+d+'</div></div>';
+  }
+  box.innerHTML=h;
+}
+function cetakRekon(){
+  var res=_rekonCompute(), rows=res.rows, c=res.cnt;
+  var lbl={COCOK:'COCOK',BELUM:'BELUM',NILAI_BEDA:'NILAI BEDA',NON_REKON:'NON-REKON'};
+  var body='';
+  for(var i=0;i<rows.length;i++){ var t=rows[i].t, st=rows[i].st;
+    var d=(st==='NILAI_BEDA'&&_rekonBedaMap[String(t.no)]!=null)?rupiah(Math.abs(_rekonBedaMap[String(t.no)])):'';
+    body+='<tr><td>'+esc(String(t.no))+'</td><td>'+esc(t.tanggal||'')+'</td><td>'+esc(t.kegiatan||'')+'</td>'
+      +'<td class="r">'+rupiah(+t.kredit||0)+'</td><td>'+esc(t.rekonRefPb||'')+'</td><td>'+esc(t.noKuitansi||'')+'</td>'
+      +'<td>'+lbl[st]+'</td><td class="r">'+d+'</td></tr>';
+  }
+  var rekonabel=c.COCOK+c.BELUM+c.NILAI_BEDA;
+  var html='<html><head><meta charset="utf-8"><title>Kertas Kerja Rekonsiliasi</title><style>'
+    +'@page{size:A4 landscape;margin:10mm} *{font-family:Arial,sans-serif;box-sizing:border-box}'
+    +'body{font-size:11px;color:#1f2937;margin:0;padding:10mm}'
+    +'h1{font-size:16px;margin:0 0 2px} .sub{color:#6b7280;font-size:11px;margin-bottom:10px}'
+    +'.sum{margin:8px 0 12px;font-size:12px} .sum b{margin-right:14px}'
+    +'table{width:100%;border-collapse:collapse} th,td{border:1px solid #cbd5e1;padding:4px 6px;text-align:left;vertical-align:top}'
+    +'th{background:#f0fdfa;color:#0f766e} td.r,th.r{text-align:right;font-variant-numeric:tabular-nums}'
+    +'.noprint{margin-bottom:10px;text-align:right}@media print{.noprint{display:none}}'
+    +'</style></head><body>'
+    +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button></div>'
+    +'<h1>Kertas Kerja Rekonsiliasi SAKTI</h1>'
+    +'<div class="sub">Politeknik Kelautan dan Perikanan Sorong &middot; Satker 634146 &middot; dicetak '+esc(todayISO())+'</div>'
+    +'<div class="sum">Transaksi rekonsiliabel: <b>'+rekonabel+'</b> '
+    +'<b style="color:#166534">COCOK: '+c.COCOK+'</b>'
+    +'<b style="color:#854d0e">BELUM: '+c.BELUM+'</b>'
+    +'<b style="color:#991b1b">NILAI BEDA: '+c.NILAI_BEDA+'</b>'
+    +'<b style="color:#64748b">Non-rekon: '+c.NON_REKON+'</b></div>'
+    +'<table><tr><th>No</th><th>Tanggal</th><th>Kegiatan</th><th class="r">Nilai</th><th>No PB</th><th>No Kuitansi</th><th>Status</th><th class="r">Selisih</th></tr>'
+    +body+'</table></body></html>';
+  _bukaPopup(html);
 }
 
 /* ============== Status & filter ============== */
