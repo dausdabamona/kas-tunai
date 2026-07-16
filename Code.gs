@@ -348,6 +348,11 @@ function serverCocokRekon(token) {
 function serverBackfillKuitansi(token, list) {
   return _run(token, function (auth) { return Rekonsiliasi.backfillKuitansi(list); });
 }
+/** Ringkasan rekonsiliasi utk Kartu Ketenangan (baca Status Rekon + saldo).
+ *  periode '' = semua; 'YYYY-MM' = bulan tertentu. */
+function serverRingkasanRekon(token, periode) {
+  return _run(token, function (auth) { return Rekonsiliasi.ringkasan(periode || ''); });
+}
 
 /* ============================================================
  * Bukti Perjalanan Dinas (tiket/boarding) + SPJ bundel

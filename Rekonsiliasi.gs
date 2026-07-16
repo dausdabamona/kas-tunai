@@ -206,6 +206,61 @@ var Rekonsiliasi = (function () {
     ctx.conflict = true; ctx.detail.push(label + ': "' + cur + '" != "' + inc + '"');  // beda → bentrok, jangan timpa
   }
 
+  /* ---------------- Ringkasan Fase 3 (baca status, tak hitung ulang) ---------------- */
+  /** Transaksi rekonsiliabel = pengeluaran (kredit>0) yang BUKAN pindah dana (TF-)
+   *  maupun mutasi bank (RK-). Selebihnya NON_REKON (tak dihitung lencana). */
+  function _rekonabel(t) {
+    var ref = String(t.refTransfer || '');
+    return Util.num(t.kredit) > 0 && ref.indexOf('TF-') !== 0 && ref.indexOf('RK-') !== 0;
+  }
+  function _statusRekonOf(t) {
+    if (!_rekonabel(t)) return 'NON_REKON';
+    var s = String(t.statusRekon || '').toUpperCase();
+    return (s === 'COCOK' || s === 'NILAI_BEDA') ? s : 'BELUM';
+  }
+  /** Parse IMPORT_BATCH 'ByyyyMMdd-HHmmss' → {tanggal, hariLalu}. */
+  function _parseBatch(b) {
+    if (!b) return null;
+    var m = String(b).match(/(\d{4})(\d{2})(\d{2})/);
+    if (!m) return { tanggal: String(b), hariLalu: null };
+    var d = new Date(+m[1], +m[2] - 1, +m[3]);
+    return { tanggal: Util.fmtDate(d),
+             hariLalu: Math.floor((new Date().getTime() - d.getTime()) / 86400000) };
+  }
+
+  /** Ringkasan rekonsiliasi utk Kartu Ketenangan (beranda). Baca Status Rekon +
+   *  saldo yang sudah dihitung + impor SAKTI terakhir. periode '' = semua. */
+  function ringkasan(periode) {
+    var tx = KasTunai.getTransaksi(), saldo = KasTunai.ringkasanSaldo();
+    var sName = CONFIG.SHEETS.SAKTI_SPBY;
+    SheetRepo.sheet(sName);
+    var sc = SC(), sData = SheetRepo.getData(sName), saktiByKu = {}, lastBatch = '';
+    for (var i = 0; i < sData.length; i++) {
+      var s = sData[i], b = String(s[sc.IMPORT_BATCH] || '');
+      if (b > lastBatch) lastBatch = b;
+      if (_isPajak(s[sc.AKUN_BELANJA])) continue;
+      var ku = _keyText(s[sc.NO_KUITANSI]); if (!ku) continue;
+      if (!(ku in saktiByKu)) saktiByKu[ku] = Util.num(s[sc.NILAI_AKUN_BELANJA]);
+    }
+    var counts = { cocok: 0, belum: 0, nilaiBeda: 0, nonRekon: 0 }, nilaiBeda = [];
+    for (var j = 0; j < tx.length; j++) {
+      var t = tx[j];
+      if (periode && String(t.tanggal || '').slice(0, 7) !== periode) continue;
+      var st = _statusRekonOf(t);
+      if (st === 'NON_REKON') { counts.nonRekon++; continue; }
+      if (st === 'COCOK') { counts.cocok++; }
+      else if (st === 'NILAI_BEDA') {
+        counts.nilaiBeda++;
+        var kk = _keyText(t.noKuitansi), ns = (kk in saktiByKu) ? saktiByKu[kk] : 0;
+        nilaiBeda.push({ no: t.no, kegiatan: t.kegiatan, tanggal: t.tanggal,
+          kredit: Util.num(t.kredit), nilaiSakti: ns, selisih: Util.num(t.kredit) - ns,
+          refPb: t.rekonRefPb || '', kuitansi: t.noKuitansi || '' });
+      } else { counts.belum++; }
+    }
+    return { saldo: { tunai: saldo.saldoTunai, bank: saldo.saldoBank, total: saldo.saldoTotal },
+             counts: counts, lastImport: _parseBatch(lastBatch), nilaiBeda: nilaiBeda };
+  }
+
   return { impor: impor, cocok: cocokUlang, upsertSakti: upsertSakti,
-           backfillKuitansi: backfillKuitansi };
+           backfillKuitansi: backfillKuitansi, ringkasan: ringkasan };
 })();
