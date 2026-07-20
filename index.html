@@ -220,6 +220,15 @@
   .rk-delta{color:var(--c-err);font-size:11px;font-weight:700}
 
   @media (prefers-reduced-motion:reduce){ *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important} }
+  /* Pilih-untuk-gabung SPBY */
+  .sg-pick{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--c-teal);background:var(--c-teal-bg);border:1px solid #99f6e4;border-radius:8px;padding:6px 10px;margin-bottom:8px;cursor:pointer;min-height:36px}
+  .sg-pick input{width:18px;height:18px}
+  #spbyPickBar{position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:10px 14px;background:#0f766e;color:#fff;box-shadow:0 -4px 14px rgba(0,0,0,.18)}
+  #spbyPickBar .pb-info{flex:1;font-size:14px} #spbyPickBar .pb-info b{font-size:16px}
+  #spbyPickBar button{min-height:44px;border:0;border-radius:9px;padding:0 16px;font-size:14px;font-weight:800;cursor:pointer}
+  #spbyPickBar .pb-go{background:#fff;color:#0f766e} #spbyPickBar .pb-go[disabled]{opacity:.5;cursor:not-allowed}
+  #spbyPickBar .pb-cancel{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6)}
 </style>
 </head>
 <body>
@@ -262,6 +271,7 @@
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalImporSakti()">&#128203; Impor SAKTI</button>
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalBackfill()">&#128273; Backfill Kuitansi</button>
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalSpbyGab()">&#128203; SPBY Gabungan</button>
+      <button id="btnPickSpby" class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="toggleSpbyPick()">&#9745; Pilih untuk Gabung</button>
     </div>
   </div>
 
@@ -306,6 +316,7 @@
     <span class="r"><span id="daftarCount">0 transaksi</span></span>
   </div>
   <div id="listTransaksi"></div>
+  <div id="spbyPickBar" class="hidden"></div>
 </div>
 
 <!-- ================= TAB PERJALANAN DINAS ================= -->
@@ -1918,7 +1929,11 @@ function _cardHtml(t, mode){
   var lunasTxt = kembali>0
     ? ('&#10003; Lengkap &middot; Nota <span class="nota-big">'+rupiah(t.notaTotal)+'</span> + Kembali '+rupiah(kembali))
     : ('&#10003; Nota Lunas &middot; <span class="nota-big">'+rupiah(t.notaTotal)+'</span>');
-  var h='<div class="tcard '+st+'">'+head
+  var pick = _spbyPickMode
+    ? '<label class="sg-pick"><input type="checkbox" '+(_spbyPicks[t.no]!=null?'checked':'')
+      +' onchange="_togglePick('+t.no+','+(+t.kredit||0)+',this)"> Pilih untuk SPBY</label>'
+    : '';
+  var h='<div class="tcard '+st+'">'+pick+head
     +(lunas
        ? '<div class="amt amt-ok">&#10003; Lunas<span class="dt">'+esc(_tglID(t.tanggal))+'</span></div>'
        : '<div class="amt">-'+rupiah(sisa)+'<span class="dt">'+esc(_tglID(t.tanggal))+'</span></div>')
@@ -2598,21 +2613,50 @@ function submitPecah(){
     .serverPecahTransaksi(_tok, _pcTarget, parts);
 }
 /* ============== SPBY Gabungan ============== */
-function openModalSpbyGab(){
+function openModalSpbyGab(preselect){
   document.getElementById('sgNo').value='';
   document.getElementById('sgTgl').value=todayISO();
-  var box=document.getElementById('sgList');
+  var pre={}; if(preselect&&preselect.length) for(var p=0;p<preselect.length;p++) pre[String(preselect[p])]=1;
   var list=allTransaksi.filter(function(t){return t.kredit>0;}).filter(_notTransfer)
             .sort(function(a,b){return (+b.no||0)-(+a.no||0);});
   var h='';
   for(var i=0;i<list.length;i++){ var t=list[i];
     h+='<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 2px;border-bottom:1px solid var(--c-line);font-size:13px">'
-      +'<input type="checkbox" class="sg-cb" value="'+t.no+'" data-nom="'+(+t.kredit||0)+'" onchange="_sgRecalc()">'
+      +'<input type="checkbox" class="sg-cb" value="'+t.no+'" data-nom="'+(+t.kredit||0)+'" '+(pre[String(t.no)]?'checked':'')+' onchange="_sgRecalc()">'
       +'<span><b>#'+t.no+'</b> '+esc(t.kegiatan||'-')+' &middot; '+rupiah(t.kredit)
       +(t.noSpby?(' <span class="chip ok">SPBY '+esc(t.noSpby)+'</span>'):'')+'<br><span class="tgl">'+esc(_tglID(t.tanggal))+' &middot; '+esc(t.penjab||'-')+'</span></span></label>';
   }
   document.getElementById('sgList').innerHTML=h||'<div class="empty">Tidak ada transaksi</div>';
   _sgRecalc(); openModal('modalSpbyGab');
+}
+/* ====== Pilih-untuk-gabung langsung dari kartu transaksi ====== */
+var _spbyPickMode=false, _spbyPicks={};
+function toggleSpbyPick(){
+  _spbyPickMode=!_spbyPickMode; _spbyPicks={};
+  var b=document.getElementById('btnPickSpby');
+  if(b) b.innerHTML=_spbyPickMode?'&#10007; Batalkan Pilih':'&#9745; Pilih untuk Gabung';
+  renderList(); _renderPickBar();
+}
+function _togglePick(no,nom,el){
+  if(el&&el.checked) _spbyPicks[no]=(+nom||0); else delete _spbyPicks[no];
+  _renderPickBar();
+}
+function _renderPickBar(){
+  var bar=document.getElementById('spbyPickBar'); if(!bar) return;
+  if(!_spbyPickMode){ bar.classList.add('hidden'); return; }
+  var nos=Object.keys(_spbyPicks), sum=0; for(var i=0;i<nos.length;i++) sum+=(+_spbyPicks[nos[i]]||0);
+  bar.innerHTML='<span class="pb-info"><b>'+nos.length+'</b> dipilih &middot; Total <span class="tnum">'+rupiah(sum)+'</span></span>'
+    +'<button class="pb-go" '+(nos.length?'':'disabled')+' onclick="gabungSpbyDariPick()">Gabung jadi 1 SPBY</button>'
+    +'<button class="pb-cancel" onclick="toggleSpbyPick()">Batal</button>';
+  bar.classList.remove('hidden');
+}
+function gabungSpbyDariPick(){
+  var nos=Object.keys(_spbyPicks);
+  if(!nos.length){ toast('Pilih minimal 1 transaksi','error'); return; }
+  openModalSpbyGab(nos);
+  _spbyPickMode=false; _spbyPicks={};
+  var b=document.getElementById('btnPickSpby'); if(b) b.innerHTML='&#9745; Pilih untuk Gabung';
+  _renderPickBar();
 }
 function _sgChecked(){ var cbs=document.querySelectorAll('#sgList .sg-cb'), out=[]; for(var i=0;i<cbs.length;i++) if(cbs[i].checked) out.push(cbs[i]); return out; }
 function _sgRecalc(){
