@@ -272,6 +272,7 @@
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalBackfill()">&#128273; Backfill Kuitansi</button>
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalSpbyGab()">&#128203; SPBY Gabungan</button>
       <button id="btnPickSpby" class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="toggleSpbyPick()">&#9745; Pilih untuk Gabung</button>
+      <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="eksporSakti()">&#11015; Ekspor Data SAKTI</button>
     </div>
   </div>
 
@@ -1578,6 +1579,47 @@ function cetakRekon(){
     +'<b style="color:#64748b">Non-rekon: '+c.NON_REKON+'</b></div>'
     +'<table><tr><th>No</th><th>Tanggal</th><th>Kegiatan</th><th class="r">Nilai</th><th>No PB</th><th>No Kuitansi</th><th>Status</th><th class="r">Selisih</th></tr>'
     +body+'</table></body></html>';
+  _bukaPopup(html);
+}
+/* ====== Ekspor data untuk input SAKTI (Nilai SPBY & Pajak) ====== */
+function eksporSakti(){
+  var rows=allTransaksi.filter(function(t){ var ref=String(t.refTransfer||''); return (+t.kredit>0)&&ref.indexOf('TF-')!==0&&ref.indexOf('RK-')!==0; })
+    .sort(function(a,b){ return String(a.tanggal||'').localeCompare(String(b.tanggal||''))||((+a.no||0)-(+b.no||0)); });
+  if(!rows.length){ toast('Tidak ada transaksi belanja untuk diekspor','error'); return; }
+  var cols=['No','Tanggal','Kegiatan','Penjab','Akun/MAK','Sumber','Nilai Bayar','Nilai SPBY','No SPBY','Tgl SPBY','DPP','PPh','PPN','No Kuitansi','No DRPP','No SPP'];
+  function iv(n){ return Math.round(+n||0); }   // integer polos → Excel baca sebagai angka
+  var data=rows.map(function(t){ return [
+    t.no, t.tanggal||'', t.kegiatan||'', t.penjab||'', t.akun||'', t.sumber||'',
+    iv(t.kredit), iv(t.nilaiSpby), t.noSpby||'', t.tglSpby||'',
+    iv(t.pajakDpp), iv(t.pajakPph), iv(t.pajakPpn),
+    t.noKuitansi||'', t.noDrpp||'', t.noSpp||'' ]; });
+  var sBayar=0,sSpby=0,sDpp=0,sPph=0,sPpn=0;
+  for(var i=0;i<data.length;i++){ sBayar+=data[i][6]; sSpby+=data[i][7]; sDpp+=data[i][10]; sPph+=data[i][11]; sPpn+=data[i][12]; }
+  // CSV (BOM + koma; teks di-quote, angka polos)
+  function cc(v){ v=String(v==null?'':v); return /[",\n;]/.test(v)?('"'+v.replace(/"/g,'""')+'"'):v; }
+  var csv=cols.join(',')+'\n';
+  for(var i=0;i<data.length;i++) csv+=data[i].map(cc).join(',')+'\n';
+  var href=''; try{ href='data:text/csv;charset=utf-8;base64,'+btoa(unescape(encodeURIComponent('﻿'+csv))); }catch(e){}
+  // Tabel HTML (bisa disalin ke Excel)
+  var th=''; for(var c=0;c<cols.length;c++) th+='<th>'+esc(cols[c])+'</th>';
+  var tb='';
+  for(var i=0;i<data.length;i++){ var r=data[i]; tb+='<tr>';
+    for(var c=0;c<r.length;c++){ var num=(c===6||c===7||c===10||c===11||c===12); tb+='<td'+(num?' class="r"':'')+'>'+esc(String(r[c]))+'</td>'; }
+    tb+='</tr>'; }
+  tb+='<tr class="tot"><td colspan="6">TOTAL ('+data.length+' transaksi)</td><td class="r">'+sBayar+'</td><td class="r">'+sSpby+'</td><td></td><td></td><td class="r">'+sDpp+'</td><td class="r">'+sPph+'</td><td class="r">'+sPpn+'</td><td></td><td></td><td></td></tr>';
+  var html='<html><head><meta charset="utf-8"><title>Ekspor Data SAKTI</title><style>'
+    +'*{font-family:Arial,sans-serif;box-sizing:border-box} body{font-size:12px;color:#1f2937;margin:0;padding:16px}'
+    +'h1{font-size:16px;margin:0 0 4px} .info{color:#6b7280;font-size:12px;margin-bottom:10px;line-height:1.5}'
+    +'.bar{margin-bottom:10px} a.dl{background:#0f766e;color:#fff;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;text-decoration:none;display:inline-block}'
+    +'table{border-collapse:collapse;width:100%} th,td{border:1px solid #cbd5e1;padding:4px 7px;text-align:left;white-space:nowrap} th{background:#f0fdfa;color:#0f766e}'
+    +'td.r,th.r{text-align:right;font-variant-numeric:tabular-nums} tr.tot td{font-weight:800;background:#f8fafc}'
+    +'</style></head><body>'
+    +'<h1>Data untuk Input SAKTI &mdash; Nilai SPBY &amp; Pajak</h1>'
+    +'<div class="info">Politeknik KP Sorong &middot; Satker 634146 &middot; '+data.length+' transaksi belanja &middot; '+esc(todayISO())+'.<br>'
+    +'Salin tabel (klik di tabel &rarr; <b>Ctrl+A</b> &rarr; <b>Ctrl+C</b>) lalu tempel ke Excel, atau klik <b>Unduh CSV</b>. Angka sudah polos agar terbaca Excel.</div>'
+    +'<div class="bar">'+(href?('<a class="dl" href="'+href+'" download="Data_SAKTI_SPBY_Pajak.csv">&#11015; Unduh CSV (buka di Excel)</a>'):'')+'</div>'
+    +'<table><thead><tr>'+th+'</tr></thead><tbody>'+tb+'</tbody></table>'
+    +'</body></html>';
   _bukaPopup(html);
 }
 
