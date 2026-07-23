@@ -9,7 +9,7 @@ REM      clasp deployments
 REM  lalu salin ID panjang (AKfycb...) milik deployment /exec
 REM  yang Anda pakai (BUKAN yang @HEAD).
 REM ============================================================
-SET DEPLOY_ID=GANTI_DENGAN_DEPLOYMENT_ID
+SET DEPLOY_ID=AKfycbye24yskdQ-NvEpBLVfhATRxBzeE-Vq6VcDUlG_0n9EoN8P9vswtYSVApxJTvaLQgI
 
 echo(
 echo === 1/2  Mengunggah kode (clasp push) ===
