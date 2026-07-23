@@ -2159,119 +2159,131 @@ function cetakSPJ(no){
     .serverGetSpjData(_tok, no);
 }
 function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
-  imgB64=imgB64||{};
+  imgB64=imgB64||{}; notas=notas||[]; fotoPerNota=fotoPerNota||{};
   function srcOf(fileId){ return imgB64[fileId] || ('https://drive.google.com/thumbnail?id='+fileId+'&sz=w800'); }
+  function lnk(url,fileId){ return url||('https://drive.google.com/file/d/'+fileId+'/view'); }
+  function fig(fileId,url,cap,bold){ return '<figure style="margin:0"><div class="evb"><a href="'+esc(url)+'" target="_blank"><img src="'+srcOf(fileId)+'"></a></div><figcaption style="margin-top:3px;font-size:10px'+(bold?';font-weight:600':'')+'">'+esc(cap)+'</figcaption></figure>'; }
   var thn=(String(t.tanggal||'').split('-')[0])||(''+new Date().getFullYear());
   var noKt='KT-'+('00'+t.no).slice(-3)+'/'+thn;
   var nilai=(t.uangDiserahkan&&t.uangDiserahkan>0)?t.uangDiserahkan:t.kredit;
-  var totalNota=0, totalFoto=0, i, j;
-  for(i=0;i<notas.length;i++){ totalNota+=(+notas[i].nilai||0); totalFoto+=((fotoPerNota[String(notas[i].urutan)]||[]).length); }
-  var dikembalikan=(+t.kembalianTotal||0);
+  var i,j,d, totalNota=0, totalFoto=0, totalBarang=0;
+  for(i=0;i<notas.length;i++){ totalNota+=(+notas[i].nilai||0); totalFoto+=((fotoPerNota[String(notas[i].urutan)]||[]).length); totalBarang+=((notas[i].detail||[]).length); }
+  var dikembalikan=(+t.kembalianTotal||0), real=totalNota+dikembalikan;
   var targetSpj=(+t.nilaiSpby>0)?(+t.nilaiSpby):t.kredit;
-  var selisihSpj=targetSpj-totalNota-dikembalikan;
-  var lengkap=((totalNota+dikembalikan)>=targetSpj && targetSpj>0);
+  var selisihSpj=targetSpj-real, lengkap=(real>=targetSpj && targetSpj>0);
+  var pct=targetSpj>0?Math.round(real/targetSpj*100):0;
+  var adaPajak=((+t.pajakDpp||0)>0)||((+t.pajakPpn||0)>0)||((+t.pajakPph||0)>0), npwpDoc='';
+  for(i=0;i<notas.length;i++){ if(notas[i].npwp){ npwpDoc=notas[i].npwp; break; } }
 
-  var notaHtml='';
-  for(i=0;i<notas.length;i++){
-    var n=notas[i], fp=fotoPerNota[String(n.urutan)]||[];
-    notaHtml+='<div class="nota"><div class="nhead">'
-      +'<span class="nno">'+(i+1)+'</span><span class="nnm">'+esc(n.namaPenyedia||n.noNota||'Nota')+'</span>'
-      +'<span class="nval">'+rupiah(n.nilai)+'</span></div>';
-    notaHtml+='<div class="nbody">';
-    notaHtml+= n.fileId
-      ? '<a href="'+esc(n.urlFile||('https://drive.google.com/file/d/'+n.fileId+'/view'))+'" target="_blank"><img class="nthumb" src="'+srcOf(n.fileId)+'"></a>'
-      : '<div class="nthumb none">Tidak ada<br>foto nota</div>';
-    notaHtml+='<div class="ninfo"><b>'+esc(n.namaFile||'(tanpa berkas)')+'</b><br>'+rupiah(n.nilai)
-      +(n.npwp?('<br>NPWP: '+esc(n.npwp)):'')
-      +(n.urlFile?('<br><a href="'+esc(n.urlFile)+'" target="_blank">'+esc(n.urlFile)+'</a>'):'')
-      +'</div></div>';
-    // Rincian barang (persediaan) + foto tagging per item
-    var det=n.detail||[];
-    if(det.length){
-      notaHtml+='<table class="itbl"><tr><th>No</th><th>Nama Barang</th><th>Qty</th><th>Satuan</th><th class="rt">Harga</th><th class="rt">Subtotal</th></tr>';
-      for(var d=0;d<det.length;d++){ var it=det[d];
-        notaHtml+='<tr><td class="ct">'+(d+1)+'</td><td>'+esc(it.namaBarang||'-')+(it.keterangan?(' <span style="color:#777">('+esc(it.keterangan)+')</span>'):'')+'</td>'
-          +'<td class="ct">'+(it.qty||0)+'</td><td class="ct">'+esc(it.satuan||'')+'</td>'
-          +'<td class="rt">'+rupiah(it.hargaSatuan)+'</td><td class="rt">'+rupiah(it.subtotal)+'</td></tr>';
-      }
-      notaHtml+='</table>';
-      var fotoItem=''; var nfi=0;
-      for(d=0;d<det.length;d++){ var it2=det[d]; if(!it2.fileId) continue; nfi++;
-        fotoItem+='<figure><a href="'+esc(it2.urlFile||('https://drive.google.com/file/d/'+it2.fileId+'/view'))+'" target="_blank"><img src="'+srcOf(it2.fileId)+'"></a><figcaption>'+esc(it2.namaBarang||'')+'</figcaption></figure>';
-      }
-      if(nfi) notaHtml+='<div class="ftagh">&#128247; Foto per item ('+nfi+')</div><div class="ftrow">'+fotoItem+'</div>';
+  // Rekapitulasi (bila > 1 nota)
+  var recap='';
+  if(notas.length>1){
+    recap='<h3 class="sh">Rekapitulasi Nota</h3><table class="tbl"><thead><tr><th style="width:26px">No</th><th>Penyedia</th><th>Tanggal</th><th class="c" style="width:52px">Barang</th><th class="r" style="width:110px">Nilai</th></tr></thead><tbody>';
+    for(i=0;i<notas.length;i++){ var rn=notas[i];
+      recap+='<tr><td>'+(i+1)+'</td><td>'+esc(rn.namaPenyedia||('Nota '+(i+1)))+(rn.npwp?' <span class="tag pkp">PKP</span>':'')+'</td><td>'+esc(rn.tglNota||'-')+'</td><td class="c">'+((rn.detail||[]).length||'-')+'</td><td class="r">'+rupiah(rn.nilai)+'</td></tr>';
     }
-    notaHtml+='<div class="ftag"><div class="ftagh">&#128247; Foto Barang ('+fp.length+')</div>';
-    if(fp.length){
-      notaHtml+='<div class="ftrow">';
-      for(j=0;j<fp.length;j++) notaHtml+='<a href="'+esc(fp[j].urlFile||('https://drive.google.com/file/d/'+fp[j].fileId+'/view'))+'" target="_blank"><img src="'+srcOf(fp[j].fileId)+'"></a>';
-      notaHtml+='</div>';
-    } else { notaHtml+='<div class="ftnone">Belum ada foto tagging untuk nota ini</div>'; }
-    notaHtml+='</div></div>';
+    recap+='</tbody><tfoot><tr><td colspan="4" class="r ft">Total Realisasi</td><td class="r ft acc">'+rupiah(totalNota)+'</td></tr></tfoot></table>';
   }
-  if(!notas.length) notaHtml='<div class="ftnone" style="text-align:center">Belum ada nota.</div>';
+
+  // Rincian per nota
+  var detail='<h3 class="sh" style="margin-bottom:1px">Rincian Barang per Nota</h3>'
+    +'<div class="note">Dirinci per barang untuk belanja akun persediaan (521811). Nota lain cukup pada rekapitulasi.</div>';
+  if(!notas.length) detail='<div class="note" style="text-align:center;padding:14px 0">Belum ada nota.</div>';
+  for(i=0;i<notas.length;i++){ var n=notas[i], det=n.detail||[];
+    detail+='<div class="nb"><div class="nbh"><span class="nbn">'+('0'+(i+1)).slice(-2)+'</span>'
+      +'<span class="nbnm">'+esc(n.namaPenyedia||('Nota '+(i+1)))+(n.npwp?' <span class="tag pkp">PKP &middot; PPN</span>':'')+'</span>'
+      +'<span class="nbd">'+(n.tglNota?('Nota '+esc(n.tglNota)+' &middot; '):'')+(n.fileId?('<a href="'+esc(lnk(n.urlFile,n.fileId))+'" target="_blank">Lihat berkas &#8599;</a>'):'')+'</span>'
+      +'<span class="nbv">'+rupiah(n.nilai)+'</span></div>';
+    if(det.length){
+      detail+='<table class="itbl"><thead><tr><th style="width:22px">No</th><th>Nama Barang</th><th class="c" style="width:38px">Qty</th><th style="width:52px">Satuan</th><th class="r" style="width:82px">Harga</th><th class="r" style="width:90px">Subtotal</th></tr></thead><tbody>';
+      for(d=0;d<det.length;d++){ var it=det[d];
+        detail+='<tr><td>'+(d+1)+'</td><td>'+esc(it.namaBarang||'-')+(it.fileId?(' <a href="'+esc(lnk(it.urlFile,it.fileId))+'" target="_blank" style="font-size:9px">foto&#8599;</a>'):'')+'</td><td class="c">'+(it.qty||0)+'</td><td>'+esc(it.satuan||'')+'</td><td class="r">'+rupiah(it.hargaSatuan)+'</td><td class="r">'+rupiah(it.subtotal)+'</td></tr>';
+      }
+      detail+='</tbody></table>';
+    }
+    detail+='</div>';
+  }
+  if(notas.length===1) detail+='<div class="totline">Total Realisasi Nota &nbsp; <b class="acc">'+rupiah(totalNota)+'</b></div>';
+
+  // Pajak (tingkat dokumen — data pajak tersimpan per transaksi)
+  var tax = adaPajak
+    ? '<table class="tbl" style="margin-top:8px"><thead><tr><th>Dasar Pengenaan (DPP)</th><th>PPN 11%</th><th>PPh</th><th>NPWP Penyedia</th></tr></thead><tbody><tr><td>'+rupiah(t.pajakDpp)+'</td><td>'+rupiah(t.pajakPpn)+'</td><td>'+((+t.pajakPph||0)>0?rupiah(t.pajakPph):'&mdash;')+'</td><td>'+esc(npwpDoc||'&mdash;')+'</td></tr></tbody></table>'
+    : '<div class="note" style="margin-top:6px">Belanja tidak dikenai pemotongan pajak (penyedia non-PKP / di bawah ambang PPN).</div>';
+
+  // Bukti foto per nota
+  var ev='', anyEv=false;
+  for(i=0;i<notas.length;i++){ var en=notas[i], edt=en.detail||[], efp=fotoPerNota[String(en.urutan)]||[], figs='', cnt=0;
+    if(en.fileId){ figs+=fig(en.fileId,lnk(en.urlFile,en.fileId),'Scan nota',true); cnt++; }
+    for(d=0;d<edt.length;d++){ if(edt[d].fileId){ figs+=fig(edt[d].fileId,lnk(edt[d].urlFile,edt[d].fileId),edt[d].namaBarang||'Foto',false); cnt++; } }
+    for(j=0;j<efp.length;j++){ if(efp[j].fileId){ figs+=fig(efp[j].fileId,lnk(efp[j].urlFile,efp[j].fileId),'Foto barang',false); cnt++; } }
+    if(!cnt) continue; anyEv=true;
+    ev+='<div class="nb evrow"><div class="evh"><span class="nbn">'+('0'+(i+1)).slice(-2)+'</span><span style="font-weight:600;font-size:12px">'+esc(en.namaPenyedia||('Nota '+(i+1)))+'</span><span class="mut10">'+cnt+' berkas</span></div><div class="evg">'+figs+'</div></div>';
+  }
+  var evidence = anyEv ? ('<h3 class="sh">Bukti &mdash; Scan Nota &amp; Foto Barang</h3>'+ev) : '';
+
+  var statusSent = lengkap
+    ? ('Dipertanggungjawabkan penuh &mdash; <b>'+rupiah(real)+'</b> dari <b>'+rupiah(targetSpj)+'</b> ('+pct+'%). '+(dikembalikan>0?('Sisa <b>'+rupiah(dikembalikan)+'</b> dikembalikan. '):'Tidak ada sisa uang muka. ')+'<span class="mut">'+notas.length+' nota &middot; '+totalBarang+' barang &middot; '+totalFoto+' bukti foto.</span>')
+    : ('Baru <b>'+rupiah(real)+'</b> dari <b>'+rupiah(targetSpj)+'</b> ('+pct+'%).'+(selisihSpj>0?(' Sisa perlu dipertanggungjawabkan/disetor <b>'+rupiah(selisihSpj)+'</b>.'):'')+' <span class="mut">'+notas.length+' nota &middot; '+totalBarang+' barang &middot; '+totalFoto+' bukti foto.</span>');
 
   return ''
-  +'<html><head><meta charset="utf-8"><title>SPJ PUM '+noKt+'</title><style>'
-  +'@page{size:A4 portrait;margin:0} *{font-family:Arial,sans-serif;box-sizing:border-box}'
-  +'body{font-size:12px;color:#1f2937;margin:0;padding:14mm}'
-  +'h1{text-align:center;font-size:18px;margin:0;color:#16456e}'
-  +'.sub{text-align:center;font-size:12px;color:#6b7280;margin:3px 0 8px}'
-  +'.hr{border-top:2px solid #16456e;margin-bottom:14px}'
-  +'.grid{display:flex;gap:10px;margin-bottom:10px} .grid>.bx{flex:1}'
-  +'.bx{border:1px solid #e2e6ec;border-radius:8px;padding:9px 12px}'
-  +'.bx .k{font-size:11px;color:#6b7280} .bx .v{font-weight:bold;color:#16456e;margin-top:2px;font-size:14px}'
-  +'.status{border:1px solid #bbf7d0;background:#f0fdf4;border-radius:8px;padding:10px 12px;margin-bottom:14px}'
-  +'.status .s{font-weight:bold;color:#15803d} .status .x{font-size:11px;color:#6b7280;margin-top:3px}'
-  +'.status.no{border-color:#fed7aa;background:#fff7ed} .status.no .s{color:#9a3412}'
-  +'.sechead{font-weight:bold;color:#16456e;border-bottom:1px solid #e2e6ec;padding-bottom:5px;margin:14px 0 10px}'
-  +'.nota{border:1px solid #e2e6ec;border-radius:8px;padding:10px;margin-bottom:12px}'
-  +'.nhead{display:flex;align-items:center;gap:8px;font-weight:bold}'
-  +'.nno{background:#16456e;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px}'
-  +'.nnm{flex:1} .nval{color:#16456e}'
-  +'.nbody{display:flex;gap:12px;margin-top:9px}'
-  +'.nthumb{max-width:240px;max-height:340px;width:auto;height:auto;object-fit:contain;border:1px solid #e2e6ec;border-radius:6px}'
-  +'.nthumb.none{width:160px;height:120px;display:flex;align-items:center;justify-content:center;color:#9aa;font-size:10px;text-align:center}'
-  +'.ninfo{flex:1;font-size:11px;word-break:break-all} .ninfo a{color:#1565c0}'
-  +'.ftag{margin-top:10px;border-top:1px dashed #e2e6ec;padding-top:8px}'
-  +'.ftagh{font-weight:bold;font-size:12px;margin-bottom:6px}'
-  +'.ftrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px} .ftrow img{width:100%;height:auto;max-height:210px;object-fit:contain;border:1px solid #e2e6ec;border-radius:6px;background:#f7f7f7}'
-  +'.ftrow figure{margin:0} .ftrow figcaption{font-size:10px;text-align:center;margin-top:2px;font-weight:600}'
-  +'.itbl{width:100%;border-collapse:collapse;margin:6px 0;font-size:11px} .itbl th,.itbl td{border:1px solid #cbd5e1;padding:3px 5px} .itbl th{background:#eef2f7} .itbl .ct{text-align:center} .itbl .rt{text-align:right}'
-  +'.ftnone{color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:8px;font-size:11px;text-align:center}'
-  +'.total{text-align:right;font-weight:bold;color:#16456e;font-size:15px;margin-top:6px}'
-  +'.foot{text-align:center;font-size:10px;color:#9aa;margin-top:16px}'
-  +'a{text-decoration:none;color:inherit} img{-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+  +'<html><head><meta charset="utf-8"><title>SPJ PUM '+noKt+'</title>'
+  +'<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap">'
+  +'<style>'
+  +':root{--tx:#201e1d;--ac:#0088b0;--a7:#006688;--a2:#d6006c;--dv:#dcd9d7;--sf:#f0efee;--mut:#7a756f;--mut2:#8a8683}'
+  +'@page{size:A4 portrait;margin:0} *{box-sizing:border-box}'
+  +"body{font-family:'Source Serif 4',Georgia,serif;color:var(--tx);font-size:12px;line-height:1.5;margin:0;padding:14mm}"
+  +'h1{font-size:26px;margin:16px 0 2px;letter-spacing:-.02em;font-weight:600} h3.sh{font-size:14px;margin:20px 0 6px;letter-spacing:.02em;font-weight:600}'
+  +'.kh1{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut2)} .kh2{font-weight:600;font-size:23px;line-height:1.05;letter-spacing:-.02em;margin-top:2px} .kh3{font-size:10px;color:var(--mut);margin-top:3px}'
+  +'.rule3{height:3px;background:var(--tx);margin-top:9px} .rule1{height:1px;background:var(--tx)}'
+  +'.krow{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:10px;letter-spacing:.08em;text-transform:uppercase} .kacc{color:var(--a7);font-weight:600} .knum{color:var(--mut)} .knum b{color:var(--tx)}'
+  +'.subt{font-size:12px;font-style:italic;color:var(--mut)}'
+  +'.idg{display:grid;grid-template-columns:1fr 1fr;column-gap:26px;margin-top:16px} .idc{padding:8px 0;border-top:1px solid var(--dv)} .idc.full{grid-column:1/-1}'
+  +'.lbl{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--mut);margin-bottom:1px} .val{font-size:13px;font-weight:600}'
+  +'.st{display:flex;align-items:center;gap:10px;margin-top:14px;padding:8px 0;border-top:1px solid var(--dv);border-bottom:1px solid var(--dv);font-size:12px}'
+  +'.tag{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.03em;padding:2px 10px;border-radius:999px} .tag.ok{background:#e6f4f8;color:var(--a7)} .tag.warn{background:#fdecdf;color:#9a3412} .tag.pkp{background:#fbe0ee;color:var(--a2);font-size:9px;padding:1px 6px;vertical-align:middle}'
+  +'.mut{color:var(--mut)} .mut10{font-size:10px;color:var(--mut2)}'
+  +'.tbl{width:100%;border-collapse:collapse;font-size:11.5px} .tbl th{text-align:left;font-weight:600;padding:5px 7px;border-bottom:1px solid var(--tx)} .tbl td{padding:5px 7px;border-bottom:1px solid var(--dv)} .tbl tfoot td{border-bottom:none;padding-top:9px} .tbl .ft{font-weight:600;font-size:13px} .tbl .ft.acc{font-size:14px;color:var(--a7)}'
+  +'.r{text-align:right} .c{text-align:center} .acc{color:var(--a7)}'
+  +'.nb{break-inside:avoid} .nbh{display:flex;align-items:baseline;gap:8px;border-top:1px solid var(--dv);padding-top:7px;margin-top:12px} .nbn{font-weight:600;color:var(--a7)} .nbnm{font-weight:600;font-size:13px;flex:1} .nbd{font-size:10px;color:var(--mut2)} .nbv{font-weight:600;font-size:13px;min-width:96px;text-align:right}'
+  +'.itbl{width:100%;border-collapse:collapse;font-size:11px;margin-top:5px} .itbl th{text-align:left;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);padding:3px 7px;border-bottom:1px solid var(--dv)} .itbl td{padding:4px 7px;border-bottom:1px solid #efeeed;vertical-align:top}'
+  +'.totline{text-align:right;font-size:14px;border-top:1px solid var(--tx);padding-top:7px;margin-top:6px}'
+  +'.note{font-size:10px;font-style:italic;color:var(--mut2)}'
+  +'.evrow{border-top:1px solid var(--dv);padding-top:7px;margin-top:10px} .evh{display:flex;align-items:baseline;gap:8px;margin-bottom:5px} .evg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px} .evb{height:112px;border:1px solid var(--dv);border-radius:4px;overflow:hidden;background:var(--sf)} .evb img{width:100%;height:100%;object-fit:cover}'
+  +'.sign{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:14px} .sign .nm{font-weight:600;border-top:1px solid var(--tx);padding-top:3px;display:inline-block;min-width:180px}'
+  +'.foot{margin-top:22px;padding-top:6px;border-top:1px solid var(--dv);font-size:9px;color:#9a958f;display:flex;justify-content:space-between}'
+  +'a{color:var(--ac);text-decoration:none} img{-webkit-print-color-adjust:exact;print-color-adjust:exact}'
   +'.noprint{margin-bottom:10px;text-align:right}@media print{.noprint{display:none}}'
   +'</style></head><body>'
-  +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button> '
-  +'<span style="font-size:11px;color:#6b7280">Tip: tunggu semua foto termuat sebelum mencetak</span></div>'
-  +'<h1>Laporan SPJ PUM (Pemegang Uang Muka)</h1>'
-  +'<div class="sub">No. '+noKt+' &middot; '+_tglPanjang(t.tanggal)+' &middot; '+notas.length+' nota &middot; '+totalFoto+' foto tagging</div>'
-  +'<div class="hr"></div>'
-  +'<div class="grid">'
-  +'<div class="bx"><div class="k">Kegiatan / Belanja</div><div class="v">'+esc(t.kegiatan||'-')+'</div></div>'
-  +'<div class="bx"><div class="k">PUM (Penerima Uang Muka)</div><div class="v">'+esc(t.penjab||'-')+'</div></div>'
+  +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button> <span style="font-size:11px;color:#7a756f">Tunggu semua foto termuat sebelum mencetak</span></div>'
+  // KOP
+  +'<div class="kh1">Kementerian Kelautan dan Perikanan &middot; Badan PPSDM Kelautan dan Perikanan</div>'
+  +'<div class="kh2">'+esc(INST.namaWP||'Politeknik Kelautan dan Perikanan Sorong')+'</div>'
+  +'<div class="kh3">'+esc(INST.kopAlamat||INST.alamatWP||'')+(INST.npwpWP?(' &middot; NPWP '+esc(INST.npwpWP)):'')+'</div>'
+  +'<div class="rule3"></div>'
+  +'<div class="krow"><span class="kacc">Surat Pertanggungjawaban &mdash; Kas Tunai</span><span class="knum">Nomor <b>'+noKt+'</b></span></div>'
+  +'<div class="rule1"></div>'
+  // JUDUL
+  +'<h1>Pertanggungjawaban Pemegang Uang Muka</h1>'
+  +'<div class="subt">SPJ PUM &mdash; realisasi belanja atas uang muka kegiatan, dengan bukti nota dan foto barang.</div>'
+  // IDENTITAS
+  +'<div class="idg">'
+  +'<div class="idc"><div class="lbl">Kegiatan / Belanja</div><div class="val">'+esc(t.kegiatan||'-')+'</div></div>'
+  +'<div class="idc"><div class="lbl">Pemegang Uang Muka (PUM)</div><div class="val">'+esc(t.penjab||'-')+'</div></div>'
+  +'<div class="idc"><div class="lbl">Tanggal</div><div class="val">'+_tglPanjang(t.tanggal)+'</div></div>'
+  +'<div class="idc"><div class="lbl">Nilai Diterima PUM</div><div class="val">'+rupiah(nilai)+'</div></div>'
+  +((t.akun||t.persediaan)?('<div class="idc full"><div class="lbl">Akun / MAK</div><div class="val">'+esc(t.akun||'-')+(t.persediaan?' &middot; Persediaan':'')+'</div></div>'):'')
   +'</div>'
-  +'<div class="grid">'
-  +'<div class="bx"><div class="k">Tanggal</div><div class="v">'+_tglPanjang(t.tanggal)+'</div></div>'
-  +'<div class="bx"><div class="k">Nilai Diterima PUM</div><div class="v">'+rupiah(nilai)+'</div></div>'
-  +'</div>'
-  +((t.akun||t.persediaan)?('<div class="grid"><div class="bx"><div class="k">Akun / MAK</div><div class="v">'+esc(t.akun||'-')+(t.persediaan?' &middot; Persediaan':'')+'</div></div></div>'):'')
-  +'<div class="status'+(lengkap?'':' no')+'"><div class="s">'
-  +(lengkap?('&#9989; Pertanggungjawaban Lengkap ('+rupiah(totalNota+dikembalikan)+')')
-           :('&#9888; Belum Lengkap ('+rupiah(totalNota+dikembalikan)+' dari '+rupiah(targetSpj)+')'))
-  +'</div><div class="x">Nota '+rupiah(totalNota)
-  +(dikembalikan>0?(' + Dikembalikan '+rupiah(dikembalikan)):'')
-  +' &middot; '+notas.length+' nota | '+totalFoto+' foto tagging'
-  +(t.noSpby?(' &middot; SPBY '+esc(t.noSpby)+(t.nilaiSpby>0?(' = '+rupiah(t.nilaiSpby)):'')):'')
-  +(selisihSpj>0?(' &middot; selisih disetor '+rupiah(selisihSpj)):'')
-  +'</div></div>'
-  +'<div class="sechead">&#129534; Rincian Nota &amp; Foto Barang</div>'
-  +notaHtml
-  +'<div class="total">Total Nota: '+rupiah(totalNota)
-  +(dikembalikan>0?(' &nbsp;|&nbsp; Dikembalikan: '+rupiah(dikembalikan)+' &nbsp;|&nbsp; Total PJ: '+rupiah(totalNota+dikembalikan)):'')
-  +'</div>'
+  // STATUS
+  +'<div class="st"><span class="tag '+(lengkap?'ok':'warn')+'">'+(lengkap?'LENGKAP':'BELUM LENGKAP')+'</span><span>'+statusSent+'</span></div>'
+  +recap
+  +detail
+  +tax
+  +evidence
+  // PERNYATAAN + TTD
+  +'<div style="margin-top:24px;font-size:11px;font-style:italic;color:#6f6b67;max-width:70%">Bukti-bukti belanja di atas benar, lengkap, dan dapat dipertanggungjawabkan sesuai peruntukan uang muka.</div>'
+  +'<div class="sign"><div><div style="font-size:11px">Diverifikasi,<br>Bendahara Pengeluaran,</div><div style="height:52px"></div><div class="nm">'+(INST.bendahara?esc(INST.bendahara):'(&nbsp;&nbsp;.......................................&nbsp;&nbsp;)')+(INST.nipBendahara?('<br><span class="mut" style="font-size:10px;font-weight:400">NIP. '+esc(INST.nipBendahara)+'</span>'):'')+'</div></div>'
+  +'<div style="text-align:right"><div style="font-size:11px">'+esc(INST.kota||'Sorong')+', '+_tglPanjang(t.tanggal)+'<br>Pemegang Uang Muka,</div><div style="height:52px"></div><div class="nm">'+esc(t.penjab||'-')+'</div></div></div>'
+  +'<div class="foot"><span>Dokumen dihasilkan oleh Aplikasi Kas Tunai &mdash; Poltek KP Sorong</span><span>'+noKt+'</span></div>'
   +'</body></html>';
 }
 
