@@ -4515,50 +4515,63 @@ function cetakKuitansiPajakModal(){
 }
 
 function _renderKuitansiPajakHtml(t, pj){
-  var thn=new Date().getFullYear();
-  var noKwt='KP-'+t.no+'/'+thn;
-  var netto=pj.nettoRekanan;
-  var baris=function(l,v){ return '<tr><td class="l">'+l+'</td><td class="c">:</td><td>'+v+'</td></tr>'; };
-  var css=_kuitansiCss()+_docCss()
-    +'.kp-sec{margin-top:10px} .kp-head{font-weight:bold;border-bottom:1px solid #ccc;padding-bottom:4px;margin-bottom:6px;font-size:13px}'
-    +'.kp-total td{font-weight:bold;background:#f0f0f0} .kp-netto td{font-weight:bold;font-size:15px}';
-  var penyedia=t.penjab||'(…………………………)';
+  var thn=(String(t.tanggal||'').split('-')[0])||(''+new Date().getFullYear());
+  var noKwt='KP-'+('00'+t.no).slice(-3)+'/'+thn;
+  var netto=pj.nettoRekanan, penerima=t.penjab||'(…………………………)';
+  function prow(k,v){ return '<div class="prow"><span class="pk">'+k+'</span><span class="pv">'+v+'</span></div>'; }
+  var rincian=prow('Nilai Kontrak / Nota'+(pj.kenaPPN&&pj.termasukPPN?' <span class="mut">(termasuk PPN)</span>':''), rupiah(pj.nominal))
+    +prow('DPP &mdash; Dasar Pengenaan Pajak'+(pj.kenaPPN&&pj.termasukPPN?' <span class="mut" style="font-style:italic">(nilai &divide; 1,11)</span>':''), rupiah(pj.dpp))
+    +(pj.pph>0?prow(esc(pj.jenisPPh||'PPh')+' <span class="mut">('+(pj.tarifPPhPct?pj.tarifPPhPct+'% &times; DPP':'atas DPP')+')</span>'+(pj.nonNpwp?' <span class="mut" style="font-style:italic">(non-NPWP &times;2)</span>':''), rupiah(pj.pph)):'')
+    +(pj.ppn>0?prow('PPN <span class="mut">(11% &times; DPP)</span>', rupiah(pj.ppn)):'');
 
-  var body=''
-  +'<div class="page">'
-  +_docKopResmi()
-  +'<div class="judul">KUITANSI PEMOTONGAN PAJAK</div>'
-  +'<div class="nomor">Nomor: '+esc(noKwt)+'</div>'
-
-  +'<table class="b">'
-  +baris('Kegiatan / Uraian', esc(t.kegiatan))
-  +baris('Penyedia / Penerima', esc(penyedia))
-  +baris('Tanggal', esc(_tglPanjang(t.tanggal)))
-  +'</table>'
-
-  +'<div class="kp-sec"><div class="kp-head">Rincian Pemotongan Pajak</div>'
-  +'<table class="b">'
-  +baris('Nilai Kontrak / Nota', '<b>'+rupiah(pj.nominal)+'</b>')
-  +baris('DPP (Dasar Pengenaan Pajak)', rupiah(pj.dpp)+(pj.kenaPPN&&pj.termasukPPN?' <span style="font-size:11px;color:#555">(= nilai ÷ 1,11)</span>':''))
-  +(pj.pph>0?baris(esc(pj.jenisPPh||'PPh')+(pj.tarifPPhPct?' ('+pj.tarifPPhPct+'%)':'')+(pj.nonNpwp?' <i>(non-NPWP ×2)</i>':''), '<b>'+rupiah(pj.pph)+'</b>'):'')
-  +(pj.ppn>0?baris('PPN (11% × DPP)', '<b>'+rupiah(pj.ppn)+'</b>'):'')
-  +'<tr class="kp-total"><td class="l">Total Pemotongan Pajak</td><td class="c">:</td><td>'+rupiah(pj.totalPajak)+'</td></tr>'
-  +'<tr class="kp-netto"><td class="l">Netto Dibayarkan ke Rekanan</td><td class="c">:</td><td>'+rupiah(netto)+'</td></tr>'
-  +'<tr><td colspan="3" class="terb">Terbilang : <i>'+_terbilangTitle(netto)+'</i></td></tr>'
-  +'</table></div>'
-
-  +(pj.mapPPh?'<div class="tgl" style="margin-top:8px">MAP / KJS PPh : <b>'+esc(pj.mapPPh)+' / '+esc(pj.kjsPPh)+'</b></div>':'')
-
-  +'<table class="sig"><tr>'
-  +'<td>Rekanan / Penerima,<br>'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)+'<div class="nm">'+esc(penyedia)+'</div></td>'
-  +'<td>Bendahara Pengeluaran,<br>&nbsp;<div class="nm">'+esc(INST.bendahara||'')+'</div><span class="nip">NIP. '+esc(INST.nipBendahara||'')+'</span></td>'
-  +'<td>Mengetahui,<br>PPK Poltek KP Sorong<div class="nm">'+esc(INST.ppk||'')+'</div><span class="nip">NIP. '+esc(INST.nipPpk||'')+'</span></td>'
-  +'</tr></table>'
-  +'</div>';
-
-  return '<html><head><meta charset="utf-8"><title>Kuitansi Pajak No '+t.no+'</title><style>'+css+'</style></head><body>'
-  +'<div class="noprint" style="text-align:right;padding:10px 16mm 0"><button onclick="window.print()">Cetak / Simpan PDF</button></div>'
-  +body+'</body></html>';
+  return ''
+  +'<html><head><meta charset="utf-8"><title>Kuitansi Pajak '+noKwt+'</title>'
+  +'<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap">'
+  +'<style>'
+  +':root{--tx:#201e1d;--ac:#0088b0;--a7:#006688;--a1:#e6f4f8;--dv:#dcd9d7;--mut:#7a756f;--mut2:#8a8683}'
+  +'@page{size:A4 portrait;margin:0} *{box-sizing:border-box}'
+  +"body{font-family:'Source Serif 4',Georgia,serif;color:var(--tx);font-size:12px;line-height:1.5;margin:0;padding:16mm}"
+  +'h1{font-size:26px;margin:16px 0 2px;letter-spacing:-.02em;font-weight:600} h3{font-size:14px;margin:22px 0 2px;letter-spacing:.02em;font-weight:600}'
+  +'.kh1{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut2)} .kh2{font-weight:600;font-size:23px;line-height:1.05;letter-spacing:-.02em;margin-top:2px} .kh3{font-size:10px;color:var(--mut);margin-top:3px}'
+  +'.rule3{height:3px;background:var(--tx);margin-top:9px} .rule1{height:1px;background:var(--tx)}'
+  +'.krow{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:10px;letter-spacing:.08em;text-transform:uppercase} .kacc{color:var(--a7);font-weight:600} .knum{color:var(--mut)} .knum b{color:var(--tx)}'
+  +'.subt{font-size:12px;font-style:italic;color:var(--mut)}'
+  +'.idg{display:grid;grid-template-columns:1fr 1fr;column-gap:26px;margin-top:16px} .idc{padding:8px 0;border-top:1px solid var(--dv)}'
+  +'.lbl{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--mut);margin-bottom:1px} .val{font-size:13px;font-weight:600}'
+  +'.prow{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-top:1px solid var(--dv)} .pk{font-size:12px} .pv{font-weight:600;font-size:13px;font-variant-numeric:tabular-nums} .mut{color:var(--mut)}'
+  +'.tot{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;margin-top:2px;border-top:2px solid var(--tx);border-bottom:1px solid var(--dv)} .tot .tk{font-weight:600;font-size:14px} .tot .tv{font-weight:600;font-size:15px;color:var(--a7);font-variant-numeric:tabular-nums}'
+  +'.netto{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:12px 14px;background:var(--a1);border-radius:6px} .netto .nlbl{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--a7)} .netto .nterb{font-size:12px;font-style:italic;color:#6f6b67;margin-top:2px} .netto .nval{font-weight:600;font-size:22px;letter-spacing:-.01em;font-variant-numeric:tabular-nums}'
+  +'.sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:22px;margin-top:30px;text-align:center} .sign .nm{font-weight:600;border-top:1px solid var(--tx);padding-top:4px} .sign .nip{font-size:10px;color:var(--mut)}'
+  +'.foot{margin-top:24px;padding-top:6px;border-top:1px solid var(--dv);font-size:9px;color:#9a958f;display:flex;justify-content:space-between}'
+  +'a{color:var(--ac);text-decoration:none} .noprint{margin-bottom:10px;text-align:right}@media print{.noprint{display:none}}'
+  +'</style></head><body>'
+  +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button></div>'
+  +'<div class="kh1">Kementerian Kelautan dan Perikanan &middot; Badan PPSDM Kelautan dan Perikanan</div>'
+  +'<div class="kh2">'+esc(INST.namaWP||'Politeknik Kelautan dan Perikanan Sorong')+'</div>'
+  +'<div class="kh3">'+esc(INST.kopAlamat||INST.alamatWP||'')+(INST.kopTelp?(' &middot; Telp. '+esc(INST.kopTelp)):'')+(INST.kopLaman?(' &middot; '+esc(INST.kopLaman)):'')+'</div>'
+  +'<div class="rule3"></div>'
+  +'<div class="krow"><span class="kacc">Kuitansi Pemotongan Pajak</span><span class="knum">Nomor <b>'+noKwt+'</b></span></div>'
+  +'<div class="rule1"></div>'
+  +'<h1>Bukti Pemotongan Pajak</h1>'
+  +'<div class="subt">Pemotongan PPh dan pemungutan PPN atas pembayaran kepada rekanan.</div>'
+  +'<div class="idg">'
+  +'<div class="idc"><div class="lbl">Rekanan / Uraian</div><div class="val">'+esc(t.kegiatan||'-')+'</div></div>'
+  +'<div class="idc"><div class="lbl">Penerima Pembayaran</div><div class="val">'+esc(penerima)+'</div></div>'
+  +'<div class="idc"><div class="lbl">Tanggal</div><div class="val">'+_tglPanjang(t.tanggal)+'</div></div>'
+  +'<div class="idc"><div class="lbl">MAP / KJS PPh</div><div class="val">'+(pj.mapPPh?(esc(pj.mapPPh)+' / '+esc(pj.kjsPPh)):'&mdash;')+'</div></div>'
+  +'</div>'
+  +'<h3>Rincian Pemotongan Pajak</h3>'
+  +rincian
+  +'<div class="tot"><span class="tk">Total Pemotongan Pajak</span><span class="tv">'+rupiah(pj.totalPajak)+'</span></div>'
+  +'<div class="netto"><div><div class="nlbl">Netto Dibayarkan ke Rekanan</div><div class="nterb">'+esc(_terbilangTitle(netto))+' Rupiah</div></div><div class="nval">'+rupiah(netto)+'</div></div>'
+  +'<div style="font-size:10px;color:var(--mut);margin-top:6px;font-style:italic">Pajak di atas disetor ke Kas Negara melalui SSP/e-Billing pada MAP/KJS tercantum. Netto = nilai nota dikurangi total pemotongan pajak.</div>'
+  +'<div class="sign">'
+  +'<div><div style="font-size:11px">Rekanan / Penerima,<br>'+esc(INST.kota||'Sorong')+', '+_tglPanjang(t.tanggal)+'</div><div style="height:56px"></div><div class="nm">'+esc(penerima)+'</div></div>'
+  +'<div><div style="font-size:11px">Bendahara Pengeluaran,</div><div style="height:56px"></div><div class="nm">'+esc(INST.bendahara||'')+'</div><div class="nip">NIP. '+esc(INST.nipBendahara||'')+'</div></div>'
+  +'<div><div style="font-size:11px">Mengetahui,<br>PPK Poltek KP Sorong</div><div style="height:36px"></div><div class="nm">'+esc(INST.ppk||'')+'</div><div class="nip">NIP. '+esc(INST.nipPpk||'')+'</div></div>'
+  +'</div>'
+  +'<div class="foot"><span>Dokumen dihasilkan oleh Aplikasi Kas Tunai &mdash; Poltek KP Sorong</span><span>'+noKwt+'</span></div>'
+  +'</body></html>';
 }
 
 /* ============== Kuitansi (Bendahara -> PUM, diketahui PPK) ============== */
