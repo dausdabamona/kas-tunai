@@ -1,36 +1,82 @@
 @echo off
+setlocal enabledelayedexpansion
 REM ============================================================
-REM  Deploy Kas Tunai: push kode + buat VERSI BARU web app
-REM  (URL web app TETAP, karena update deployment yang sama).
+REM  Kas Tunai — deploy sekali klik
+REM    1) tarik kode terbaru dari GitHub (git pull)
+REM    2) unggah ke Apps Script (clasp push --force)
+REM    3) buat VERSI BARU pada deployment web app yang sama
+REM       -> URL web app TIDAK berubah
 REM
-REM  ISI SEKALI: ganti nilai DEPLOY_ID dengan ID deployment
-REM  web app Anda. Cara mendapatkannya:
-REM      clasp deployments
-REM  lalu salin ID panjang (AKfycb...) milik deployment /exec
-REM  yang Anda pakai (BUKAN yang @HEAD).
+REM  Cara pakai:  deploy.bat            (pull + push + versi baru)
+REM               deploy.bat nopull     (lewati git pull)
+REM
+REM  Diuji dengan clasp 3.3.0:
+REM    clasp push -f
+REM    clasp deploy -i <deploymentId> -d "<deskripsi>"
 REM ============================================================
+
 SET DEPLOY_ID=AKfycbye24yskdQ-NvEpBLVfhATRxBzeE-Vq6VcDUlG_0n9EoN8P9vswtYSVApxJTvaLQgI
+SET BRANCH=claude/determined-archimedes-od8jtc
 
-echo(
-echo === 1/2  Mengunggah kode (clasp push) ===
-call clasp push --force
-if errorlevel 1 goto :gagal
-
-echo(
-echo === 2/2  Membuat versi baru deployment ===
-if "%DEPLOY_ID%"=="GANTI_DENGAN_DEPLOYMENT_ID" (
-  echo [LEWAT] DEPLOY_ID belum diisi. Edit deploy.bat dan isi ID-nya.
-  echo         Sementara ini, buat versi baru manual: Deploy ^> Manage deployments ^> Edit ^> New version.
-  goto :selesai
+REM --- pastikan dijalankan di folder repo ---
+if not exist ".clasp.json" (
+  echo [GAGAL] File .clasp.json tidak ada di folder ini.
+  echo         Jalankan deploy.bat dari DALAM folder repo kas-tunai.
+  echo         Contoh:  cd C:\Users\Daba\kas-tunai
+  goto :akhir
 )
-call clasp deploy -i %DEPLOY_ID% -d "update kas tunai"
-if errorlevel 1 goto :gagal
 
-:selesai
+REM --- 1) git pull ---
+if /I "%~1"=="nopull" goto :lewatipull
 echo(
-echo SELESAI. Buka web app lalu hard-refresh (Ctrl+Shift+R).
-goto :eof
+echo === 1/3  Menarik kode terbaru dari GitHub ===
+git pull origin %BRANCH%
+if errorlevel 1 (
+  echo [PERINGATAN] git pull gagal / dilewati. Lanjut memakai kode lokal.
+)
+:lewatipull
 
-:gagal
+REM --- 2) clasp push ---
 echo(
-echo GAGAL. Periksa pesan error di atas. Bila "invalid_grant" -^> jalankan: clasp login
+echo === 2/3  Mengunggah kode ke Apps Script ===
+call clasp push --force
+if errorlevel 1 goto :gagalclasp
+
+REM --- 3) versi baru deployment ---
+echo(
+echo === 3/3  Membuat versi baru web app ===
+if "%DEPLOY_ID%"=="GANTI_DENGAN_DEPLOYMENT_ID" (
+  echo [LEWAT] DEPLOY_ID belum diisi. Jalankan: clasp deployments
+  echo         lalu salin ID yang diawali AKfycb... ke dalam deploy.bat
+  goto :akhir
+)
+for /f "tokens=1-4 delims=/ " %%a in ("%DATE%") do set TGL=%%a%%b%%c
+call clasp deploy -i %DEPLOY_ID% -d "update %TGL% %TIME:~0,5%"
+if errorlevel 1 goto :gagaldeploy
+
+echo(
+echo ============================================================
+echo  SELESAI. Kode + versi baru sudah aktif.
+echo  Buka web app lalu tekan Ctrl+Shift+R (hard refresh).
+echo  Tip: ketik  clasp open-web-app  untuk membukanya langsung.
+echo ============================================================
+goto :akhir
+
+:gagalclasp
+echo(
+echo [GAGAL] clasp push bermasalah.
+echo   - Bila tertulis "invalid_grant" atau diminta login:  clasp login
+echo   - Bila "command not found": pasang clasp -^> npm install -g @google/clasp
+goto :akhir
+
+:gagaldeploy
+echo(
+echo [GAGAL] Pembuatan versi baru bermasalah.
+echo   - Pastikan DEPLOY_ID benar. Lihat daftarnya:  clasp deployments
+echo   - Kode tetap sudah terunggah; Anda bisa buat versi baru manual lewat
+echo     editor: Deploy ^> Manage deployments ^> Edit (pensil) ^> New version.
+goto :akhir
+
+:akhir
+echo(
+pause
