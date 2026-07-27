@@ -781,8 +781,9 @@ function detailNota(t, notas){
       + '</div>';
   }
   h += '<div style="display:flex;gap:10px;margin-top:18px">'
+    + '<button class="btn ac" style="flex:1" onclick="cetakTandaTerima('+JSON.stringify(String(t.no))+')">'
+    +   (t.sumber==='BANK'?'Bukti Transfer':'Tanda Terima')+'</button>'
     + '<button class="btn" style="flex:1" onclick="bukaPengembalian('+JSON.stringify(String(t.no))+')">Pengembalian</button>'
-    + '<button class="btn" style="flex:1" onclick="belumSiap(\'Cetak SPBY\')">Cetak SPBY</button>'
     + '</div>'
     + '<div class="strip" style="margin-top:18px">Pencatatan, kamera nota, pajak, dan pengembalian hadir bertahap. '
     + 'Untuk sekarang gunakan versi desktop untuk aksi tersebut.</div>';
@@ -975,15 +976,15 @@ function simpanSemua(){
   google.script.run
     .withSuccessHandler(function(res){
       var no = res && res.no;
-      if (!no){ loading(false); toast('Transaksi tersimpan', false); selesai(null); return; }
+      if (!no){ loading(false); toast('Transaksi tersimpan', false); selesai(null, false); return; }
       // Nota HANYA dibuat bila memang belanja langsung ke toko. Pada penyerahan
       // uang muka, notanya belum ada — dilampirkan belakangan lewat Kelola Nota.
-      if (!keluar || !d.penyedia){ unggahFoto(no); return; }
+      if (!keluar || !d.penyedia){ unggahFoto(no, false); return; }
       var p = penyediaTerpilih();
       loading(true, 'Menyimpan nota…');
       google.script.run
-        .withSuccessHandler(function(){ unggahFoto(no); })
-        .withFailureHandler(function(e){ loading(false); gagal(e); selesai(no); })
+        .withSuccessHandler(function(){ unggahFoto(no, true); })
+        .withFailureHandler(function(e){ loading(false); gagal(e); selesai(no, true); })
         .serverTambahNota(_tok, no, { namaPenyedia:p.nama, npwp:p.npwp||'', alamat:p.alamat||'', nilai:d.nilai, tglNota:d.tanggal });
     })
     .withFailureHandler(gagal)
@@ -995,28 +996,139 @@ function simpanSemua(){
       sumber: d.sumber, keterangan: 'Dicatat dari HP', akun: keluar ? d.akun : '', persediaan: false
     });
 }
-function unggahFoto(no){
-  if (!FOTOS.length){ loading(false); selesai(no); return; }
+function unggahFoto(no, langsungKeToko){
+  if (!FOTOS.length){ loading(false); selesai(no, langsungKeToko); return; }
   loading(true, 'Mengunggah ' + FOTOS.length + ' foto…');
   var arr = [];
   for (var i=0;i<FOTOS.length;i++)
     arr.push({ base64:FOTOS[i].base64, mimeType:FOTOS[i].mimeType, namaFile:FOTOS[i].namaFile, keterangan:'Foto nota (HP)' });
   google.script.run
-    .withSuccessHandler(function(){ loading(false); selesai(no); })
-    .withFailureHandler(function(e){ loading(false); gagal(e); selesai(no); })
+    .withSuccessHandler(function(){ loading(false); selesai(no, langsungKeToko); })
+    .withFailureHandler(function(e){ loading(false); gagal(e); selesai(no, langsungKeToko); })
     .serverUploadFotoNota(_tok, no, 1, arr);
 }
-function selesai(no){
+function selesai(no, langsungKeToko){
   hapusDraft(); FOTOS = [];
   toast('Tersimpan' + (no ? (' — transaksi No ' + no) : ''));
   google.script.run
     .withSuccessHandler(function(d){
       TX = (d && d.transaksi) || []; FOTO = (d && d.fotoMap) || {}; SALDO = (d && d.saldo) || null;
       renderBeranda();
-      if (no) bukaDetail(String(no)); else go('beranda');
+      if (!no){ go('beranda'); return; }
+      bukaDetail(String(no));
+      // Penyerahan uang muka: langkah berikutnya adalah tanda terima yang
+      // ditandatangani PUM. (Belanja langsung ke toko tidak memerlukannya.)
+      if (!langsungKeToko && setTimeout) setTimeout(function(){
+        if (confirm('Cetak Tanda Terima Uang Muka untuk ditandatangani PUM?')) cetakTandaTerima(String(no));
+      }, 350);
     })
     .withFailureHandler(function(){ go('beranda'); })
     .serverGetDashboard(_tok);
+}
+
+/* ===================== Tanda Terima Uang Muka =====================
+ * Dokumen yang ditandatangani PUM saat menerima uang. Dibuat sama dengan
+ * versi desktop (_renderKuitansiHtml) agar berkasnya seragam dari mana pun
+ * dicetak. Identitas pejabat diambil dari server (CONFIG.INSTANSI).       */
+var INSTANSI = null;
+function muatInstansi(cb){
+  if (INSTANSI){ if(cb) cb(); return; }
+  google.script.run
+    .withSuccessHandler(function(o){ INSTANSI = o||{}; if(cb) cb(); })
+    .withFailureHandler(function(){ INSTANSI = {}; if(cb) cb(); })
+    .serverGetInstansi(_tok);
+}
+/* Terbilang (huruf) — dipakai pada dokumen resmi. */
+function terbilang(n){
+  n = Math.floor(Math.abs(+n||0));
+  var s=['','Satu','Dua','Tiga','Empat','Lima','Enam','Tujuh','Delapan','Sembilan','Sepuluh','Sebelas'];
+  function f(x){
+    if (x < 12) return s[x];
+    if (x < 20) return f(x-10) + ' Belas';
+    if (x < 100) return f(Math.floor(x/10)) + ' Puluh' + (x%10?' '+f(x%10):'');
+    if (x < 200) return 'Seratus' + (x%100?' '+f(x%100):'');
+    if (x < 1000) return f(Math.floor(x/100)) + ' Ratus' + (x%100?' '+f(x%100):'');
+    if (x < 2000) return 'Seribu' + (x%1000?' '+f(x%1000):'');
+    if (x < 1000000) return f(Math.floor(x/1000)) + ' Ribu' + (x%1000?' '+f(x%1000):'');
+    if (x < 1000000000) return f(Math.floor(x/1000000)) + ' Juta' + (x%1000000?' '+f(x%1000000):'');
+    return f(Math.floor(x/1000000000)) + ' Miliar' + (x%1000000000?' '+f(x%1000000000):'');
+  }
+  return n ? f(n).replace(/\s+/g,' ').trim() : 'Nol';
+}
+function tglPanjang(iso){
+  if(!iso) return '-';
+  var p=String(iso).split('-'); if(p.length<3) return String(iso);
+  var bl=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  return (+p[2])+' '+(bl[(+p[1])-1]||'')+' '+p[0];
+}
+function cetakTandaTerima(no){
+  var t=null;
+  for (var i=0;i<TX.length;i++) if (String(TX[i].no)===String(no)) { t=TX[i]; break; }
+  if (!t){ toast('Transaksi tidak ditemukan', true); return; }
+  muatInstansi(function(){ _bukaCetak(_htmlTandaTerima(t)); });
+}
+function _bukaCetak(html){
+  var w = window.open('', '_blank');
+  if (!w){ toast('Popup diblokir — izinkan popup untuk mencetak', true); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+}
+function _htmlTandaTerima(t){
+  var I = INSTANSI || {};
+  var thn = String(t.tanggal||'').split('-')[0] || (''+new Date().getFullYear());
+  var noKwt = 'KT-' + ('00'+t.no).slice(-3) + '/' + thn;
+  var bank = (t.sumber === 'BANK');
+  var judul = bank ? 'BUKTI TRANSFER' : 'TANDA TERIMA UANG MUKA';
+  var jumlah = +t.kredit || 0;
+  var penerima = t.penjab || '(…………………)';
+  var barisAsal = bank
+    ? ('<tr><td class="l">Telah ditransfer kepada</td><td class="c">:</td><td>'+esc(penerima)+'</td></tr>'
+      +'<tr><td class="l">Melalui</td><td class="c">:</td><td>Transfer rekening bank Bendahara Pengeluaran '
+      +esc(I.namaWP||'')+'<br><i>('+esc(I.bendahara||'')+')</i></td></tr>')
+    : ('<tr><td class="l">Sudah diterima dari</td><td class="c">:</td><td>Bendahara Pengeluaran '
+      +esc(I.namaWP||'')+'<br><i>('+esc(I.bendahara||'')+')</i></td></tr>');
+  return ''
+  +'<html><head><meta charset="utf-8"><title>'+esc(judul+' '+noKwt)+'</title><style>'
+  +'@page{size:A4 portrait;margin:0} *{font-family:Arial,sans-serif;box-sizing:border-box}'
+  +'body{font-size:13px;color:#000;margin:0} .page{padding:16mm}'
+  +'.kop{text-align:center;line-height:1.35} .kop .k1{font-size:12px} .kop .k2{font-size:12.5px;font-weight:bold}'
+  +'.kop .k3{font-size:15px;font-weight:bold} .kop .ad{font-size:10.5px;margin-top:3px}'
+  +'.hrt{border:0;border-top:2.5px solid #000;margin:6px 0 0}'
+  +'.judul{text-align:center;font-weight:bold;font-size:18px;letter-spacing:3px;margin:18px 0 2px}'
+  +'.nomor{text-align:center;font-size:13px;margin-bottom:16px}'
+  +'.b{border-collapse:collapse;width:100%} .b td{border:1px solid #000;padding:9px 11px;vertical-align:top}'
+  +'.b .l{width:34%;font-weight:bold} .b .c{width:14px;text-align:center} .b .us{font-weight:bold;font-size:15px}'
+  +'.terb{background:#dcdcdc;font-style:italic}'
+  +'.sig{width:100%;border-collapse:collapse;margin-top:22px;font-size:12px;text-align:center}'
+  +'.sig td{width:33.33%;padding:6px 8px;vertical-align:top}'
+  +'.sig .nm{margin-top:54px;font-weight:bold} .sig .nip{font-size:11px}'
+  +'.noprint{padding:10px 16mm 0;text-align:right}@media print{.noprint{display:none}}'
+  +'</style></head><body>'
+  +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button></div>'
+  +'<div class="page">'
+  +'<div class="kop"><div class="k1">'+esc(I.kementerian||'')+'</div>'
+  +'<div class="k2">'+esc(I.eselon1||'')+'</div>'
+  +'<div class="k3">'+esc(I.satker||I.namaWP||'')+'</div>'
+  +'<div class="ad">'+esc(I.kopAlamat||'')
+  +(I.kopTelp?(' &middot; Telp. '+esc(I.kopTelp)):'')+(I.kopLaman?(' &middot; '+esc(I.kopLaman)):'')+'</div></div>'
+  +'<hr class="hrt">'
+  +'<div class="judul">'+esc(judul)+'</div>'
+  +'<div class="nomor">Nomor: '+esc(noKwt)+'</div>'
+  +'<table class="b">'
+  + barisAsal
+  +'<tr><td class="l">Uang sejumlah</td><td class="c">:</td><td class="us">'+rp(jumlah)+'</td></tr>'
+  +'<tr><td class="l">Untuk pembayaran</td><td class="c">:</td><td>'+esc(t.kegiatan||'-')
+  + (t.kodeItem?('<br><i>'+esc(t.kodeItem+' — '+(t.uraianItem||''))+'</i>'):'') +'</td></tr>'
+  +'<tr><td class="terb" colspan="3">Terbilang : <i>'+esc(terbilang(jumlah))+' Rupiah</i></td></tr>'
+  +'</table>'
+  +'<table class="sig"><tr>'
+  +'<td>Mengetahui,<br>Pejabat Pembuat Komitmen<div class="nm">'+esc(I.ppk||'')+'</div>'
+  +'<span class="nip">NIP. '+esc(I.nipPpk||'')+'</span></td>'
+  +'<td>Bendahara Pengeluaran,<div class="nm">'+esc(I.bendahara||'')+'</div>'
+  +'<span class="nip">NIP. '+esc(I.nipBendahara||'')+'</span></td>'
+  +'<td>'+esc(I.kota||'Sorong')+', '+esc(tglPanjang(t.tanggal))+'<br>Yang menerima,<div class="nm">'
+  +esc(penerima)+'</div></td>'
+  +'</tr></table>'
+  +'</div></body></html>';
 }
 
 /* ===================== Potongan pajak per nota (Tahap 3) ===================== */

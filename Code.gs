@@ -368,6 +368,11 @@ function serverGetNotaPajak(token) {
 function serverImporPagu(token, list, periode) {
   return _run(token, function (auth) { return Anggaran.imporPagu(list, periode); });
 }
+/** Identitas instansi & pejabat (dipakai tampilan mobile untuk mencetak). */
+function serverGetInstansi(token) {
+  return _run(token, function (auth) { return CONFIG.INSTANSI; });
+}
+
 /** Daftar item pagu (untuk pemilih Detail Kegiatan di form transaksi). */
 function serverGetPagu(token) {
   return _run(token, function (auth) { return Anggaran.getPagu(); });

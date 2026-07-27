@@ -155,12 +155,27 @@ var CONFIG = {
   },
 
   // Identitas instansi (untuk laporan SPJ & SSP pajak)
+  /**
+   * Identitas instansi & pejabat penanda tangan.
+   * Dipakai oleh tampilan mobile lewat serverGetInstansi(). Tampilan desktop
+   * masih memakai objek INST di index.html — jaga agar keduanya sama bila ada
+   * perubahan nama/NIP pejabat.
+   */
   INSTANSI: {
-    namaWP:   'Politeknik Kelautan dan Perikanan Sorong',
-    npwpWP:   '00.000.000.0-000.000',
-    alamatWP: 'Jl. Kapitan Pattimura, Tanjung Kasuari, Sorong, Papua Barat Daya',
-    bendahara:'',
-    kota:     'Sorong',
+    namaWP:      'Politeknik Kelautan dan Perikanan Sorong',
+    npwpWP:      '',
+    alamatWP:    'Jl. Kapitan Pattimura, Suprau, Kota Sorong',
+    kota:        'Sorong',
+    kementerian: 'KEMENTERIAN KELAUTAN DAN PERIKANAN',
+    eselon1:     'BADAN PENYULUHAN DAN PENGEMBANGAN SUMBER DAYA MANUSIA KELAUTAN DAN PERIKANAN',
+    satker:      'POLITEKNIK KELAUTAN DAN PERIKANAN SORONG',
+    kopAlamat:   'Jalan Kapitan Pattimura, Kelurahan Malaingkedi, Distrik Sorong Utara, Kota Sorong, Papua Barat Daya',
+    kopTelp:     '(0951) 321039',
+    kopLaman:    'www.polikpsorong.ac.id',
+    bendahara:   'Abdul Rauf Muhammad Saleh',
+    nipBendahara:'198309122007011001',
+    ppk:         'Firdaus Dabamona, S.T.',
+    nipPpk:      '198201032007011002',
     namaBank: '',
     noRekening: ''
   }
