@@ -82,5 +82,12 @@ uji manual di Chrome Android, dengan bukti (lihat `verification-before-completio
 
 ## Pekerjaan mobile yang sedang berjalan
 
-Rencana, temuan, dan papan status ada di **`docs/HANDOFF-MOBILE.md`**.
-Perintah siap pakai: `/kt-status`, lalu `/kt-1-draft` … `/kt-6-pajak`.
+**Fokus utama: pengelolaan transaksi di HP** — satu transaksi diurus tuntas dari layar
+detailnya (nota, foto nota, foto barang, pajak, nilai yang boleh diserahkan ke penyedia,
+pengembalian sisa, dan bukti-buktinya).
+
+Rumus neraca transaksi, temuan terverifikasi, keputusan domain, dan papan status ada di
+**`docs/HANDOFF-MOBILE.md`** — baca sebelum menyentuh kode mobile. **Rumus di bagian 2
+dokumen itu adalah satu-satunya sumber kebenaran**; jangan menaruh varian rumus di kode.
+
+Perintah siap pakai: `/kt-status`, lalu `/kt-1-draft` … `/kt-10-setor`.
