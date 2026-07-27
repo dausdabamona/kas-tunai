@@ -613,7 +613,10 @@ function muat(){
   google.script.run
     .withSuccessHandler(function(d){
       loading(false);
-      TX    = (d && d.transaksi) || [];
+      // Baris Pindah Dana hanya memindahkan saldo antar kas — bukan belanja.
+      // Disaring di sini supaya tidak muncul di daftar, tidak ikut dihitung,
+      // dan tidak menagih nota/pajak. (Versi desktop menyaringnya juga.)
+      TX    = ((d && d.transaksi) || []).filter(bukanPindahDana);
       FOTO  = (d && d.fotoMap) || {};
       SALDO = (d && d.saldo) || null;
       try {
@@ -628,6 +631,7 @@ function muat(){
 }
 
 /* ===================== Klasifikasi tampilan ===================== */
+function bukanPindahDana(t){ return String(t.refTransfer||'').indexOf('TF-') !== 0; }
 function isKeluar(t){ return (+t.kredit||0) > 0; }
 function fotoCount(t){ return FOTO[String(t.no)] || 0; }
 function pajakBelum(t){

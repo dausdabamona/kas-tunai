@@ -1810,6 +1810,10 @@ function updateSaldoBar(){
   if(isViewer){ _applyRoleUI(); return; } // peninjau tidak melihat saldo
   var masuk=0,keluar=0;
   for(var i=0;i<allTransaksi.length;i++){
+    // Pindah Dana hanya memindahkan saldo antar kas — bukan uang masuk/keluar.
+    // Kalau ikut dijumlah, Total Masuk & Total Keluar sama-sama menggelembung
+    // sebesar nominal pindah (saldo gabungan tetap benar).
+    if(!_notTransfer(allTransaksi[i])) continue;
     masuk+=(+allTransaksi[i].debet||0);
     keluar+=(+allTransaksi[i].kredit||0);
   }
