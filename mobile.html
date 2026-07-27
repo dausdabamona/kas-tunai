@@ -498,7 +498,7 @@
 <!-- ================= TAMBAH NOTA ================= -->
 <div id="scNota" class="scr task">
   <button class="back" onclick="kembaliDetail()"><i class="ph-duotone ph-arrow-left"></i> Detail</button>
-  <div class="h1" style="margin-top:10px">Tambah nota</div>
+  <div class="h1" style="margin-top:10px" id="ntTajuk">Tambah nota</div>
   <div class="step" id="ntJudul">—</div>
 
   <div class="f"><label>Penyedia / Toko</label>
@@ -522,6 +522,11 @@
 
   <input type="file" id="ntCam" accept="image/*" capture="environment" style="display:none" onchange="ntTerima(this)">
   <div class="strip" style="margin-top:18px">Foto dikompres ke maks. 1280px sebelum diunggah — hemat kuota.</div>
+
+  <div id="ntHapusWrap" class="hide" style="margin-top:22px;border-top:1px solid var(--n200);padding-top:18px">
+    <button class="btn" style="width:100%;color:var(--a2-700)" onclick="hapusNota()">Hapus nota ini</button>
+    <div class="hint" style="text-align:center">Nota dan berkas notanya dibuang; foto barang ikut tidak terpakai.</div>
+  </div>
 </div>
 
 <!-- ================= PINDAH DANA ================= -->
@@ -917,7 +922,10 @@ function detailNota(t, notas){
       +  '<div class="fotoStrip">' + (fa || '<div class="tile"><i class="ph-duotone ph-receipt"></i></div>') + '</div>'
       +  '<div class="kick" style="margin-top:8px">Bukti B — barang diterima</div>'
       +  '<div class="fotoStrip">' + (fb || '<div class="tile"><i class="ph-duotone ph-package"></i></div>') + '</div>'
-      + '<button class="btn pink" style="margin-top:12px" onclick="bukaPajak('+JSON.stringify(String(t.no))+','+JSON.stringify(String(n.urutan))+')">Isi potongan pajak nota ini</button>'
+      + '<div style="display:flex;gap:10px;margin-top:12px">'
+      +   '<button class="btn pink" style="flex:1.4" onclick="bukaPajak('+JSON.stringify(String(t.no))+','+JSON.stringify(String(n.urutan))+')">Potongan pajak</button>'
+      +   '<button class="btn" style="flex:1" onclick="bukaNotaUbah('+JSON.stringify(String(t.no))+','+JSON.stringify(String(n.urutan))+')">&#9998; Ubah</button>'
+      + '</div>'
       + '</div>';
   }
   var noJs = JSON.stringify(String(t.no));
@@ -1646,24 +1654,63 @@ function simpanEdit(){
  * sini, lengkap dengan dua jenis bukti yang dipisah seperti versi desktop —
  * Bukti A (scan nota) menempel pada baris notanya, Bukti B (barang diterima)
  * disimpan sebagai foto nota bertag.                                       */
-var NT = { no:null, fotoNota:[], fotoBarang:[], sasaran:'nota' };
-function bukaNotaBaru(no){
-  var t = null;
-  for (var i=0;i<TX.length;i++) if (String(TX[i].no)===String(no)) { t = TX[i]; break; }
-  if (!t){ toast('Transaksi tidak ditemukan', true); return; }
-  NT = { no:String(no), fotoNota:[], fotoBarang:[], sasaran:'nota', transaksi:t };
+var NT = { no:null, mode:'baru', urutan:null, fotoNota:[], fotoBarang:[], lamaA:null, lamaB:[], sasaran:'nota' };
+function _ntCariTx(no){
+  for (var i=0;i<TX.length;i++) if (String(TX[i].no)===String(no)) return TX[i];
+  return null;
+}
+function _ntSiap(no, t){
+  NT = { no:String(no), mode:'baru', urutan:null, fotoNota:[], fotoBarang:[],
+         lamaA:null, lamaB:[], sasaran:'nota', transaksi:t };
   muatPenyedia('ntPenyediaList');
+}
+function bukaNotaBaru(no){
+  var t = _ntCariTx(no);
+  if (!t){ toast('Transaksi tidak ditemukan', true); return; }
+  _ntSiap(no, t);
+  $('ntTajuk').textContent = 'Tambah nota';
   $('ntPenyedia').value = ''; $('ntNilai').value = '';
   $('ntTanggal').value = new Date().toISOString().slice(0,10);
   $('ntJudul').textContent = 'No ' + no + ' · ' + (t.kegiatan||'-');
+  $('ntHapusWrap').className = 'hide';
   ntIsiNpwp(); ntSisa(); ntRenderFoto();
+  go('nota');
+}
+/* Ubah nota yang sudah tersimpan. Foto lama ditampilkan apa adanya:
+   Bukti A bisa diganti (server membuang berkas lamanya), Bukti B bisa
+   dihapus satu per satu. */
+function bukaNotaUbah(no, urutan){
+  var t = _ntCariTx(no);
+  if (!t){ toast('Transaksi tidak ditemukan', true); return; }
+  var n = null;
+  for (var i=0;i<NOTAS.length;i++) if (String(NOTAS[i].urutan)===String(urutan)) { n = NOTAS[i]; break; }
+  if (!n){ toast('Nota tidak ditemukan', true); return; }
+  _ntSiap(no, t);
+  NT.mode = 'ubah'; NT.urutan = String(urutan); NT.nota = n;
+  NT.lamaA = n.fileId ? { fileId:n.fileId, urlFile:n.urlFile } : null;
+  NT.lamaB = (FOTO_NOTA[String(urutan)] || []).slice();
+  $('ntTajuk').textContent = 'Ubah nota';
+  $('ntJudul').textContent = 'No ' + no + ' · nota ' + urutan;
+  $('ntPenyedia').value = n.namaPenyedia || '';
+  $('ntNilai').value = (+n.nilai||0) ? (+n.nilai).toLocaleString('id-ID') : '';
+  $('ntTanggal').value = n.tglNota || '';
+  $('ntHapusWrap').className = '';
+  ntIsiNpwp();
+  // NPWP/alamat dari nota dipakai bila penyedianya belum ada di master.
+  if (!NT.penyedia && (n.npwp || n.alamat)) NT.penyedia = { npwp:n.npwp||'', alamat:n.alamat||'' };
+  ntSisa(); ntRenderFoto();
   go('nota');
 }
 /* Sisa yang belum bernota — supaya jelas berapa lagi yang harus dipertanggungjawabkan. */
 function ntSisa(){
   var t = NT.transaksi || {};
   var sudah = 0;
-  for (var i=0;i<NOTAS.length;i++) sudah += (+NOTAS[i].nilai||0);
+  // Saat mengubah, nilai lama nota ini tidak ikut dihitung — kalau ikut,
+  // sisanya terlihat kurang sebesar dua kali nota yang sedang disunting.
+  for (var i=0;i<NOTAS.length;i++){
+    if (NT.mode==='ubah' && String(NOTAS[i].urutan)===String(NT.urutan)) continue;
+    sudah += (+NOTAS[i].nilai||0);
+  }
   var sisa = (+t.kredit||0) - sudah - angka($('ntNilai').value);
   var el = $('ntSisaHint');
   el.textContent = 'Uang muka ' + rp(t.kredit) + ' · sudah bernota ' + rp(sudah)
@@ -1693,10 +1740,25 @@ function ntTerima(input){
   input.value = '';
 }
 function ntRenderFoto(){
-  $('ntFotoNota').innerHTML   = _ntPetak(NT.fotoNota,   'nota');
-  $('ntFotoBarang').innerHTML = _ntPetak(NT.fotoBarang, 'barang');
+  var a = '', b = '', i;
+  // --- Bukti A: berkas nota yang sudah tersimpan (bila ada) ---
+  if (NT.lamaA && !NT.fotoNota.length)
+    a += '<div class="ph">' + _ntImgDrive(NT.lamaA.fileId)
+       + '<button class="tukar" onclick="ntAmbil(\'nota\')">&#8646; ganti</button></div>';
+  a += _ntPetakBaru(NT.fotoNota, 'nota');
+  // --- Bukti B: foto bertag yang sudah terunggah, bisa dihapus satu per satu ---
+  for (i=0;i<NT.lamaB.length;i++)
+    b += '<div class="ph">' + _ntImgDrive(NT.lamaB[i].fileId)
+       + '<button class="del" onclick="ntHapusFotoServer('+i+')" aria-label="Hapus">'
+       + '<i class="ph-duotone ph-trash"></i></button></div>';
+  b += _ntPetakBaru(NT.fotoBarang, 'barang');
+  $('ntFotoNota').innerHTML = a;
+  $('ntFotoBarang').innerHTML = b;
 }
-function _ntPetak(arr, jenis){
+function _ntImgDrive(fileId){
+  return '<img src="https://drive.google.com/thumbnail?id=' + esc(fileId) + '&sz=w400" alt="">';
+}
+function _ntPetakBaru(arr, jenis){
   var h = '';
   for (var i=0;i<arr.length;i++)
     h += '<div class="ph"><img src="'+prev(arr[i])+'" alt="">'
@@ -1706,9 +1768,22 @@ function _ntPetak(arr, jenis){
      + '<i class="ph-duotone ph-plus" style="font-size:26px"></i>Tambah foto</button>';
   return h;
 }
+/* Foto yang belum terunggah — cukup dibuang dari daftar lokal. */
 function ntHapusFoto(jenis, i){
   (jenis==='barang' ? NT.fotoBarang : NT.fotoNota).splice(i,1);
   ntRenderFoto();
+}
+/* Foto yang sudah ada di server — hapus sungguhan, jadi perlu konfirmasi. */
+function ntHapusFotoServer(i){
+  var f = NT.lamaB[i]; if (!f) return;
+  if (!confirm('Hapus foto ini? Berkasnya ikut dibuang dari Drive.')) return;
+  loading(true,'Menghapus foto…');
+  google.script.run
+    .withSuccessHandler(function(){
+      loading(false); NT.lamaB.splice(i,1); ntRenderFoto(); toast('Foto dihapus');
+    })
+    .withFailureHandler(gagal)
+    .serverHapusFotoNota(_tok, NT.no, NT.urutan, f.urutan);
 }
 function simpanNotaBaru(){
   var nama = ($('ntPenyedia').value||'').trim();
@@ -1716,31 +1791,51 @@ function simpanNotaBaru(){
   if (!nama){ toast('Nama penyedia wajib diisi', true); return; }
   if (nilai <= 0){ toast('Nilai nota harus lebih dari 0', true); return; }
   if (!navigator.onLine){ toast('Tidak ada koneksi — coba lagi setelah tersambung', true); return; }
-  var p = NT.penyedia || {};
+  var p = NT.penyedia || {}, no = NT.no, ubah = (NT.mode==='ubah');
+  // updateNota SELALU menimpa nama, nominal, NPWP, alamat, dan tanggal nota —
+  // jadi kelimanya dikirim lengkap, bukan hanya yang berubah.
+  var data = {
+    namaPenyedia: nama, npwp: p.npwp||'', alamat: p.alamat||'',
+    nilai: nilai, tglNota: $('ntTanggal').value || '',
+    file: NT.fotoNota[0] ? _kirimFoto(NT.fotoNota[0], 'Scan nota (HP)') : null
+  };
+  var lanjutkan = function(urutan){
+    if (!NT.penyedia) google.script.run.serverSimpanPenyedia(_tok, { nama:nama, npwp:'', alamat:'' });
+    // Foto nota ke-2 dst = halaman lanjutan; sisanya foto barang (Bukti B).
+    var lanjut = [], i;
+    for (i=1;i<NT.fotoNota.length;i++) lanjut.push(_kirimFoto(NT.fotoNota[i], 'Nota (lanjutan, HP)'));
+    for (i=0;i<NT.fotoBarang.length;i++) lanjut.push(_kirimFoto(NT.fotoBarang[i], 'Barang diterima (HP)'));
+    if (!lanjut.length){ ntSelesai(no); return; }
+    loading(true, 'Mengunggah ' + lanjut.length + ' foto…');
+    google.script.run
+      .withSuccessHandler(function(){ ntSelesai(no); })
+      .withFailureHandler(function(e){ gagal(e); ntSelesai(no); })
+      .serverUploadFotoNota(_tok, no, urutan, lanjut);
+  };
+  loading(true, ubah ? 'Menyimpan perubahan…' : 'Menyimpan nota…');
+  if (ubah){
+    google.script.run
+      .withSuccessHandler(function(){ lanjutkan(NT.urutan); })
+      .withFailureHandler(gagal)
+      .serverUpdateNota(_tok, no, NT.urutan, data);
+  } else {
+    google.script.run
+      .withSuccessHandler(function(res){ lanjutkan((res && res.urutan) || 1); })
+      .withFailureHandler(gagal)
+      .serverTambahNota(_tok, no, data);
+  }
+}
+function hapusNota(){
+  if (NT.mode!=='ubah' || NT.urutan===null) return;
+  var n = NT.nota || {};
+  if (!confirm('Hapus nota ' + NT.urutan + ' (' + (n.namaPenyedia||'tanpa nama') + ' · ' + rp(n.nilai) + ')?\n\n'
+    + 'Total nota transaksi ini akan dihitung ulang.')) return;
   var no = NT.no;
-  loading(true, 'Menyimpan nota…');
+  loading(true,'Menghapus nota…');
   google.script.run
-    .withSuccessHandler(function(res){
-      var urutan = (res && res.urutan) || 1;
-      // Simpan penyedia ke master supaya autocomplete berikutnya mengenalinya.
-      if (!NT.penyedia) google.script.run.serverSimpanPenyedia(_tok, { nama:nama, npwp:'', alamat:'' });
-      // Bukti B + halaman lanjutan nota (foto nota ke-2 dst).
-      var lanjut = [];
-      for (var i=1;i<NT.fotoNota.length;i++) lanjut.push(_kirimFoto(NT.fotoNota[i], 'Nota (lanjutan, HP)'));
-      for (var j=0;j<NT.fotoBarang.length;j++) lanjut.push(_kirimFoto(NT.fotoBarang[j], 'Barang diterima (HP)'));
-      if (!lanjut.length){ ntSelesai(no); return; }
-      loading(true, 'Mengunggah ' + lanjut.length + ' foto…');
-      google.script.run
-        .withSuccessHandler(function(){ ntSelesai(no); })
-        .withFailureHandler(function(e){ gagal(e); ntSelesai(no); })
-        .serverUploadFotoNota(_tok, no, urutan, lanjut);
-    })
+    .withSuccessHandler(function(){ toast('Nota dihapus'); ntSelesai(no); })
     .withFailureHandler(gagal)
-    .serverTambahNota(_tok, no, {
-      namaPenyedia: nama, npwp: p.npwp||'', alamat: p.alamat||'',
-      nilai: nilai, tglNota: $('ntTanggal').value || '',
-      file: NT.fotoNota[0] ? _kirimFoto(NT.fotoNota[0], 'Scan nota (HP)') : null
-    });
+    .serverHapusNotaItem(_tok, no, NT.urutan, n.fileId || '');
 }
 function ntSelesai(no){
   loading(false); toast('Nota tersimpan');
