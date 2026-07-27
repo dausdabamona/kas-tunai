@@ -283,6 +283,10 @@ function serverSimpanPajak(token, no, d) {
 function serverSimpanPajakNota(token, no, urutan, d) {
   return _run(token, function (auth) { return KasTunai.simpanPajakNota(no, urutan, d); });
 }
+/** Daftar seluruh nota yang dipotong pajak (rekap setoran / SPT Masa). */
+function serverGetNotaPajak(token) {
+  return _run(token, function (auth) { return KasTunai.getNotaPajak(); });
+}
 
 /* ============================================================
  * Impor Rekening Koran (Bank) — .xlsx via Advanced Drive Service

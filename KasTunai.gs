@@ -520,6 +520,49 @@ var KasTunai = (function () {
     return { success: true, total: tot };
   }
 
+  /**
+   * Daftar SELURUH nota yang dipotong pajak, lintas transaksi — bahan rekap
+   * setoran & SPT Masa. Tiap baris sudah dilengkapi identitas transaksinya
+   * agar frontend bisa mencetak bukti potong tanpa query tambahan.
+   */
+  function getNotaPajak() {
+    var n = NC();
+    var tx = {}, tdata = SheetRepo.getData(CONFIG.SHEETS.KAS_TUNAI);
+    for (var i = 0; i < tdata.length; i++) {
+      var r = tdata[i];
+      if (isDeleted(r[C.IS_DELETED])) continue;
+      tx[String(r[C.NO])] = {
+        tanggal: Util.fmtDate(r[C.TANGGAL]), kegiatan: r[C.KEGIATAN],
+        penjab: r[C.PENJAB], akun: r[C.AKUN] || ''
+      };
+    }
+    var rows = SheetRepo.getData(CONFIG.SHEETS.MULTI_NOTA), out = [];
+    for (var j = 0; j < rows.length; j++) {
+      var m = rows[j];
+      if (isDeleted(m[n.IS_DELETED])) continue;
+      var pph = Util.num(m[n.PAJAK_PPH]), ppn = Util.num(m[n.PAJAK_PPN]);
+      if (pph + ppn <= 0) continue;                       // hanya yang benar-benar dipotong
+      var noTx = String(m[n.NO_TRANSAKSI]), t = tx[noTx] || {};
+      out.push({
+        no: noTx, tglTransaksi: t.tanggal || '', kegiatan: t.kegiatan || '',
+        penjab: t.penjab || '', akun: t.akun || '',
+        urutan: m[n.URUTAN], namaPenyedia: m[n.NAMA_NOTA] || '',
+        npwp: m[n.NPWP_PENYEDIA] || '', alamat: m[n.ALAMAT_PENYEDIA] || '',
+        tglNota: Util.fmtDate(m[n.TGL_NOTA] || m[n.TGL_UPLOAD]),
+        nilai: Util.num(m[n.NOMINAL]),
+        pajakKatIdx: (m[n.PAJAK_KATEGORI_IDX] !== '' && m[n.PAJAK_KATEGORI_IDX] != null) ? Util.num(m[n.PAJAK_KATEGORI_IDX]) : null,
+        pajakDpp: Util.num(m[n.PAJAK_DPP]), pajakPph: pph, pajakPpn: ppn,
+        pajakTermasukPPN: String(m[n.PAJAK_TERMASUK_PPN] || '').toUpperCase() !== 'N',
+        pajakAdaNpwp: String(m[n.PAJAK_ADA_NPWP] || '').toUpperCase() !== 'N'
+      });
+    }
+    out.sort(function (a, b) {
+      return String(b.tglNota || '').localeCompare(String(a.tglNota || '')) ||
+             (Util.num(b.no) - Util.num(a.no));
+    });
+    return out;
+  }
+
   /** Jumlahkan pajak seluruh nota aktif → tulis ke kolom pajak transaksi. */
   function _recalcPajakTransaksi(transactionId) {
     var notas = getMultiNota(transactionId);
@@ -566,6 +609,7 @@ var KasTunai = (function () {
     hapusKuitansi: hapusKuitansi,
     simpanPajak: simpanPajak,
     simpanPajakNota: simpanPajakNota,
+    getNotaPajak: getNotaPajak,
     getRekap: getRekap
   };
 })();
