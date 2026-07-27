@@ -20,12 +20,20 @@ function doGet(e) {
   // dan mobile (halaman GAS berjalan di dalam iframe, jadi tak bisa membaca
   // alamatnya sendiri).
   try { tpl.webAppUrl = ScriptApp.getService().getUrl() || ''; } catch (err) { tpl.webAppUrl = ''; }
-  return tpl.evaluate()
+  tpl.iconUrl = CONFIG.ICON_URL || '';
+  var out = tpl.evaluate()
     .setTitle('Kas Tunai - Poltek KP Sorong')
     .addMetaTag('viewport', mobile
       ? 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover'
       : 'width=device-width, initial-scale=1')
+    // Warna bilah atas browser saat aplikasi dibuka dari layar utama HP.
+    .addMetaTag('theme-color', '#0088b0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  // Ikon halaman: dipakai browser untuk tab dan untuk pintasan layar utama.
+  // Hanya setFaviconUrl yang berpengaruh — <link rel="icon"> di dalam berkas
+  // HTML kita tidak terbaca karena halaman ini berjalan di dalam iframe.
+  if (CONFIG.ICON_URL) out.setFaviconUrl(CONFIG.ICON_URL);
+  return out;
 }
 
 /** Include partial HTML/CSS/JS (dipakai bila file dipecah). */

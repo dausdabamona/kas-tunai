@@ -154,6 +154,15 @@ var CONFIG = {
     ]
   },
 
+  /**
+   * Ikon aplikasi (favicon + ikon layar utama HP).
+   * Apps Script hanya menerima URL, bukan berkas lokal, sehingga PNG di folder
+   * assets/ disajikan dari repositori publik GitHub. Ganti URL ini bila berkas
+   * dipindahkan ke tempat lain (mis. Drive yang dibagikan ke publik).
+   * Berkas sumbernya: assets/icon.svg.
+   */
+  ICON_URL: 'https://raw.githubusercontent.com/dausdabamona/kas-tunai/refs/heads/claude/determined-archimedes-od8jtc/assets/icon-192.png',
+
   // Identitas instansi (untuk laporan SPJ & SSP pajak)
   /**
    * Identitas instansi & pejabat penanda tangan.

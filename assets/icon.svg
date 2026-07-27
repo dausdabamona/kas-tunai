@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Ikon Kas Tunai (Poltek KP Sorong).
+       Warna mengikuti sistem aplikasi: teal #0088b0 (aksen), #006786 (aksen tua),
+       magenta #d6006c (aksen kedua), kertas #f7f6f5.
+       Bentuk: nota/kuitansi bertepi sobek dengan "Rp" di dalamnya.
+       Berkas PNG di folder ini yang dipakai aplikasi; SVG ini sumbernya. -->
+  <clipPath id="sobek">
+    <!-- Sisi bawah bergerigi — seperti struk yang disobek dari mesin. -->
+    <path d="M106 86h300v276
+             l-25 24-25-24-25 24-25-24-25 24-25-24-25 24-25-24-25 24-25-24-25 24-25-24z"/>
+  </clipPath>
+
+  <rect width="512" height="512" rx="114" fill="#0088b0"/>
+
+  <g clip-path="url(#sobek)">
+    <rect x="106" y="86" width="300" height="310" fill="#f7f6f5"/>
+    <!-- Pita magenta di kepala nota: aksen merek, sekaligus 'kop' nota. -->
+    <rect x="106" y="86" width="300" height="28" fill="#d6006c"/>
+  </g>
+
+  <!-- Rupiah -->
+  <text x="256" y="302" text-anchor="middle"
+        font-family="'Source Serif 4','Liberation Serif',Georgia,serif"
+        font-weight="600" font-size="180" fill="#006786">Rp</text>
+
+  <!-- Baris nominal di bawahnya, meniru angka pada nota. -->
+  <rect x="158" y="332" width="196" height="16" rx="8" fill="#0088b0" opacity=".4"/>
+</svg>
