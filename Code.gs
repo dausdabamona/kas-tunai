@@ -21,18 +21,22 @@ function doGet(e) {
   // alamatnya sendiri).
   try { tpl.webAppUrl = ScriptApp.getService().getUrl() || ''; } catch (err) { tpl.webAppUrl = ''; }
   tpl.iconUrl = CONFIG.ICON_URL || '';
+  // addMetaTag hanya menerima daftar tag tertentu (viewport,
+  // apple-mobile-web-app-capable, mobile-web-app-capable,
+  // google-site-verification). Tag lain — termasuk theme-color — ditolak
+  // dengan "Tag meta yang Anda tentukan tidak diperbolehkan dalam konteks ini"
+  // dan membuat SELURUH halaman gagal dimuat. Jangan tambahkan di sini.
   var out = tpl.evaluate()
     .setTitle('Kas Tunai - Poltek KP Sorong')
     .addMetaTag('viewport', mobile
       ? 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover'
       : 'width=device-width, initial-scale=1')
-    // Warna bilah atas browser saat aplikasi dibuka dari layar utama HP.
-    .addMetaTag('theme-color', '#0088b0')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   // Ikon halaman: dipakai browser untuk tab dan untuk pintasan layar utama.
   // Hanya setFaviconUrl yang berpengaruh — <link rel="icon"> di dalam berkas
   // HTML kita tidak terbaca karena halaman ini berjalan di dalam iframe.
-  if (CONFIG.ICON_URL) out.setFaviconUrl(CONFIG.ICON_URL);
+  // Dibungkus try/catch: hiasan tidak boleh menjatuhkan seluruh aplikasi.
+  try { if (CONFIG.ICON_URL) out.setFaviconUrl(CONFIG.ICON_URL); } catch (err2) {}
   return out;
 }
 
