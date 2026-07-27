@@ -167,6 +167,11 @@
 
   <div class="sec-h"><div class="t">Transaksi terakhir</div><button class="lnk" onclick="go('transaksi')">Semua</button></div>
   <div id="bdList"></div>
+
+  <div style="margin-top:26px;text-align:center">
+    <a id="lnkDesktop" href="#" target="_top" onclick="try{localStorage.setItem('kt_view','desktop')}catch(e){}"
+       style="font-size:13px;color:var(--n600)">Buka versi desktop</a>
+  </div>
 </div>
 
 <!-- ================= TRANSAKSI ================= -->
@@ -200,6 +205,7 @@
 
 <script>
 /* ===================== State ===================== */
+var WEBAPP_URL = '<?= webAppUrl ?>';   /* disuntik doGet — untuk pindah ke desktop */
 var _tok = '';
 try { _tok = localStorage.getItem('kt_token') || ''; } catch(e){}
 var TX = [], FOTO = {}, SALDO = null, USER = null, SCREEN = 'beranda', FILTER = 'semua', DETAIL_NO = null;
@@ -500,6 +506,8 @@ function detailNota(t, notas){
 /* ===================== Mulai ===================== */
 (function init(){
   try { USER = JSON.parse(localStorage.getItem('kt_user')||'null'); } catch(e){}
+  var ld = $('lnkDesktop');
+  if (ld && WEBAPP_URL) ld.href = WEBAPP_URL + (WEBAPP_URL.indexOf('?')>=0?'&':'?') + 'm=0';
   renderChips();
   window.addEventListener('online',  function(){ $('bdOffline').className='banner hide'; });
   window.addEventListener('offline', function(){ $('bdOffline').className='banner'; });

@@ -15,7 +15,12 @@ function doGet(e) {
   // ?m=1 → tampilan mobile (mobile.html); selain itu tampilan desktop.
   var p = (e && e.parameter) ? e.parameter : {};
   var mobile = (p.m === '1' || p.mobile === '1');
-  return HtmlService.createTemplateFromFile(mobile ? 'mobile' : 'index').evaluate()
+  var tpl = HtmlService.createTemplateFromFile(mobile ? 'mobile' : 'index');
+  // URL web app disuntik agar halaman bisa berpindah antara tampilan desktop
+  // dan mobile (halaman GAS berjalan di dalam iframe, jadi tak bisa membaca
+  // alamatnya sendiri).
+  try { tpl.webAppUrl = ScriptApp.getService().getUrl() || ''; } catch (err) { tpl.webAppUrl = ''; }
+  return tpl.evaluate()
     .setTitle('Kas Tunai - Poltek KP Sorong')
     .addMetaTag('viewport', mobile
       ? 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover'

@@ -235,9 +235,23 @@
   #spbyPickBar button{min-height:44px;border:0;border-radius:9px;padding:0 16px;font-size:14px;font-weight:800;cursor:pointer}
   #spbyPickBar .pb-go{background:#fff;color:#0f766e} #spbyPickBar .pb-go[disabled]{opacity:.5;cursor:not-allowed}
   #spbyPickBar .pb-cancel{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6)}
+
+  /* Tawaran versi mobile saat dibuka di layar kecil */
+  #mobileTip{display:none;background:#0088b0;color:#fff;padding:10px 14px;font-size:13.5px;
+    align-items:center;gap:10px;flex-wrap:wrap;line-height:1.35}
+  #mobileTip a{background:#fff;color:#006786;border-radius:999px;padding:8px 14px;font-weight:800;
+    text-decoration:none;min-height:40px;display:inline-flex;align-items:center;white-space:nowrap}
+  #mobileTip button{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6);
+    border-radius:999px;padding:8px 12px;font-size:12.5px;min-height:40px;cursor:pointer}
 </style>
 </head>
 <body>
+
+<div id="mobileTip">
+  <span style="flex:1;min-width:150px">&#128241; Layar Anda kecil &mdash; tersedia tampilan khusus HP.</span>
+  <a id="mobileTipLink" href="#" target="_top">Buka versi HP</a>
+  <button onclick="_tolakMobile()">Tetap di sini</button>
+</div>
 
 <header class="topbar">
   <div class="brand">&#128176; <span>Kas Tunai<small>Poltek KP Sorong &middot; <span id="userLabel"></span></small></span></div>
@@ -1029,6 +1043,10 @@
    selalu kosong utk staf Gmail). Nilai asli di-set dari respons serverLogin,
    serverGetDashboard, dan prefill kt_user di init(). SALDO_AWAL_JS hanya fallback
    saat saldoInfo null — full/admin selalu dapat saldoInfo, viewer saldo disembunyikan. */
+/* URL web app (disuntik doGet) — dipakai untuk berpindah ke tampilan HP.
+   Halaman GAS berjalan dalam iframe, jadi alamatnya tak bisa dibaca sendiri. */
+var WEBAPP_URL = '<?= webAppUrl ?>';
+
 var SALDO_AWAL_JS = 0;
 var CURRENT_USER  = '';
 var NAMA_USER     = '';
@@ -5426,8 +5444,24 @@ function cetakRekapPajak(){
   _bukaPopup(html);
 }
 
+/* ===== Tawaran tampilan HP (tampil di layar kecil, bisa ditolak) ===== */
+function _tolakMobile(){
+  try { localStorage.setItem('kt_view','desktop'); } catch(e){}
+  var el=document.getElementById('mobileTip'); if(el) el.style.display='none';
+}
+function _cekTawaranMobile(){
+  var el=document.getElementById('mobileTip'); if(!el) return;
+  var pilihan=''; try{ pilihan=localStorage.getItem('kt_view')||''; }catch(e){}
+  var kecil=(window.innerWidth||document.documentElement.clientWidth||0) < 760;
+  if(!kecil || pilihan==='desktop' || !WEBAPP_URL) return;
+  var a=document.getElementById('mobileTipLink');
+  if(a) a.href = WEBAPP_URL + (WEBAPP_URL.indexOf('?')>=0?'&':'?') + 'm=1';
+  el.style.display='flex';
+}
+
 /* ============== Init ============== */
 (function init(){
+  _cekTawaranMobile();
   // Prefill role dari localStorage bila token sudah tersimpan
   var _savedUser = null;
   try { _savedUser = JSON.parse(localStorage.getItem('kt_user') || 'null'); } catch(e){}
