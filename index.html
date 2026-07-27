@@ -2250,7 +2250,9 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
     // (B) foto barang — foto per item + foto barang bertag, dikelompokkan per nota
     var bfig='', bcnt=0;
     for(d=0;d<edt.length;d++){ if(edt[d].fileId){ bfig+=fig(edt[d].fileId,lnk(edt[d].urlFile,edt[d].fileId),edt[d].namaBarang||'Barang',false); bcnt++; } }
-    for(j=0;j<efp.length;j++){ if(efp[j].fileId){ bfig+=fig(efp[j].fileId,lnk(efp[j].urlFile,efp[j].fileId),'Barang diterima',false); bcnt++; } }
+    // Keterangan dipakai apa adanya bila ada — halaman lanjutan nota yang
+    // diunggah dari HP tidak boleh ikut berlabel "Barang diterima".
+    for(j=0;j<efp.length;j++){ if(efp[j].fileId){ bfig+=fig(efp[j].fileId,lnk(efp[j].urlFile,efp[j].fileId),(efp[j].keterangan||'Barang diterima'),false); bcnt++; } }
     if(bcnt){
       nBarang+=bcnt;
       evBarang+='<div class="nb evrow"><div class="evh"><span class="nbn">'+('0'+(i+1)).slice(-2)+'</span>'
