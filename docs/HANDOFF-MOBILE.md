@@ -10,7 +10,7 @@ Dokumen acuan lintas sesi. Setiap perintah `/kt-*` membaca file ini lebih dulu.
 | # | Tugas | Perintah | Status | Branch / commit |
 |---|-------|----------|--------|-----------------|
 | 0 | CLAUDE.md repo | `/kt-0-setup` | ⬜ belum | — |
-| 1 | Tambal draft foto hilang diam-diam | `/kt-1-draft` | ⬜ belum | — |
+| 1 | Tambal draft foto hilang diam-diam | `/kt-1-draft` | 🟡 kode selesai | `kt-1-draft` → c2395b9 |
 | 2 | Antrean unggah offline | `/kt-2-antrean` | ⬜ belum | — |
 | 3 | Layar Akun | `/kt-3-akun` | ⬜ belum | — |
 | 4 | Item POK + cek sisa pagu | `/kt-4-pagu` | ⬜ belum | — |
@@ -18,6 +18,10 @@ Dokumen acuan lintas sesi. Setiap perintah `/kt-*` membaca file ini lebih dulu.
 | 6 | Worklist pajak + pengingat setor | `/kt-6-pajak` | ⬜ belum | — |
 
 Status: ⬜ belum · 🟡 jalan · ✅ selesai (sudah diuji di HP) · ⛔ terblokir
+
+> Tugas 1: kode selesai dan diuji otomatis di Chromium lewat jalur asli aplikasi
+> (`#kmCam` → `terimaFoto` → `kompres` → `simpanDraft`, 12 foto, tutup-buka tab).
+> Naikkan ke ✅ setelah dikonfirmasi di HP sungguhan pasca `deploy.bat`.
 
 **Urutan wajib:** 1 → 2 (keduanya menyentuh penyimpanan lokal yang sama, jangan paralel).
 3 boleh kapan saja. 4 → 5 → 6 setelah 2 beres.
@@ -112,6 +116,14 @@ yang disepakati, ambang hari, dsb).
 |---------|-------|-----------|
 | 27 Jul 2026 | T1 | Diukur ulang: gagal pada foto ke-5 (bukan 6–9). Penjaga ukuran wajib. |
 | 27 Jul 2026 | T2, T3 | Diperiksa ulang di kode — keduanya masih benar dan belum ditambal. |
+| 27 Jul 2026 | T1 | **Selesai.** `_prev` tidak lagi ikut disimpan (874→437 KB/foto); `simpanDraft()` mengembalikan boolean dan melaporkan gagal; penjaga 3,5 MB menolak foto sebelum kuota jebol. Uji 12 foto: 8 tersimpan, ke-9 ditolak dengan peringatan, isi FOTOS selalu sama dengan isi draft, jenis nota/barang bertahan setelah muat ulang. Catatan untuk `/kt-2-antrean`: batas 3,5 MB ini hanya penambal — antrean IndexedDB yang akan menghapus batas tersebut. |
+
+---
+
+## 6. Sengaja tidak dikerjakan
+
+Rekonsiliasi rekening koran/SAKTI, impor pagu, manajemen user, dan layout SPJ **tetap
+di desktop**. Memindahkannya ke layar kecil hanya menambah risiko salah input.
 
 ---
 
@@ -130,10 +142,3 @@ mencakup ini karena bukan bagian dari tugas 1–6.
 | Pindah dana bank ↔ tunai | Layar sendiri + konversi transaksi keluar jadi Pindah Dana (`serverKonversiPindahDana`) |
 | Tanda terima 2 salinan per A4 | Atas bendahara, bawah PUM, garis potong di tengah |
 | Ikon aplikasi | `assets/`, dipasang lewat `setFaviconUrl` di `doGet` — `addMetaTag` hanya menerima viewport, apple-mobile-web-app-capable, mobile-web-app-capable, google-site-verification; tag lain **menjatuhkan seluruh halaman** |
-
----
-
-## 6. Sengaja tidak dikerjakan
-
-Rekonsiliasi rekening koran/SAKTI, impor pagu, manajemen user, dan layout SPJ **tetap
-di desktop**. Memindahkannya ke layar kecil hanya menambah risiko salah input.
