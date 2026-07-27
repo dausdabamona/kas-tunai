@@ -583,7 +583,9 @@ var KasTunai = (function () {
     if (!adaYangDiisi) return null;                   // jangan sentuh data lama bila belum ada pajak nota
     SheetRepo.ensureMinCols(CONFIG.SHEETS.KAS_TUNAI, CONFIG.HEADERS.KAS_TUNAI.length);
     updateByTransactionId(transactionId, Util.set(
-      C.PAJAK_KATEGORI_IDX, (katIdx != null ? katIdx : 0),
+      // -1 = manual/lain-lain (bukan 0 yang berarti kategori pertama) bila tak
+      // ada nota yang memakai kategori baku.
+      C.PAJAK_KATEGORI_IDX, (katIdx != null ? katIdx : -1),
       C.PAJAK_PPH,          pph,
       C.PAJAK_PPN,          ppn,
       C.PAJAK_DPP,          dpp));
