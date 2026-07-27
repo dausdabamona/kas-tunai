@@ -5024,11 +5024,11 @@ function _renderKuitansiHtml(t, list){
   } else if(t.sumber==='BANK'){
     // Transaksi via bank: Bukti Transfer
     docTitle='Bukti Transfer '+noBase+'/'+thn;
-    pages=_kuitansiPage(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'BUKTI TRANSFER', mode:'transfer', noPpk:true });
+    pages=_kuitansiDua(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'BUKTI TRANSFER', mode:'transfer', noPpk:true });
   } else {
     // Transaksi tunai (uang muka PUM): Tanda Terima Uang Muka
     docTitle='Tanda Terima Uang Muka '+noBase+'/'+thn;
-    pages=_kuitansiPage(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'TANDA TERIMA UANG MUKA', noPpk:true });
+    pages=_kuitansiDua(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'TANDA TERIMA UANG MUKA', noPpk:true });
   }
   return ''
   +'<html><head><meta charset="utf-8"><title>'+esc(docTitle)+'</title><style>'+_kuitansiCss()+_docCss()
@@ -5053,11 +5053,42 @@ function _kuitansiCss(){
   +'.sig{width:100%;border-collapse:collapse;margin-top:18px;font-size:12px;text-align:center}'
   +'.sig td{width:33.33%;padding:6px 8px;vertical-align:top}'
   +'.sig .nm{margin-top:54px;font-weight:bold} .sig .nip{font-size:11px}'
+  // Mode 2-salinan-per-A4: setiap salinan dipadatkan jadi setengah halaman.
+  +'.page.dua{padding:0}'
+  +'.page.dua .half{height:148mm;padding:9mm 14mm 5mm;position:relative;overflow:hidden;font-size:12.5px}'
+  +'.page.dua .lbr{position:absolute;top:3.5mm;right:14mm;font-size:9px;font-style:italic;color:#444}'
+  +'.page.dua .kopr .k3, .page.dua .kop .nm{font-size:14.5px}'
+  +'.page.dua .kopr .k1{font-size:11px} .page.dua .kopr .k2{font-size:11.5px}'
+  +'.page.dua .kopr .kal, .page.dua .kop .ad{font-size:9.5px}'
+  +'.page.dua .koplogo img{height:38px}'
+  +'.page.dua .judul{font-size:16px;margin:10px 0 2px}'
+  +'.page.dua .nomor{font-size:11.5px;margin-bottom:10px}'
+  +'.page.dua .b td{padding:6px 9px} .page.dua .b .us{font-size:14px}'
+  +'.page.dua .sig{margin-top:14px;font-size:11.5px}'
+  +'.page.dua .sig td{padding:4px 8px} .page.dua .sig .nm{margin-top:44px}'
+  +'.page.dua .sig .nip{font-size:10px}'
+  // Garis potong: tinggi 0 supaya tidak menambah tinggi halaman.
+  +'.cut{height:0;border-top:1px dashed #666;position:relative}'
+  +'.cut span{position:absolute;top:-7px;left:50%;transform:translateX(-50%);'
+  +'background:#fff;padding:0 8px;font-size:9px;color:#666;letter-spacing:1px}'
   +'@media print{.noprint{display:none}}';
 }
 function _kuitansiPage(t, o){
+  return '<div class="page">'+_kuitansiIsi(t,o)+'</div>';
+}
+/* Satu lembar A4 memuat dua salinan identik (masing-masing setengah halaman):
+   atas untuk arsip Bendahara, bawah untuk Pemegang Uang Muka. Setelah dicetak
+   kertas tinggal dipotong pada garis putus-putus — hemat kertas. */
+function _kuitansiDua(t, o){
   return ''
-  +'<div class="page">'
+  +'<div class="page dua">'
+  +'<div class="half"><div class="lbr">Lembar 1 — Arsip Bendahara</div>'+_kuitansiIsi(t,o)+'</div>'
+  +'<div class="cut"><span>&#9986; potong di sini</span></div>'
+  +'<div class="half"><div class="lbr">Lembar 2 — Pemegang Uang Muka</div>'+_kuitansiIsi(t,o)+'</div>'
+  +'</div>';
+}
+function _kuitansiIsi(t, o){
+  return ''
   +_docKopResmi()
 
   +'<div class="judul" style="letter-spacing:'+((o.judul&&o.judul.length>12)?'3px':'6px')+'">'+esc(o.judul||'K U I T A N S I')+'</div>'
@@ -5078,8 +5109,7 @@ function _kuitansiPage(t, o){
   +'<td'+(o.noPpk?' style="width:50%"':'')+'>'+((o.mode==='transfer')?'Penerima Transfer,':'Penerima,')+'<br>'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)+'<div class="nm">'+esc(o.penerima)+'</div></td>'
   +'<td'+(o.noPpk?' style="width:50%"':'')+'>Bendahara Pengeluaran,<div class="nm">'+esc(INST.bendahara)+'</div><span class="nip">NIP. '+esc(INST.nipBendahara)+'</span></td>'
   +(o.noPpk?'':'<td>Mengetahui,<br>PPK Poltek KP Sorong<div class="nm">'+esc(INST.ppk)+'</div><span class="nip">NIP. '+esc(INST.nipPpk)+'</span></td>')
-  +'</tr></table>'
-  +'</div>';
+  +'</tr></table>';
 }
 
 /* ============== SSP (dasar) ============== */

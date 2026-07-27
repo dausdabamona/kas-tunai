@@ -1086,49 +1086,68 @@ function _htmlTandaTerima(t){
       +esc(I.namaWP||'')+'<br><i>('+esc(I.bendahara||'')+')</i></td></tr>')
     : ('<tr><td class="l">Sudah diterima dari</td><td class="c">:</td><td>Bendahara Pengeluaran '
       +esc(I.namaWP||'')+'<br><i>('+esc(I.bendahara||'')+')</i></td></tr>');
+  // Satu lembar A4 memuat dua salinan identik (masing-masing setengah halaman):
+  // atas untuk arsip Bendahara, bawah untuk Pemegang Uang Muka. Setelah dicetak
+  // kertas tinggal dipotong pada garis putus-putus — hemat kertas.
+  function salinan(label){
+    return ''
+    +'<div class="half">'
+    +'<div class="lbr">'+esc(label)+'</div>'
+    +'<div class="kop"><div class="k1">'+esc(I.kementerian||'')+'</div>'
+    +'<div class="k2">'+esc(I.eselon1||'')+'</div>'
+    +'<div class="k3">'+esc(I.satker||I.namaWP||'')+'</div>'
+    +'<div class="ad">'+esc(I.kopAlamat||'')
+    +(I.kopTelp?(' &middot; Telp. '+esc(I.kopTelp)):'')+(I.kopLaman?(' &middot; '+esc(I.kopLaman)):'')+'</div></div>'
+    +'<hr class="hrt">'
+    +'<div class="judul">'+esc(judul)+'</div>'
+    +'<div class="nomor">Nomor: '+esc(noKwt)+'</div>'
+    +'<table class="b">'
+    + barisAsal
+    +'<tr><td class="l">Uang sejumlah</td><td class="c">:</td><td class="us">'+rp(jumlah)+'</td></tr>'
+    +'<tr><td class="l">Untuk pembayaran</td><td class="c">:</td><td>'+esc(t.kegiatan||'-')
+    + (t.kodeItem?('<br><i>'+esc(t.kodeItem+' — '+(t.uraianItem||''))+'</i>'):'') +'</td></tr>'
+    +'<tr><td class="terb" colspan="3">Terbilang : <i>'+esc(terbilang(jumlah))+' Rupiah</i></td></tr>'
+    +'</table>'
+    // Cukup dua tanda tangan: penerima (PUM) dan Bendahara Pengeluaran —
+    // sama dengan dokumen versi desktop (tanpa blok PPK).
+    +'<table class="sig"><tr>'
+    +'<td style="width:50%">'+(bank?'Penerima Transfer,':'Penerima,')+'<br>'
+    +esc(I.kota||'Sorong')+', '+esc(tglPanjang(t.tanggal))
+    +'<div class="nm">'+esc(penerima)+'</div></td>'
+    +'<td style="width:50%">Bendahara Pengeluaran,<div class="nm">'+esc(I.bendahara||'')+'</div>'
+    +'<span class="nip">NIP. '+esc(I.nipBendahara||'')+'</span></td>'
+    +'</tr></table>'
+    +'</div>';
+  }
   return ''
   +'<html><head><meta charset="utf-8"><title>'+esc(judul+' '+noKwt)+'</title><style>'
   +'@page{size:A4 portrait;margin:0} *{font-family:Arial,sans-serif;box-sizing:border-box}'
-  +'body{font-size:13px;color:#000;margin:0} .page{padding:16mm}'
-  +'.kop{text-align:center;line-height:1.35} .kop .k1{font-size:12px} .kop .k2{font-size:12.5px;font-weight:bold}'
-  +'.kop .k3{font-size:15px;font-weight:bold} .kop .ad{font-size:10.5px;margin-top:3px}'
-  +'.hrt{border:0;border-top:2.5px solid #000;margin:6px 0 0}'
-  +'.judul{text-align:center;font-weight:bold;font-size:18px;letter-spacing:3px;margin:18px 0 2px}'
-  +'.nomor{text-align:center;font-size:13px;margin-bottom:16px}'
-  +'.b{border-collapse:collapse;width:100%} .b td{border:1px solid #000;padding:9px 11px;vertical-align:top}'
-  +'.b .l{width:34%;font-weight:bold} .b .c{width:14px;text-align:center} .b .us{font-weight:bold;font-size:15px}'
+  +'body{font-size:12.5px;color:#000;margin:0} .page{padding:0}'
+  +'.half{height:148mm;padding:9mm 14mm 5mm;position:relative;overflow:hidden}'
+  +'.lbr{position:absolute;top:3.5mm;right:14mm;font-size:9px;font-style:italic;color:#444}'
+  +'.kop{text-align:center;line-height:1.3} .kop .k1{font-size:11px} .kop .k2{font-size:11.5px;font-weight:bold}'
+  +'.kop .k3{font-size:14.5px;font-weight:bold} .kop .ad{font-size:9.5px;margin-top:2px}'
+  +'.hrt{border:0;border-top:2.2px solid #000;margin:4px 0 0}'
+  +'.judul{text-align:center;font-weight:bold;font-size:16px;letter-spacing:2.5px;margin:10px 0 2px}'
+  +'.nomor{text-align:center;font-size:11.5px;margin-bottom:10px}'
+  +'.b{border-collapse:collapse;width:100%} .b td{border:1px solid #000;padding:6px 9px;vertical-align:top}'
+  +'.b .l{width:34%;font-weight:bold} .b .c{width:12px;text-align:center} .b .us{font-weight:bold;font-size:14px}'
   +'.terb{background:#dcdcdc;font-style:italic}'
-  +'.sig{width:100%;border-collapse:collapse;margin-top:22px;font-size:12px;text-align:center}'
-  +'.sig td{width:33.33%;padding:6px 8px;vertical-align:top}'
-  +'.sig .nm{margin-top:54px;font-weight:bold} .sig .nip{font-size:11px}'
-  +'.noprint{padding:10px 16mm 0;text-align:right}@media print{.noprint{display:none}}'
+  +'.sig{width:100%;border-collapse:collapse;margin-top:14px;font-size:11.5px;text-align:center}'
+  +'.sig td{padding:4px 8px;vertical-align:top}'
+  +'.sig .nm{margin-top:44px;font-weight:bold} .sig .nip{font-size:10px}'
+  // Garis potong: tinggi 0 supaya tidak menambah tinggi halaman.
+  +'.cut{height:0;border-top:1px dashed #666;position:relative}'
+  +'.cut span{position:absolute;top:-7px;left:50%;transform:translateX(-50%);'
+  +'background:#fff;padding:0 8px;font-size:9px;color:#666;letter-spacing:1px}'
+  +'.noprint{padding:10px 14mm 0;text-align:right}@media print{.noprint{display:none}}'
   +'</style></head><body>'
-  +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button></div>'
+  +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button>'
+  +'<div style="font-size:11px;color:#555;margin-top:4px">1 lembar A4 = 2 salinan &middot; potong pada garis putus-putus</div></div>'
   +'<div class="page">'
-  +'<div class="kop"><div class="k1">'+esc(I.kementerian||'')+'</div>'
-  +'<div class="k2">'+esc(I.eselon1||'')+'</div>'
-  +'<div class="k3">'+esc(I.satker||I.namaWP||'')+'</div>'
-  +'<div class="ad">'+esc(I.kopAlamat||'')
-  +(I.kopTelp?(' &middot; Telp. '+esc(I.kopTelp)):'')+(I.kopLaman?(' &middot; '+esc(I.kopLaman)):'')+'</div></div>'
-  +'<hr class="hrt">'
-  +'<div class="judul">'+esc(judul)+'</div>'
-  +'<div class="nomor">Nomor: '+esc(noKwt)+'</div>'
-  +'<table class="b">'
-  + barisAsal
-  +'<tr><td class="l">Uang sejumlah</td><td class="c">:</td><td class="us">'+rp(jumlah)+'</td></tr>'
-  +'<tr><td class="l">Untuk pembayaran</td><td class="c">:</td><td>'+esc(t.kegiatan||'-')
-  + (t.kodeItem?('<br><i>'+esc(t.kodeItem+' — '+(t.uraianItem||''))+'</i>'):'') +'</td></tr>'
-  +'<tr><td class="terb" colspan="3">Terbilang : <i>'+esc(terbilang(jumlah))+' Rupiah</i></td></tr>'
-  +'</table>'
-  // Cukup dua tanda tangan: penerima (PUM) dan Bendahara Pengeluaran —
-  // sama dengan dokumen versi desktop (tanpa blok PPK).
-  +'<table class="sig"><tr>'
-  +'<td style="width:50%">'+(bank?'Penerima Transfer,':'Penerima,')+'<br>'
-  +esc(I.kota||'Sorong')+', '+esc(tglPanjang(t.tanggal))
-  +'<div class="nm">'+esc(penerima)+'</div></td>'
-  +'<td style="width:50%">Bendahara Pengeluaran,<div class="nm">'+esc(I.bendahara||'')+'</div>'
-  +'<span class="nip">NIP. '+esc(I.nipBendahara||'')+'</span></td>'
-  +'</tr></table>'
+  + salinan('Lembar 1 — Arsip Bendahara')
+  +'<div class="cut"><span>&#9986; potong di sini</span></div>'
+  + salinan('Lembar 2 — Pemegang Uang Muka')
   +'</div></body></html>';
 }
 
