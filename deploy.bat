@@ -36,6 +36,21 @@ if errorlevel 1 (
 )
 :lewatipull
 
+REM --- 1b) periksa hak akses web app di appsscript.json ---
+REM  ANYONE_ANONYMOUS = "Siapa saja" (tanpa login Google).
+REM  ANYONE (tanpa _ANONYMOUS) = "Siapa saja yang memiliki Akun Google" —
+REM  itu menghalangi staf yang memakai Gmail pribadi di luar domain satker.
+findstr /C:"ANYONE_ANONYMOUS" appsscript.json >nul
+if errorlevel 1 (
+  echo(
+  echo [PERINGATAN] appsscript.json belum memakai "access": "ANYONE_ANONYMOUS".
+  echo              Web app akan tetap meminta Akun Google.
+  echo              Perbaiki dulu baris "access" di appsscript.json.
+  echo(
+  choice /C YT /N /M "Lanjutkan juga? (Y=ya, T=tidak) "
+  if errorlevel 2 goto :akhir
+)
+
 REM --- 2) clasp push ---
 echo(
 echo === 2/3  Mengunggah kode ke Apps Script ===
@@ -59,6 +74,16 @@ echo ============================================================
 echo  SELESAI. Kode + versi baru sudah aktif.
 echo  Buka web app lalu tekan Ctrl+Shift+R (hard refresh).
 echo  Tip: ketik  clasp open-web-app  untuk membukanya langsung.
+echo ============================================================
+echo(
+echo  PERIKSA HAK AKSES - sekali saja, tidak perlu diulang tiap deploy:
+echo    Apps Script mengunci pengaturan "Who has access" pada deployment
+echo    yang sudah ada, jadi mengubah appsscript.json belum tentu cukup.
+echo    Buka editor -^> Deploy -^> Manage deployments -^> ikon pensil,
+echo    lalu setel "Who has access" ke  Anyone  - BUKAN "Anyone with a
+echo    Google Account" - kemudian tekan Deploy.
+echo    Uji: buka URL web app di jendela penyamaran. Bila TIDAK diminta
+echo    memilih Akun Google, pengaturannya sudah benar.
 echo ============================================================
 goto :akhir
 
