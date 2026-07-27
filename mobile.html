@@ -381,7 +381,12 @@
   <div class="h1" style="margin-top:10px">Potongan pajak</div>
   <div class="step" id="pjNota">Nota</div>
 
-  <div class="prow" style="border-top:none">
+  <div class="f" style="margin-top:14px"><label>Kategori belanja</label>
+    <select id="pjKat" onchange="pjPilihKategori()"></select>
+    <div class="hint" id="pjKatHint">Menentukan jenis PPh, PPN, dan ambang batasnya.</div>
+  </div>
+
+  <div class="prow">
     <div class="kiri"><div class="nm">Nilai nota</div></div>
     <div class="val" id="pjNilai">—</div>
   </div>
@@ -400,24 +405,13 @@
 
   <div class="prow">
     <div class="kiri"><div class="nm">PPN 11%</div>
-      <div class="sub">Kode MAP 411211 / KJS 900</div></div>
-    <div style="display:flex;align-items:center;gap:12px">
-      <span class="val" id="pjPpn">—</span>
-      <button class="sw on" id="pjSwPpn" onclick="pjToggle('ppn')"><i></i></button>
-    </div>
+      <div class="sub" id="pjPpnSub">Kode MAP 411211 / KJS 900</div></div>
+    <div class="val" id="pjPpn">—</div>
   </div>
 
   <div class="prow">
-    <div class="kiri"><div class="nm">Jenis PPh</div>
-      <div class="sub" id="pjPphSub">Pilih sesuai objek pajak</div>
-      <select id="pjPphSel" onchange="hitungPajakUI()" style="width:100%;border:none;border-bottom:1px solid var(--n400);
-        background:none;font-family:var(--fb);font-size:15px;padding:8px 0;margin-top:6px;border-radius:0">
-        <option value="0">Tanpa PPh</option>
-        <option value="22" selected>PPh Pasal 22 — barang (1,5%)</option>
-        <option value="23">PPh Pasal 23 — jasa (2%)</option>
-        <option value="42">PPh Final 4(2) — sewa tanah/bangunan (10%)</option>
-      </select>
-    </div>
+    <div class="kiri"><div class="nm" id="pjPphNm">PPh</div>
+      <div class="sub" id="pjPphSub">Ditentukan oleh kategori belanja</div></div>
     <div class="val" id="pjPph">—</div>
   </div>
 
@@ -434,7 +428,8 @@
   </div>
 
   <div class="strip" style="margin-top:16px">Pajak melekat pada nota ini (penyedianya), bukan pada transaksi.
-    Untuk 20 kategori pajak otomatis, gunakan versi desktop.</div>
+    Kategori ditebak dari uraian kegiatan dan boleh diubah — tarif serta ambang batasnya
+    memakai acuan yang sama dengan versi desktop.</div>
 </div>
 
 <!-- ================= PENGEMBALIAN ================= -->
@@ -468,6 +463,36 @@
 
   <div class="sec-h" style="margin-top:24px"><div class="t">Riwayat</div></div>
   <div id="pgRiwayat"></div>
+</div>
+
+<!-- ================= EDIT TRANSAKSI ================= -->
+<div id="scEdit" class="scr task">
+  <button class="back" onclick="kembaliDetail()"><i class="ph-duotone ph-arrow-left"></i> Detail</button>
+  <div class="h1" style="margin-top:10px">Edit transaksi</div>
+  <div class="step" id="edJudul">—</div>
+
+  <div id="edPeringatan" class="banner hide" style="margin-top:14px"></div>
+
+  <div class="f"><label>Nilai</label>
+    <div class="nilai"><span>Rp</span><input id="edNilai" inputmode="numeric" placeholder="0" oninput="fmtNilai(this)"></div>
+  </div>
+  <div class="f"><label>Uraian / Kegiatan</label><input id="edUraian"></div>
+  <div class="f" id="edPumWrap"><label>Penanggung jawab (PUM)</label>
+    <input id="edPum" list="ctPumList" placeholder="Nama pemegang uang muka">
+  </div>
+  <div class="f2">
+    <div class="f"><label>Tanggal</label><input type="date" id="edTanggal"></div>
+    <div class="f"><label>Sumber dana</label>
+      <select id="edSumber"><option value="TUNAI">Kas Tunai</option><option value="BANK">Kas Bank</option></select>
+    </div>
+  </div>
+  <div class="f" id="edAkunWrap"><label>Akun / MAK</label>
+    <input id="edAkun" list="ctAkunList" placeholder="mis. 521211">
+  </div>
+  <div class="f"><label>No Kuitansi (kunci rekonsiliasi SAKTI)</label>
+    <input id="edKuitansi" placeholder="kosongkan bila belum ada">
+  </div>
+  <div class="f"><label>Keterangan</label><input id="edKeterangan"></div>
 </div>
 
 <!-- ================= TAMBAH NOTA ================= -->
@@ -559,6 +584,9 @@
 <div id="stickyNota" class="sticky hide">
   <button class="btn ac full" onclick="simpanNotaBaru()">Simpan nota</button>
 </div>
+<div id="stickyEdit" class="sticky hide">
+  <button class="btn ac full" onclick="simpanEdit()">Simpan perubahan</button>
+</div>
 
 <div id="toast"></div>
 <div id="load"><div class="spin"></div><div id="loadMsg">Memuat…</div></div>
@@ -599,11 +627,11 @@ function tglPendek(iso){
 
 /* ===================== Navigasi ===================== */
 /* Layar tugas (catat/kamera/review) menyembunyikan navigasi bawah — mode fokus. */
-var TUGAS = {catat:1, kamera:1, review:1, pajak:1, kembali:1, pindah:1, nota:1};
-var TASKSCR = {Catat:1, Review:1, Pajak:1, Kembali:1, Pindah:1, Nota:1};
+var TUGAS = {catat:1, kamera:1, review:1, pajak:1, kembali:1, pindah:1, nota:1, edit:1};
+var TASKSCR = {Catat:1, Review:1, Pajak:1, Kembali:1, Pindah:1, Nota:1, Edit:1};
 function go(scr){
   SCREEN = scr;
-  var semua = ['Login','Beranda','Transaksi','Detail','Catat','Review','Pajak','Kembali','Pindah','Nota'];
+  var semua = ['Login','Beranda','Transaksi','Detail','Catat','Review','Pajak','Kembali','Pindah','Nota','Edit'];
   for (var i=0;i<semua.length;i++){
     var el = $('sc'+semua[i]);
     if(el) el.className = 'scr' + (TASKSCR[semua[i]] ? ' task' : '')
@@ -617,6 +645,7 @@ function go(scr){
   $('stickyKembali').className = (scr==='kembali') ? 'sticky' : 'sticky hide';
   $('stickyPindah').className  = (scr==='pindah')  ? 'sticky' : 'sticky hide';
   $('stickyNota').className    = (scr==='nota')    ? 'sticky' : 'sticky hide';
+  $('stickyEdit').className    = (scr==='edit')    ? 'sticky' : 'sticky hide';
   $('nvBeranda').className   = (scr==='beranda') ? 'on' : '';
   $('nvTransaksi').className = (scr==='transaksi'||scr==='detail') ? 'on' : '';
   window.scrollTo(0,0);
@@ -674,6 +703,9 @@ function muat(){
       TX    = ((d && d.transaksi) || []).filter(bukanPindahDana);
       FOTO  = (d && d.fotoMap) || {};
       SALDO = (d && d.saldo) || null;
+      if (d && d.pajakRef && d.pajakRef.list && d.pajakRef.list.length){
+        PAJAK_REF = d.pajakRef.list; PAJAK_DEFAULT = d.pajakRef.def || PAJAK_DEFAULT;
+      }
       try {
         var u = JSON.parse(localStorage.getItem('kt_user')||'null');
         if(u) USER = u;
@@ -888,10 +920,14 @@ function detailNota(t, notas){
       + '<button class="btn pink" style="margin-top:12px" onclick="bukaPajak('+JSON.stringify(String(t.no))+','+JSON.stringify(String(n.urutan))+')">Isi potongan pajak nota ini</button>'
       + '</div>';
   }
+  var noJs = JSON.stringify(String(t.no));
   h += '<div style="display:flex;gap:10px;margin-top:18px">'
-    + '<button class="btn ac" style="flex:1" onclick="cetakTandaTerima('+JSON.stringify(String(t.no))+')">'
+    + '<button class="btn ac" style="flex:1" onclick="cetakTandaTerima('+noJs+')">'
     +   (t.sumber==='BANK'?'Bukti Transfer':'Tanda Terima')+'</button>'
-    + '<button class="btn" style="flex:1" onclick="bukaPengembalian('+JSON.stringify(String(t.no))+')">Pengembalian</button>'
+    + '<button class="btn" style="flex:1" onclick="bukaPengembalian('+noJs+')">Pengembalian</button>'
+    + '</div>'
+    + '<div style="display:flex;gap:10px;margin-top:10px">'
+    + '<button class="btn" style="flex:1" onclick="bukaEdit('+noJs+')">&#9998; Edit transaksi</button>'
     + '</div>'
     + '<div class="strip" style="margin-top:18px">Cetak SPJ, SPBY, dan pemecahan transaksi masih di versi desktop.</div>';
   return h;
@@ -1363,59 +1399,106 @@ function _htmlTandaTerima(t){
 /* ===================== Potongan pajak per nota (Tahap 3) ===================== */
 /* Rumus mengikuti mesin pajak versi desktop supaya kedua tampilan konsisten:
    netto ke rekanan = nilai nota − PPh − PPN (bendahara memungut keduanya).   */
-var PJ = { no:null, urutan:null, nota:null, inc:true, ppn:true, npwp:true };
-var PPH_REF = {
-  '0'  : { nama:'Tanpa PPh',                 tarif:0,    map:'',       kjs:'',    x2:false },
-  '22' : { nama:'PPh Pasal 22 — barang',     tarif:0.015, map:'411122', kjs:'900', x2:true  },
-  '23' : { nama:'PPh Pasal 23 — jasa',       tarif:0.02,  map:'411124', kjs:'104', x2:true  },
-  '42' : { nama:'PPh Final 4(2) — sewa',     tarif:0.10,  map:'411128', kjs:'403', x2:false }
-};
+var PJ = { no:null, urutan:null, nota:null, inc:true, npwp:true, kat:-1 };
+/* Tabel kategori dari server (CONFIG.PAJAK_REF) — sama persis dengan desktop.
+   Diisi saat muat(); selama kosong, layar pajak menolak dibuka daripada
+   menghitung dengan acuan yang salah. */
+var PAJAK_REF = [], PAJAK_DEFAULT = null;
+/* Cocokkan uraian kegiatan ke kategori — salinan _klasifikasiPajak() desktop. */
+function klasifikasiPajak(kegiatan){
+  var s = String(kegiatan||'').toLowerCase();
+  for (var i=0;i<PAJAK_REF.length;i++){
+    var kw = PAJAK_REF[i].kw||[];
+    for (var j=0;j<kw.length;j++) if (s.indexOf(kw[j]) !== -1) return i;
+  }
+  return -1;                       // -1 = PAJAK_DEFAULT (Lain-lain)
+}
+function pjRef(idx){
+  return (idx>=0 && idx<PAJAK_REF.length) ? PAJAK_REF[idx] : PAJAK_DEFAULT;
+}
+/* Teks yang diklasifikasikan = uraian kegiatan + nama barang pada rincian
+   nota — sama dengan _pjTeksKlasifikasi() di desktop. */
+function pjTeksKlasifikasi(t, n){
+  var s = String((t && t.kegiatan) || '');
+  var det = (n && n.detail) || [];
+  for (var i=0;i<det.length;i++) s += ' ' + String(det[i].namaBarang || '');
+  return s;
+}
+/* Mesin hitung — salinan hitungPajak() desktop, termasuk ambang batas. */
+function hitungPajak(nominal, ref, termasukPPN, adaNpwp){
+  nominal = +nominal || 0;
+  var kenaPPN = ref.ppn > 0;
+  var dpp = (kenaPPN && termasukPPN) ? Math.round(nominal/1.11) : nominal;
+  var tarif = ref.tarifPPh || 0;
+  // Tarif dua kali lipat untuk non-NPWP hanya berlaku pada PPh 22 & 23.
+  var x2 = (ref.jenisPPh==='PPh Pasal 22' || ref.jenisPPh==='PPh Pasal 23');
+  if (!adaNpwp && tarif > 0 && x2) tarif = tarif * 2;
+  var pph = (ref.jenisPPh && tarif > 0 && (!ref.minPPh || nominal >= ref.minPPh))
+    ? Math.round(tarif * dpp) : 0;
+  var ppn = (kenaPPN && (!ref.minPPN || nominal >= ref.minPPN))
+    ? Math.round(ref.ppn * dpp) : 0;
+  return { dpp:dpp, pph:pph, ppn:ppn, tarif:tarif, kenaPPN:kenaPPN, x2:x2 };
+}
 function bukaPajak(no, urutan){
+  if (!PAJAK_REF.length){ toast('Acuan pajak belum termuat — tarik layar untuk memuat ulang', true); return; }
   var n = null;
   for (var i=0;i<NOTAS.length;i++) if (String(NOTAS[i].urutan)===String(urutan)) { n = NOTAS[i]; break; }
   if (!n){ toast('Nota tidak ditemukan', true); return; }
+  var t = null;
+  for (i=0;i<TX.length;i++) if (String(TX[i].no)===String(no)) { t = TX[i]; break; }
   PJ.no = no; PJ.urutan = urutan; PJ.nota = n;
   PJ.inc  = (n.pajakTermasukPPN !== false);
   PJ.npwp = (n.pajakAdaNpwp !== false) && !!(n.npwp);
-  PJ.ppn  = ((+n.pajakPpn||0) > 0) || (n.pajakKatIdx===null||n.pajakKatIdx===undefined);
+  // Kategori: pakai yang tersimpan; bila belum ada, tebak dari uraian kegiatan
+  // persis seperti desktop — bukan lagi menebak dari rasio PPh/DPP.
+  PJ.kat = (n.pajakKatIdx===null || n.pajakKatIdx===undefined || n.pajakKatIdx < 0)
+    ? klasifikasiPajak(pjTeksKlasifikasi(t, n))
+    : +n.pajakKatIdx;
   $('pjNota').textContent = 'Nota ' + urutan + ' — ' + (n.namaPenyedia||'(tanpa nama)') + (n.npwp?' · PKP':'');
-  // Tebak jenis PPh dari nilai tersimpan bila ada
-  var sel = $('pjPphSel'); sel.value = '22';
-  if ((+n.pajakPph||0) > 0 && (+n.pajakDpp||0) > 0){
-    var r = (+n.pajakPph) / (+n.pajakDpp);
-    sel.value = (r > 0.05) ? '42' : (r > 0.017 ? '23' : '22');
-  } else if (n.pajakKatIdx!==null && n.pajakKatIdx!==undefined && (+n.pajakPph||0)===0){
-    sel.value = '0';
-  }
+  pjIsiKategori();
   hitungPajakUI();
   go('pajak');
 }
+function pjIsiKategori(){
+  var h = '', i;
+  for (i=0;i<PAJAK_REF.length;i++) h += '<option value="'+i+'">'+esc(PAJAK_REF[i].label)+'</option>';
+  h += '<option value="-1">'+esc(PAJAK_DEFAULT.label)+'</option>';
+  var sel = $('pjKat'); sel.innerHTML = h; sel.value = String(PJ.kat);
+}
+function pjPilihKategori(){ PJ.kat = parseInt($('pjKat').value,10); hitungPajakUI(); }
 function pjToggle(k){ PJ[k] = !PJ[k]; hitungPajakUI(); }
 function hitungPajakUI(){
   var n = PJ.nota; if (!n) return;
   var nilai = +n.nilai || 0;
-  var dpp = PJ.inc ? Math.round(nilai / 1.11) : nilai;
-  var ppn = PJ.ppn ? Math.round(dpp * 0.11) : 0;
-  var ref = PPH_REF[$('pjPphSel').value] || PPH_REF['0'];
-  var tarif = ref.tarif;
-  if (!PJ.npwp && ref.x2 && tarif > 0) tarif = tarif * 2;
-  var pph = Math.round(dpp * tarif);
-  var total = pph + ppn, netto = nilai - pph - ppn;
+  var ref = pjRef(PJ.kat);
+  var r = hitungPajak(nilai, ref, PJ.inc, PJ.npwp);
+  var total = r.pph + r.ppn, netto = nilai - total;
 
   $('pjSwInc').className  = 'sw' + (PJ.inc ?' on':'');
-  $('pjSwPpn').className  = 'sw' + (PJ.ppn ?' on':'');
   $('pjSwNpwp').className = 'sw' + (PJ.npwp?' on':'');
   $('pjNilai').textContent = rp(nilai);
-  $('pjDppSub').textContent = PJ.inc ? 'Nilai nota ÷ 1,11' : 'Sama dengan nilai nota';
-  $('pjDpp').textContent = rp(dpp);
-  $('pjPpn').textContent = rp(ppn);
-  $('pjPph').textContent = rp(pph);
-  $('pjPphSub').textContent = ref.map
-    ? ('Kode MAP ' + ref.map + ' / KJS ' + ref.kjs + (!PJ.npwp && ref.x2 ? ' · non-NPWP ×2' : ''))
-    : 'Tidak ada pemotongan PPh';
+  $('pjKatHint').textContent = ref.catatan || 'Menentukan jenis PPh, PPN, dan ambang batasnya.';
+  $('pjDppSub').textContent = (r.kenaPPN && PJ.inc) ? 'Nilai nota ÷ 1,11' : 'Sama dengan nilai nota';
+  $('pjDpp').textContent = rp(r.dpp);
+
+  // PPN — jelaskan bila tidak dipungut, supaya angka nol tidak terlihat seperti kekeliruan.
+  $('pjPpn').textContent = rp(r.ppn);
+  $('pjPpnSub').textContent = !r.kenaPPN
+    ? 'Kategori ini bukan objek PPN'
+    : (r.ppn===0 ? ('Tidak dipungut — nilai di bawah ' + rp(ref.minPPN))
+                 : 'Kode MAP 411211 / KJS 900');
+
+  $('pjPph').textContent = rp(r.pph);
+  $('pjPphNm').textContent = ref.jenisPPh || 'PPh';
+  $('pjPphSub').textContent = !ref.jenisPPh
+    ? 'Kategori ini tidak dipotong PPh'
+    : (r.pph===0 && ref.minPPh ? ('Tidak dipungut — nilai di bawah ' + rp(ref.minPPh))
+       : ('Tarif ' + (+(r.tarif*100).toFixed(2)) + '% · MAP ' + ref.mapPPh + ' / KJS ' + ref.kjsPPh
+          + (!PJ.npwp && r.x2 ? ' · non-NPWP ×2' : '')));
+
   $('pjTotal').textContent = rp(total);
   $('pjNetto').textContent = rp(netto);
-  PJ._hasil = { dpp:dpp, ppn:ppn, pph:pph };
+  PJ._hasil = { dpp:r.dpp, ppn:r.ppn, pph:r.pph };
 }
 function simpanPajak(){
   if (!PJ.no || PJ.urutan===null){ toast('Nota belum dipilih', true); return; }
@@ -1429,7 +1512,7 @@ function simpanPajak(){
     })
     .withFailureHandler(gagal)
     .serverSimpanPajakNota(_tok, PJ.no, PJ.urutan, {
-      katIdx: -1,                   // -1 = manual dari HP (kategori otomatis ada di desktop)
+      katIdx: PJ.kat,               // kategori asli — sama dengan yang dipakai desktop
       dpp: h.dpp, pph: h.pph, ppn: h.ppn,
       termasukPPN: PJ.inc, adaNpwp: PJ.npwp
     });
@@ -1485,6 +1568,76 @@ function simpanPengembalian(){
     .serverTambahPengembalian(_tok, PG.no, {
       nilai: nilai, tanggal: $('pgTanggal').value || '',
       keterangan: $('pgCara').value || 'Tunai ke kas'
+    });
+}
+
+/* ===================== Edit transaksi =====================
+ * updateTransaksi() di server SELALU menimpa tanggal, debet, kredit, penjab,
+ * kegiatan, dan keterangan. Jadi keenamnya harus dikirim lengkap — kalau ada
+ * yang tidak diisi, isinya terhapus, bukan dibiarkan.                       */
+var ED = { no:null, t:null };
+function bukaEdit(no){
+  var t = null;
+  for (var i=0;i<TX.length;i++) if (String(TX[i].no)===String(no)) { t = TX[i]; break; }
+  if (!t){ toast('Transaksi tidak ditemukan', true); return; }
+  ED.no = String(no); ED.t = t;
+  var keluar = isKeluar(t);
+  $('edJudul').textContent = 'No ' + no + ' · ' + (keluar ? 'Pengeluaran' : 'Penerimaan');
+  $('edNilai').value = (keluar ? (+t.kredit||0) : (+t.debet||0)).toLocaleString('id-ID');
+  $('edUraian').value = t.kegiatan || '';
+  $('edPum').value = t.penjab || '';
+  $('edTanggal').value = t.tanggal || '';
+  $('edSumber').value = (t.sumber==='BANK') ? 'BANK' : 'TUNAI';
+  $('edAkun').value = t.akun || '';
+  $('edKuitansi').value = t.noKuitansi || '';
+  $('edKeterangan').value = t.keterangan || '';
+  $('edAkunWrap').style.display = keluar ? '' : 'none';
+  $('edPumWrap').style.display  = keluar ? '' : 'none';
+  isiDaftarPum();
+  // Peringatkan bila mengubah nilai bisa merusak pertanggungjawaban yang sudah jalan.
+  var alasan = [];
+  if ((+t.notaTotal||0) > 0) alasan.push('sudah punya nota ' + rp(t.notaTotal));
+  if (t.noSpby) alasan.push('sudah bernomor SPBY ' + t.noSpby);
+  if (String(t.statusRekon||'').toUpperCase()==='COCOK') alasan.push('sudah cocok dengan SAKTI');
+  var b = $('edPeringatan');
+  if (alasan.length){
+    b.className = 'banner';
+    b.innerHTML = '<i class="ph-duotone ph-warning"></i><span>Transaksi ini ' + esc(alasan.join(', '))
+      + '. Mengubah nilainya membuat angka pertanggungjawaban tidak lagi cocok.</span>';
+  } else b.className = 'banner hide';
+  go('edit');
+}
+function simpanEdit(){
+  var nilai = angka($('edNilai').value);
+  var uraian = ($('edUraian').value||'').trim();
+  if (nilai <= 0){ toast('Nilai harus lebih dari 0', true); return; }
+  if (!uraian){ toast('Uraian wajib diisi', true); return; }
+  if (!navigator.onLine){ toast('Tidak ada koneksi — coba lagi setelah tersambung', true); return; }
+  var t = ED.t, keluar = isKeluar(t), no = ED.no;
+  loading(true,'Menyimpan perubahan…');
+  google.script.run
+    .withSuccessHandler(function(){
+      loading(false); toast('Transaksi diperbarui');
+      google.script.run
+        .withSuccessHandler(function(d){
+          TX = ((d && d.transaksi) || []).filter(bukanPindahDana);
+          FOTO = (d && d.fotoMap) || {}; SALDO = (d && d.saldo) || null;
+          renderBeranda(); bukaDetail(no);
+        })
+        .withFailureHandler(function(){ bukaDetail(no); })
+        .serverGetDashboard(_tok);
+    })
+    .withFailureHandler(gagal)
+    .serverUpdateTransaksi(_tok, no, {
+      tanggal: $('edTanggal').value || t.tanggal || '',
+      kegiatan: uraian,
+      penjab: keluar ? ($('edPum').value||'').trim() : (t.penjab||''),
+      debet: keluar ? 0 : nilai,
+      kredit: keluar ? nilai : 0,
+      keterangan: ($('edKeterangan').value||'').trim(),
+      sumber: $('edSumber').value,
+      akun: keluar ? ($('edAkun').value||'').trim() : '',
+      noKuitansi: ($('edKuitansi').value||'').trim()
     });
 }
 

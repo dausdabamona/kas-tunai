@@ -92,7 +92,10 @@ function serverGetDashboard(token) {
       suratMap: SuratTugas.getMap(),
       saldo: full ? KasTunai.ringkasanSaldo() : null,
       role: role,
-      isAdmin: (role === 'admin')
+      isAdmin: (role === 'admin'),
+      // Tabel pajak dikirim dari server supaya desktop dan mobile memakai
+      // acuan yang sama persis (tarif, ambang batas, kode MAP/KJS).
+      pajakRef: { list: CONFIG.PAJAK_REF, def: CONFIG.PAJAK_DEFAULT }
     };
   });
 }

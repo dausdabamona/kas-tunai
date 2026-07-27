@@ -1399,6 +1399,11 @@ function loadAll(){
       saldoInfo=(d&&d.saldo)||null;
       if(d&&d.role) isViewer=(d.role==='viewer');
       if(d&&typeof d.isAdmin!=='undefined') IS_ADMIN=!!d.isAdmin;
+      // Tabel pajak dari server = acuan tunggal (dipakai desktop & mobile).
+      // Salinan literal di bawah hanya cadangan bila server versi lama.
+      if(d&&d.pajakRef&&d.pajakRef.list&&d.pajakRef.list.length){
+        PAJAK_REF=d.pajakRef.list; PAJAK_DEFAULT=d.pajakRef.def||PAJAK_DEFAULT;
+      }
       _applyRoleUI();
       _refreshScanAktif();
       _refreshRingkasanRekon();
