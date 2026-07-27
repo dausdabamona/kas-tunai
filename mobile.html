@@ -131,6 +131,9 @@
   .f .hint{font-size:12.5px;color:var(--n600);margin-top:5px}
   .f2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .autosave{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--n600);margin-top:22px}
+  /* Draft gagal disimpan — harus terlihat, bukan sekadar berubah kata. */
+  .autosave.bahaya{color:var(--a2-900);background:var(--a2-100);border-radius:10px;padding:10px 12px;font-weight:600}
+  .autosave.bahaya i{color:var(--a2)}
   .sticky{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;padding:12px 20px 16px;
     background:var(--bg);border-top:1px solid var(--n300);display:flex;gap:10px;z-index:25}
   .sticky .btn{min-height:52px;font-size:17px;flex:1}
@@ -1015,16 +1018,49 @@ function onPenyedia(){
 }
 
 /* ---- Draft lokal ---- */
+/* Foto untuk draft: HANYA field yang perlu.
+   `_prev` adalah data URL hasil kompres() — isinya base64 yang sama persis
+   ditambah awalan "data:image/jpeg;base64,". Menyimpannya berarti menulis
+   gambar dua kali dan kuota localStorage habis pada foto kelima. prev()
+   sudah bisa membangun ulang data URL dari base64, jadi pratinjau tetap
+   jalan setelah muatDraft(). */
+function _draftFoto(f){
+  return { base64:f.base64, mimeType:f.mimeType, namaFile:f.namaFile, jenis:jenisFoto(f) };
+}
+/* Perkiraan ukuran draft (karakter JSON ≈ byte, karena base64 itu ASCII). */
+var BATAS_DRAFT = 3.5 * 1024 * 1024;
+function ukuranDraft(){
+  var n = 0;
+  for (var i=0;i<FOTOS.length;i++) n += (FOTOS[i].base64||'').length;
+  return n;
+}
 function isiDraft(){
+  var fs = [];
+  for (var i=0;i<FOTOS.length;i++) fs.push(_draftFoto(FOTOS[i]));
   return { jenis:JENIS, nilai:angka($('ctNilai').value), uraian:$('ctUraian').value||'',
            pum:$('ctPum').value||'', penyedia:$('ctPenyedia').value||'', tanggal:$('ctTanggal').value||'',
-           sumber:$('ctSumber').value||'TUNAI', akun:$('ctAkun').value||'', fotos:FOTOS };
+           sumber:$('ctSumber').value||'TUNAI', akun:$('ctAkun').value||'', fotos:fs };
 }
+/* @return {boolean} benar bila draft benar-benar tersimpan.
+   Kegagalan TIDAK boleh didiamkan: foto terakhir tidak ikut tersimpan, dan
+   bendahara akan mengira notanya aman padahal hilang saat aplikasi ditutup. */
 function simpanDraft(){
-  try { localStorage.setItem('kt_draft', JSON.stringify(isiDraft())); } catch(e){}
-  var el=$('ctDraftInfo'); if(el) el.textContent='Draft tersimpan otomatis di perangkat';
+  var el = $('ctDraftInfo'), kotak = el ? el.parentNode : null;
+  try {
+    localStorage.setItem('kt_draft', JSON.stringify(isiDraft()));
+    if (el) el.textContent = 'Draft tersimpan otomatis di perangkat';
+    if (kotak) kotak.className = 'autosave';
+    return true;
+  } catch(e){
+    if (el) el.textContent = 'Draft tidak muat di penyimpanan HP — segera simpan & unggah';
+    if (kotak) kotak.className = 'autosave bahaya';
+    toast('Draft tidak muat di penyimpanan HP — segera simpan & unggah', true);
+    return false;
+  }
 }
-function simpanDraftManual(){ simpanDraft(); toast('Draft disimpan di perangkat'); }
+function simpanDraftManual(){
+  if (simpanDraft()) toast('Draft disimpan di perangkat');
+}
 function muatDraft(){
   var d=null; try { d = JSON.parse(localStorage.getItem('kt_draft')||'null'); } catch(e){}
   if (!d) return null;
@@ -1106,12 +1142,21 @@ function ambilFoto(){ $('kmCam').click(); }
 function pilihGaleri(){ $('kmGal').click(); }
 function terimaFoto(input){
   var files = input.files; if (!files || !files.length) return;
-  var sisa = files.length, jenis = FOTO_JENIS;
+  var sisa = files.length, jenis = FOTO_JENIS, ditolak = 0;
   loading(true, 'Memproses foto…');
   for (var i=0;i<files.length;i++){
     kompres(files[i], function(f){
-      if (f){ f.jenis = jenis; FOTOS.push(f); }
-      if (--sisa <= 0){ loading(false); simpanDraft(); renderKamera(); }
+      if (f){
+        // Penjaga ukuran: tolak SEBELUM kuota jebol, supaya penolakannya
+        // terlihat jelas — bukan foto yang diam-diam tidak ikut tersimpan.
+        if (ukuranDraft() + (f.base64||'').length > BATAS_DRAFT) ditolak++;
+        else { f.jenis = jenis; FOTOS.push(f); }
+      }
+      if (--sisa <= 0){
+        loading(false); simpanDraft(); renderKamera();
+        if (ditolak) toast(ditolak + ' foto tidak ditambahkan — penyimpanan draft penuh. '
+          + 'Simpan & unggah dulu, baru lanjut memotret.', true);
+      }
     });
   }
   input.value = '';
