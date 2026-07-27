@@ -185,6 +185,10 @@ function migrasiKolomRekonsiliasi() {
 function serverPindahDana(token, arah, nominal, tanggal, keterangan) {
   return _run(token, function (auth) { return KasTunai.pindahDana(arah, nominal, tanggal, keterangan); });
 }
+/** Ubah transaksi keluar yang ternyata penarikan/penyetoran jadi Pindah Dana. */
+function serverKonversiPindahDana(token, no) {
+  return _run(token, function (auth) { return KasTunai.konversiPindahDana(no); });
+}
 /** SPBY gabungan: beri 1 nomor SPBY ke beberapa transaksi. */
 function serverSpbyGabungan(token, noSpby, tglSpby, nos) {
   return _run(token, function (auth) { return KasTunai.spbyGabungan(noSpby, tglSpby, nos); });

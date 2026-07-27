@@ -167,6 +167,61 @@ var KasTunai = (function () {
   }
 
   /* -------------------------------------------------------- *
+   * Ubah satu transaksi keluar yang ternyata bukan belanja (mis. penarikan
+   * di bank untuk mengisi kas tunai) menjadi Pindah Dana: baris asal
+   * dijadikan kaki "keluar" dari kas asal, lalu dibuat kaki "masuk" di kas
+   * tujuan dengan REF_TRANSFER yang sama — persis hasil pindahDana().
+   * Ditolak bila transaksi sudah punya nota/SPBY supaya jejak
+   * pertanggungjawaban tidak hilang diam-diam.
+   * -------------------------------------------------------- */
+  function konversiPindahDana(no) {
+    var hits = findRows(CONFIG.SHEETS.KAS_TUNAI, function (r) {
+      return String(r[C.NO]) === String(no) && !isDeleted(r[C.IS_DELETED]);
+    });
+    if (!hits.length) throw new Error('Transaksi No ' + no + ' tidak ditemukan');
+    var r = hits[0].values;
+
+    if (_isTransfer(r)) throw new Error('Transaksi No ' + no + ' sudah berupa Pindah Dana');
+    var nominal = Util.num(r[C.KREDIT]);
+    if (nominal <= 0) throw new Error('Hanya transaksi pengeluaran yang bisa dijadikan Pindah Dana');
+    if (Util.num(r[C.NOTA_JML]) > 0 || Util.num(r[C.NOTA_TOTAL]) > 0)
+      throw new Error('Transaksi No ' + no + ' sudah punya nota — hapus notanya dulu');
+    if (String(r[C.NO_SPBY] || '').trim())
+      throw new Error('Transaksi No ' + no + ' sudah bernomor SPBY');
+
+    var dari = (String(r[C.SUMBER] || '').toUpperCase() === 'BANK') ? 'BANK' : 'TUNAI';
+    var ke   = (dari === 'BANK') ? 'TUNAI' : 'BANK';
+    var ref  = 'TF-' + (new Date()).getTime();
+    var ket  = (dari === 'BANK') ? 'Tarik tunai dari bank' : 'Setor tunai ke bank';
+    var keg  = 'Pindah Dana (' + dari + '→' + ke + ')';
+
+    // Baris asal jadi kaki "keluar"; kolom belanja & pajak dikosongkan
+    // supaya tidak terhitung sebagai realisasi.
+    SheetRepo.ensureMinCols(CONFIG.SHEETS.KAS_TUNAI, CONFIG.HEADERS.KAS_TUNAI.length);
+    updateByTransactionId(no, Util.set(
+      C.REF_TRANSFER,       ref,
+      C.KEGIATAN,           keg,
+      C.KETERANGAN,         ket,
+      C.AKUN,               '',
+      C.NILAI_SPBY,         '',
+      C.PAJAK_KATEGORI_IDX, '',
+      C.PAJAK_PPH,          '',
+      C.PAJAK_PPN,          '',
+      C.PAJAK_DPP,          '',
+      C.KODE_ITEM,          '',
+      C.URAIAN_ITEM,        ''));
+
+    // Kaki "masuk" di kas tujuan.
+    var masuk = tambahTransaksi({
+      tanggal: r[C.TANGGAL], debet: nominal, kredit: 0, sumber: ke,
+      refTransfer: ref, kegiatan: keg, keterangan: ket });
+
+    AuditLog.write('UPDATE', CONFIG.SHEETS.KAS_TUNAI, no,
+      'konversi jadi Pindah Dana ' + dari + '->' + ke + ' ' + ref);
+    return { success: true, ref: ref, dari: dari, ke: ke, nominal: nominal, noMasuk: masuk.no };
+  }
+
+  /* -------------------------------------------------------- *
    * Update field inti transaksi (tanggal/kegiatan/penjab/debet/kredit/keterangan).
    * Saldo otomatis dihitung ulang saat getTransaksi, jadi tak perlu recalc.
    * -------------------------------------------------------- */
@@ -606,6 +661,7 @@ var KasTunai = (function () {
     updateTransaksi: updateTransaksi,
     hapusTransaksi: hapusTransaksi,
     pindahDana: pindahDana,
+    konversiPindahDana: konversiPindahDana,
     findByRef: findByRef,
     getMultiNota: getMultiNota,
     tambahNota: tambahNota,

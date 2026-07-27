@@ -127,6 +127,7 @@
   .acts button{border:0;border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:700;color:#fff;flex:1 0 auto;background:#64748b}
   .b-orange{background:#ea7317} .b-purple{background:var(--c-purple)} .b-gray{background:#cbd5e1;color:#1e293b}
   .b-dark{background:#1f3a5f} .b-green{background:var(--c-ok)} .b-spby{background:#0d9488} .b-spd{background:#0369a1} .b-edit{background:#7c3aed}
+  .b-teal{background:#0f766e}
   .mini{border:0;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;color:#fff}
 
   /* Galeri foto */
@@ -287,7 +288,7 @@
       <div class="gi"><div class="k">Total Keluar</div><div class="v" id="sumKeluar">-</div></div>
     </div>
     <div style="text-align:right;margin-top:8px">
-      <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0" onclick="openModalPindah()">&#128181; Pindah Dana (Bank&#8596;Tunai)</button>
+      <button class="btn" style="width:auto;padding:6px 12px;margin:0;background:#0f766e" onclick="openModalPindah()">&#128181; Pindah Dana (Bank&#8596;Tunai)</button>
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalImporRk()">&#127974; Impor Rekening Koran</button>
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalImporSakti()">&#128203; Impor SAKTI</button>
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalBackfill()">&#128273; Backfill Kuitansi</button>
@@ -2036,6 +2037,13 @@ function _cardHtml(t, mode){
     h+='<button class="b-dark" onclick="cetakSPJ('+t.no+')">'+(lunas?'Cetak SPJ':'SPJ Sementara')+'</button>';
     h+='<button class="b-spd" onclick="konversiKePd('+t.no+')" title="Jadikan transaksi ini Perjalanan Dinas">&#9992; Jadikan PD</button>'
       +'<button onclick="openModalPecah('+t.no+')" title="Pecah jadi beberapa transaksi">&#9986; Pecah</button>';
+    // Transaksi keluar yang belum punya nota/SPBY bisa jadi sebenarnya bukan
+    // belanja, melainkan penarikan/penyetoran antar kas.
+    if(+t.kredit>0 && !(+t.notaTotal>0) && !t.noSpby){
+      h+= (t.sumber==='BANK')
+        ? '<button class="b-teal" onclick="jadikanPindahDana('+t.no+')" title="Uang ini ditarik dari bank untuk mengisi kas tunai, bukan belanja">&#127974;&#8594;&#128181; Ke Kas Tunai</button>'
+        : '<button class="b-teal" onclick="jadikanPindahDana('+t.no+')" title="Uang ini disetor ke rekening, bukan belanja">&#128181;&#8594;&#127974; Setor ke Bank</button>';
+    }
   }
   h+='</div></div>';
   return h;
@@ -3440,6 +3448,23 @@ function submitPindah(){
     .withFailureHandler(fail)
     .serverPindahDana(_tok, document.getElementById('pdArah').value, nominal,
       document.getElementById('pdTanggal').value, document.getElementById('pdKet').value.trim());
+}
+/* Ubah transaksi keluar jadi Pindah Dana antar kas (bukan belanja).
+   Baris ini akan hilang dari daftar transaksi karena bukan lagi pengeluaran —
+   saldo berpindah dari kas asal ke kas tujuan. */
+function jadikanPindahDana(no){
+  var t=_cariTransaksi(no); if(!t) return;
+  var dari=(t.sumber==='BANK')?'Bank':'Tunai', ke=(t.sumber==='BANK')?'Tunai':'Bank';
+  if(!confirm('Ubah transaksi No '+no+' ('+rupiah(t.kredit)+') menjadi Pindah Dana '
+    +dari+' → '+ke+'?\n\nSaldo '+dari+' berkurang dan saldo '+ke+' bertambah sebesar itu. '
+    +'Transaksi ini tidak lagi dihitung sebagai belanja, sehingga hilang dari daftar '
+    +'transaksi (tidak butuh nota, SPJ, maupun pajak).')) return;
+  showLoading(true,'Memindahkan dana...');
+  google.script.run
+    .withSuccessHandler(function(r){ showLoading(false);
+      toast('Pindah Dana '+(r&&r.dari||dari)+' → '+(r&&r.ke||ke)+' tersimpan','success'); loadAll(); })
+    .withFailureHandler(fail)
+    .serverKonversiPindahDana(_tok, no);
 }
 /* ====== Impor Rekening Koran (.xlsx) ====== */
 var _rkRows=null, _rkCols=0;
