@@ -493,7 +493,8 @@
 </nav>
 
 <div id="stickyCatat" class="sticky hide">
-  <button class="btn ac full" id="btnLanjut" onclick="lanjutKeKamera()">Lanjut — foto bukti</button>
+  <button class="btn" id="btnFotoDulu" style="flex:1" onclick="lanjutKeKamera()">Foto dulu</button>
+  <button class="btn ac" id="btnLanjut" style="flex:1.5" onclick="aksiUtamaCatat()">Simpan &amp; cetak tanda terima</button>
 </div>
 <div id="stickyReview" class="sticky hide">
   <button class="btn" style="flex:1" onclick="simpanDraftManual()">Simpan draft</button>
@@ -518,6 +519,7 @@ var WEBAPP_URL = '<?= webAppUrl ?>';   /* disuntik doGet — untuk pindah ke des
 var _tok = '';
 try { _tok = localStorage.getItem('kt_token') || ''; } catch(e){}
 var TX = [], FOTO = {}, SALDO = null, USER = null, NOTAS = [], SCREEN = 'beranda', FILTER = 'semua', DETAIL_NO = null;
+var CETAK_TT = false;   /* true bila pengguna memilih "Simpan & cetak tanda terima" */
 
 /* ===================== Util ===================== */
 function $(id){ return document.getElementById(id); }
@@ -569,6 +571,7 @@ function go(scr){
   if (scr==='transaksi') renderTransaksi();
   if (scr==='kamera')    renderKamera();
   if (scr==='review')    renderReview();
+  if (scr==='catat')     perbaruiTombolLanjut();
 }
 function kembaliDetail(){ if (DETAIL_NO) bukaDetail(DETAIL_NO); else go('transaksi'); }
 
@@ -846,7 +849,9 @@ function setJenis(j){
   $('ctSegKeluar').className = (j==='keluar') ? 'on' : '';
   $('ctSegMasuk').className  = (j==='masuk')  ? 'on' : '';
   $('ctAkunWrap').style.display = (j==='keluar') ? '' : 'none';
+  $('ctPumWrap').style.display  = (j==='keluar') ? '' : 'none';
   simpanDraft();
+  perbaruiTombolLanjut();
 }
 function bukaCatat(){
   muatPenyedia(); isiDaftarPum();
@@ -926,14 +931,50 @@ function muatDraft(){
 }
 function hapusDraft(){ try { localStorage.removeItem('kt_draft'); } catch(e){} }
 
+/* Dua alur berbeda, dua tombol utama berbeda:
+   - Belanja langsung ke toko  → notanya sudah di tangan, jadi lanjut foto nota.
+   - Penyerahan uang muka ke PUM → belum ada nota apa pun untuk difoto. Simpan
+     sekarang lalu cetak tanda terima; nota menyusul lewat Kelola Nota setelah
+     PUM mempertanggungjawabkan belanjanya. */
 function perbaruiTombolLanjut(){
-  var b=$('btnLanjut'); if(!b) return;
-  b.textContent = (($('ctPenyedia').value||'').trim()) ? 'Lanjut — foto nota' : 'Lanjut — foto bukti';
+  var b=$('btnLanjut'), f=$('btnFotoDulu'), s=$('ctStep'); if(!b) return;
+  var langsung = !!(($('ctPenyedia').value||'').trim());
+  var keluar = (JENIS==='keluar');
+  if (langsung){
+    b.textContent = 'Lanjut — foto nota';
+    if(f) f.style.display = 'none';
+    if(s) s.textContent = 'Langkah 1 dari 3 · Rincian transaksi';
+  } else {
+    b.textContent = keluar ? 'Simpan & cetak tanda terima' : 'Simpan penerimaan';
+    if(f){
+      f.style.display = '';
+      f.textContent = FOTOS.length ? ('Periksa ' + FOTOS.length + ' foto') : 'Foto dulu';
+    }
+    if(s) s.textContent = keluar
+      ? 'Rincian penyerahan uang muka · nota menyusul setelah PUM mempertanggungjawabkan'
+      : 'Rincian penerimaan';
+  }
+}
+function _catatSah(){
+  if (angka($('ctNilai').value) <= 0){ toast('Nilai harus lebih dari 0', true); return false; }
+  if (!($('ctUraian').value||'').trim()){ toast('Uraian wajib diisi', true); return false; }
+  return true;
+}
+/* Dipanggil tombol utama; sasarannya di-set perbaruiTombolLanjut(). */
+function aksiUtamaCatat(){
+  if ((($('ctPenyedia').value||'').trim())) lanjutKeKamera(); else simpanTanpaFoto();
+}
+/* Simpan langsung tanpa melewati kamera — lalu cetak tanda terima. */
+function simpanTanpaFoto(){
+  if (!_catatSah()) return;
+  simpanDraft();
+  CETAK_TT = (JENIS==='keluar');
+  simpanSemua();
 }
 function lanjutKeKamera(){
-  if (angka($('ctNilai').value) <= 0){ toast('Nilai harus lebih dari 0', true); return; }
-  if (!($('ctUraian').value||'').trim()){ toast('Uraian wajib diisi', true); return; }
+  if (!_catatSah()) return;
   simpanDraft();
+  CETAK_TT = false;
   go(FOTOS.length ? 'review' : 'kamera');
 }
 
@@ -1020,7 +1061,9 @@ function simpanSemua(){
       if (!no){ loading(false); toast('Transaksi tersimpan', false); selesai(null, false); return; }
       // Nota HANYA dibuat bila memang belanja langsung ke toko. Pada penyerahan
       // uang muka, notanya belum ada — dilampirkan belakangan lewat Kelola Nota.
-      if (!keluar || !d.penyedia){ unggahFoto(no, false); return; }
+      // Tanda terima hanya relevan untuk penyerahan uang muka (pengeluaran
+      // tanpa penyedia), bukan untuk belanja langsung maupun penerimaan.
+      if (!keluar || !d.penyedia){ unggahFoto(no, keluar && !d.penyedia); return; }
       var p = penyediaTerpilih();
       loading(true, 'Menyimpan nota…');
       google.script.run
@@ -1037,29 +1080,34 @@ function simpanSemua(){
       sumber: d.sumber, keterangan: 'Dicatat dari HP', akun: keluar ? d.akun : '', persediaan: false
     });
 }
-function unggahFoto(no, langsungKeToko){
-  if (!FOTOS.length){ loading(false); selesai(no, langsungKeToko); return; }
+/* tandaTerima = transaksi ini penyerahan uang muka ke PUM, jadi perlu dokumen
+   tanda terima yang ditandatangani. Belanja langsung & penerimaan tidak. */
+function unggahFoto(no, tandaTerima){
+  if (!FOTOS.length){ loading(false); selesai(no, tandaTerima); return; }
   loading(true, 'Mengunggah ' + FOTOS.length + ' foto…');
   var arr = [];
   for (var i=0;i<FOTOS.length;i++)
     arr.push({ base64:FOTOS[i].base64, mimeType:FOTOS[i].mimeType, namaFile:FOTOS[i].namaFile, keterangan:'Foto nota (HP)' });
   google.script.run
-    .withSuccessHandler(function(){ loading(false); selesai(no, langsungKeToko); })
-    .withFailureHandler(function(e){ loading(false); gagal(e); selesai(no, langsungKeToko); })
+    .withSuccessHandler(function(){ loading(false); selesai(no, tandaTerima); })
+    .withFailureHandler(function(e){ loading(false); gagal(e); selesai(no, tandaTerima); })
     .serverUploadFotoNota(_tok, no, 1, arr);
 }
-function selesai(no, langsungKeToko){
+function selesai(no, tandaTerima){
   hapusDraft(); FOTOS = [];
   toast('Tersimpan' + (no ? (' — transaksi No ' + no) : ''));
   google.script.run
     .withSuccessHandler(function(d){
-      TX = (d && d.transaksi) || []; FOTO = (d && d.fotoMap) || {}; SALDO = (d && d.saldo) || null;
+      TX = ((d && d.transaksi) || []).filter(bukanPindahDana);
+      FOTO = (d && d.fotoMap) || {}; SALDO = (d && d.saldo) || null;
       renderBeranda();
       if (!no){ go('beranda'); return; }
       bukaDetail(String(no));
       // Penyerahan uang muka: langkah berikutnya adalah tanda terima yang
-      // ditandatangani PUM. (Belanja langsung ke toko tidak memerlukannya.)
-      if (!langsungKeToko && setTimeout) setTimeout(function(){
+      // ditandatangani PUM. Bila tombol "Simpan & cetak tanda terima" yang
+      // ditekan, langsung dicetak tanpa bertanya lagi.
+      if (tandaTerima && setTimeout) setTimeout(function(){
+        if (CETAK_TT){ CETAK_TT = false; cetakTandaTerima(String(no)); return; }
         if (confirm('Cetak Tanda Terima Uang Muka untuk ditandatangani PUM?')) cetakTandaTerima(String(no));
       }, 350);
     })
