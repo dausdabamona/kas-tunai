@@ -259,10 +259,6 @@
   <div class="sec-h"><div class="t">Transaksi terakhir</div><button class="lnk" onclick="go('transaksi')">Semua</button></div>
   <div id="bdList"></div>
 
-  <div style="margin-top:26px;text-align:center">
-    <a id="lnkDesktop" href="#" target="_top" onclick="try{localStorage.setItem('kt_view','desktop')}catch(e){}"
-       style="font-size:13px;color:var(--n600)">Buka versi desktop</a>
-  </div>
 </div>
 
 <!-- ================= TRANSAKSI ================= -->
@@ -468,6 +464,48 @@
   <div id="pgRiwayat"></div>
 </div>
 
+<!-- ================= AKUN ================= -->
+<div id="scAkun" class="scr">
+  <div class="h1" style="margin-bottom:4px">Akun</div>
+  <div class="step" id="akRingkas">—</div>
+
+  <div class="prow" style="border-top:none">
+    <div class="kiri"><div class="nm">Nama</div></div>
+    <div class="val" id="akNama" style="font-size:15px">—</div>
+  </div>
+  <div class="prow">
+    <div class="kiri"><div class="nm">Email</div></div>
+    <div class="val" id="akEmail" style="font-size:15px">—</div>
+  </div>
+  <div class="prow">
+    <div class="kiri"><div class="nm">Peran</div>
+      <div class="sub" id="akPeranSub">—</div></div>
+    <div class="val" id="akPeran" style="font-size:15px">—</div>
+  </div>
+
+  <div class="sec-h" style="margin-top:26px"><div class="t">Ganti password</div></div>
+  <div id="akErr" class="err hide"></div>
+  <div class="fld"><label>Password lama</label>
+    <input type="password" id="akLama" autocomplete="current-password"></div>
+  <div class="fld"><label>Password baru</label>
+    <input type="password" id="akBaru" autocomplete="new-password"></div>
+  <div class="fld"><label>Ulangi password baru</label>
+    <input type="password" id="akUlang" autocomplete="new-password"></div>
+  <div class="hint" style="margin-top:-6px">Minimal 8 karakter, dan tidak boleh sama dengan password lama.</div>
+  <button class="btn full" style="margin-top:14px" onclick="gantiPassword()">Simpan password baru</button>
+
+  <div class="sec-h" style="margin-top:30px"><div class="t">Sesi</div></div>
+  <div id="akDraft" class="banner hide" style="margin-bottom:12px"></div>
+  <button class="btn full" style="color:var(--a2-700)" onclick="keluarAkun()">Keluar dari akun ini</button>
+  <div class="hint">Keluar menghapus sesi di server, bukan hanya di HP ini.</div>
+
+  <div style="margin-top:30px;text-align:center">
+    <a id="lnkDesktop" href="#" target="_top" onclick="try{localStorage.setItem('kt_view','desktop')}catch(e){}"
+       style="font-size:13px;color:var(--n600)">Buka versi desktop</a>
+    <div class="hint" id="akVersi" style="text-align:center;margin-top:8px">—</div>
+  </div>
+</div>
+
 <!-- ================= EDIT TRANSAKSI ================= -->
 <div id="scEdit" class="scr task">
   <button class="back" onclick="kembaliDetail()"><i class="ph-duotone ph-arrow-left"></i> Detail</button>
@@ -569,7 +607,7 @@
   <button id="nvTransaksi" onclick="go('transaksi')"><i class="ph-duotone ph-list-bullets"></i>Transaksi</button>
   <button class="mid" onclick="bukaCatat()"><i class="ph-duotone ph-plus-circle"></i>Catat</button>
   <button id="nvAntrean" onclick="belumSiap('Antrean unggah')"><i class="ph-duotone ph-cloud-arrow-up"></i>Antrean</button>
-  <button id="nvAkun" onclick="belumSiap('Akun')"><i class="ph-duotone ph-user"></i>Akun</button>
+  <button id="nvAkun" onclick="bukaAkun()"><i class="ph-duotone ph-user"></i>Akun</button>
 </nav>
 
 <div id="stickyCatat" class="sticky hide">
@@ -639,7 +677,7 @@ var TUGAS = {catat:1, kamera:1, review:1, pajak:1, kembali:1, pindah:1, nota:1, 
 var TASKSCR = {Catat:1, Review:1, Pajak:1, Kembali:1, Pindah:1, Nota:1, Edit:1};
 function go(scr){
   SCREEN = scr;
-  var semua = ['Login','Beranda','Transaksi','Detail','Catat','Review','Pajak','Kembali','Pindah','Nota','Edit'];
+  var semua = ['Login','Beranda','Transaksi','Detail','Catat','Review','Pajak','Kembali','Pindah','Nota','Edit','Akun'];
   for (var i=0;i<semua.length;i++){
     var el = $('sc'+semua[i]);
     if(el) el.className = 'scr' + (TASKSCR[semua[i]] ? ' task' : '')
@@ -656,11 +694,13 @@ function go(scr){
   $('stickyEdit').className    = (scr==='edit')    ? 'sticky' : 'sticky hide';
   $('nvBeranda').className   = (scr==='beranda') ? 'on' : '';
   $('nvTransaksi').className = (scr==='transaksi'||scr==='detail') ? 'on' : '';
+  $('nvAkun').className      = (scr==='akun') ? 'on' : '';
   window.scrollTo(0,0);
   if (scr==='transaksi') renderTransaksi();
   if (scr==='kamera')    renderKamera();
   if (scr==='review')    renderReview();
   if (scr==='catat')     perbaruiTombolLanjut();
+  if (scr==='akun')      renderAkun();
 }
 function kembaliDetail(){ if (DETAIL_NO) bukaDetail(DETAIL_NO); else go('transaksi'); }
 
@@ -680,7 +720,7 @@ function doLogin(){
         localStorage.setItem('kt_user', JSON.stringify({email:em, role:res.role, namaUser:res.namaUser||''}));
       } catch(e){}
       USER = {email:em, role:res.role, namaUser:res.namaUser||''};
-      if (res.mustChange) toast('Password Anda masih sementara — ganti lewat versi desktop.');
+      if (res.mustChange) toast('Password Anda masih sementara — ganti lewat menu Akun.', true);
       muat();
     })
     .withFailureHandler(function(e){
@@ -690,10 +730,13 @@ function doLogin(){
     })
     .serverLogin(em, pw);
 }
+/* Dipanggil saat sesi kedaluwarsa. Berbeda dengan keluarAkun(): draft
+   SENGAJA dibiarkan, karena pengguna tidak memilih untuk keluar dan
+   catatannya yang belum terunggah tidak boleh ikut hilang. */
 function keluar(karenaSesi){
   _tok = '';
   try { localStorage.removeItem('kt_token'); localStorage.removeItem('kt_user'); } catch(e){}
-  TX = []; SALDO = null;
+  TX = []; SALDO = null; USER = null;
   if (karenaSesi) toast('Sesi berakhir. Silakan masuk lagi.', true);
   go('login');
 }
@@ -1622,6 +1665,106 @@ function simpanPengembalian(){
       nilai: nilai, tanggal: $('pgTanggal').value || '',
       keterangan: $('pgCara').value || 'Tunai ke kas'
     });
+}
+
+/* ===================== Akun =====================
+ * Token sesi tersimpan di localStorage HP. Tanpa layar ini, HP yang hilang
+ * atau dipinjam hanya bisa dikunci lewat desktop — padahal sesinya berlaku
+ * 8 jam. Keluar memanggil serverLogout yang menghapus baris sesi di server,
+ * jadi token benar-benar mati, bukan sekadar dilupakan HP.               */
+var PERAN = { admin:'Administrator', full:'Bendahara', viewer:'Peninjau' };
+function bukaAkun(){ go('akun'); }
+function renderAkun(){
+  var u = USER || {};
+  $('akNama').textContent  = u.namaUser || '—';
+  $('akEmail').textContent = u.email || '—';
+  $('akPeran').textContent = PERAN[u.role] || (u.role || '—');
+  // Saldo disembunyikan server untuk peran peninjau — jelaskan, jangan biarkan
+  // pengguna mengira angkanya gagal dimuat.
+  $('akPeranSub').textContent = (u.role === 'viewer')
+    ? 'Peran peninjau: angka saldo tidak dikirim server, jadi Beranda menampilkan “—”.'
+    : 'Boleh mencatat transaksi, nota, pajak, dan pengembalian.';
+  $('akRingkas').textContent = (u.namaUser || u.email || 'Belum masuk')
+    + (SALDO ? '' : ' · saldo tidak ditampilkan untuk peran ini');
+  $('akVersi').textContent = 'Kas Tunai — Poltek KP Sorong';
+  // Peringatkan bila keluar akan membuang pekerjaan yang belum terkirim.
+  var d = sisaDraft(), b = $('akDraft');
+  if (d){
+    b.className = 'banner';
+    b.innerHTML = '<i class="ph-duotone ph-warning"></i><span>Masih ada draft catatan '
+      + '(' + esc(d.uraian || 'tanpa uraian') + ', ' + d.fotos + ' foto) yang belum diunggah. '
+      + 'Draft ikut terhapus bila Anda keluar.</span>';
+  } else b.className = 'banner hide';
+  $('akErr').className = 'err hide';
+  $('akLama').value = ''; $('akBaru').value = ''; $('akUlang').value = '';
+}
+/* Ringkasan draft yang belum terkirim, atau null bila tidak ada. */
+function sisaDraft(){
+  var d = null; try { d = JSON.parse(localStorage.getItem('kt_draft')||'null'); } catch(e){}
+  if (!d) return null;
+  var adaIsi = (+d.nilai > 0) || (d.uraian||'').trim() || (d.fotos && d.fotos.length);
+  return adaIsi ? { uraian:(d.uraian||'').trim(), fotos:(d.fotos||[]).length } : null;
+}
+function _akErr(pesan){
+  var el = $('akErr');
+  if (!pesan){ el.className = 'err hide'; return false; }
+  el.textContent = pesan; el.className = 'err'; return false;
+}
+function gantiPassword(){
+  var lama = $('akLama').value || '', baru = $('akBaru').value || '', ulang = $('akUlang').value || '';
+  _akErr('');
+  if (!lama) return _akErr('Password lama wajib diisi');
+  if (baru.length < 8) return _akErr('Password baru minimal 8 karakter');
+  if (baru !== ulang) return _akErr('Ulangi password baru belum sama');
+  if (baru === lama)  return _akErr('Password baru tidak boleh sama dengan password lama');
+  if (!navigator.onLine) return _akErr('Tidak ada koneksi — coba lagi setelah tersambung');
+  loading(true,'Mengganti password…');
+  google.script.run
+    .withSuccessHandler(function(){
+      // Password berganti → sesi lama tidak boleh dipakai lagi.
+      google.script.run
+        .withSuccessHandler(function(){ loading(false); _akSelesaiGanti(); })
+        .withFailureHandler(function(){ loading(false); _akSelesaiGanti(); })
+        .serverLogout(_tok);
+    })
+    .withFailureHandler(function(e){
+      loading(false);
+      _akErr((e && e.message) ? e.message : 'Gagal mengganti password');
+    })
+    .serverGantiPassword(_tok, lama, baru);
+}
+function _akSelesaiGanti(){
+  bersihkanSesi();
+  toast('Password diganti — silakan masuk lagi dengan password baru');
+  go('login');
+}
+/* Hapus seluruh jejak sesi di perangkat ini. */
+function bersihkanSesi(){
+  _tok = '';
+  try {
+    localStorage.removeItem('kt_token');
+    localStorage.removeItem('kt_user');
+    localStorage.removeItem('kt_draft');
+  } catch(e){}
+  TX = []; SALDO = null; USER = null; FOTOS = []; NOTAS = []; FOTO_NOTA = {};
+}
+function keluarAkun(){
+  var d = sisaDraft();
+  var tanya = d
+    ? ('Keluar dari akun ini?\n\nDraft catatan "' + (d.uraian||'tanpa uraian') + '" beserta '
+       + d.fotos + ' foto BELUM diunggah dan akan ikut terhapus.')
+    : 'Keluar dari akun ini?';
+  if (!confirm(tanya)) return;
+  loading(true,'Keluar…');
+  google.script.run
+    .withSuccessHandler(function(){ loading(false); bersihkanSesi(); toast('Anda sudah keluar'); go('login'); })
+    // Sesi di server gagal dihapus → jangan berpura-pura aman.
+    .withFailureHandler(function(){
+      loading(false); bersihkanSesi(); go('login');
+      toast('Keluar dari HP ini, tetapi sesi di server mungkin masih aktif. '
+        + 'Bila HP hilang, minta admin mengganti password Anda.', true);
+    })
+    .serverLogout(_tok);
 }
 
 /* ===================== Edit transaksi =====================
