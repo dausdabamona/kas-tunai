@@ -220,6 +220,12 @@
   .rk-delta{color:var(--c-err);font-size:11px;font-weight:700}
 
   @media (prefers-reduced-motion:reduce){ *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important} }
+  /* Blok bukti terpisah pada form nota: A = scan nota, B = foto barang */
+  .bukti-blok{border:1px solid var(--c-line);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:#fbfcfd}
+  .bukti-judul{font-size:13px;font-weight:800;color:var(--c-teal);margin-bottom:2px}
+  .bukti-ket{font-size:11.5px;color:var(--c-muted);margin-bottom:8px}
+  .bukti-blok input[type=file]{width:100%;font-size:12.5px}
+
   /* Pilih-untuk-gabung SPBY */
   .sg-pick{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--c-teal);background:var(--c-teal-bg);border:1px solid #99f6e4;border-radius:8px;padding:6px 10px;margin-bottom:8px;cursor:pointer;min-height:36px}
   .sg-pick input{width:18px;height:18px}
@@ -655,21 +661,29 @@
       <div id="ntItemTotal" class="tgl" style="margin-top:8px;font-weight:600"></div>
       <div class="tgl" style="margin-top:2px">Nominal nota otomatis = jumlah subtotal item. Foto per item bersifat anjuran (tag = nama barang).</div>
     </div>
-    <div class="field"><label>Foto nota/kuitansi (opsional)</label><input type="file" id="ntFile" accept="image/*" capture="environment" onchange="_showPastePreview(this)"></div>
-    <button class="btn ghost scan-imp" style="display:none;margin-bottom:6px" onclick="importScanNota()">&#128247; Impor dari Folder Scan</button>
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:4px">
-      <input type="checkbox" id="ntAsFotoBarang" checked> Sekaligus simpan foto nota sebagai <b>Foto Barang</b> (dengan lokasi GPS)
-    </label>
-    <div id="ntGps" class="tgl" style="margin-bottom:8px"></div>
-    <div class="field" style="margin-top:2px">
-      <label>&#128247; Foto Barang / Bukti Penerimaan (opsional, bisa beberapa &mdash; atau <b>Ctrl+V</b> screenshot)</label>
+    <!-- ===== BUKTI A: scan nota / kuitansi ===== -->
+    <div class="bukti-blok">
+      <div class="bukti-judul">&#129534; Bukti A &mdash; Foto Nota / Kuitansi</div>
+      <div class="bukti-ket">Berkas nota asli dari penyedia. Cukup satu per nota.</div>
+      <input type="file" id="ntFile" accept="image/*" capture="environment" onchange="_showPastePreview(this)">
+      <button class="btn ghost scan-imp" style="display:none;margin:6px 0 0" onclick="importScanNota()">&#128247; Impor dari Folder Scan</button>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-top:8px;color:var(--c-muted)">
+        <input type="checkbox" id="ntAsFotoBarang"> Salin juga foto nota ini ke Bukti B (biasanya <b>tidak perlu</b>)
+      </label>
+    </div>
+
+    <!-- ===== BUKTI B: foto barang diterima ===== -->
+    <div class="bukti-blok">
+      <div class="bukti-judul">&#128247; Bukti B &mdash; Foto Barang Diterima</div>
+      <div class="bukti-ket">Foto fisik barang/jasa yang diterima (boleh beberapa &mdash; atau tempel <b>Ctrl+V</b>).</div>
       <div style="display:flex;gap:6px;margin-bottom:6px">
-        <button type="button" class="btn ghost" style="padding:5px 10px;font-size:12px" onclick="document.getElementById('ntBarangCam').click()">&#128247; Kamera</button>
-        <button type="button" class="btn ghost" style="padding:5px 10px;font-size:12px" onclick="document.getElementById('ntBarangFiles').click()">&#128444; Galeri</button>
+        <button type="button" class="btn ghost" style="padding:5px 10px;font-size:12px;margin:0" onclick="document.getElementById('ntBarangCam').click()">&#128247; Kamera</button>
+        <button type="button" class="btn ghost" style="padding:5px 10px;font-size:12px;margin:0" onclick="document.getElementById('ntBarangFiles').click()">&#128444; Galeri</button>
       </div>
       <input type="file" id="ntBarangCam" accept="image/*" capture="environment" multiple style="display:none" onchange="_ntAddBarangFiles(this.files)">
       <input type="file" id="ntBarangFiles" accept="image/*" multiple style="display:none" onchange="_ntAddBarangFiles(this.files)">
       <div id="ntBarangPp" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      <div id="ntGps" class="tgl" style="margin-top:6px"></div>
     </div>
     <button class="btn" id="ntSubmitBtn" onclick="submitNota()">Tambah Nota</button>
     <button class="btn ghost" id="ntCancelBtn" onclick="_cancelEditNota()" style="display:none">Batal Edit</button>
@@ -2127,16 +2141,33 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
     tax='<div class="note" style="margin-top:6px">Belanja tidak dikenai pemotongan pajak (penyedia non-PKP / di bawah ambang PPN).</div>';
   }
 
-  // Bukti foto per nota
-  var ev='', anyEv=false;
-  for(i=0;i<notas.length;i++){ var en=notas[i], edt=en.detail||[], efp=fotoPerNota[String(en.urutan)]||[], figs='', cnt=0;
-    if(en.fileId){ figs+=fig(en.fileId,lnk(en.urlFile,en.fileId),'Scan nota',true); cnt++; }
-    for(d=0;d<edt.length;d++){ if(edt[d].fileId){ figs+=fig(edt[d].fileId,lnk(edt[d].urlFile,edt[d].fileId),edt[d].namaBarang||'Foto',false); cnt++; } }
-    for(j=0;j<efp.length;j++){ if(efp[j].fileId){ figs+=fig(efp[j].fileId,lnk(efp[j].urlFile,efp[j].fileId),'Foto barang',false); cnt++; } }
-    if(!cnt) continue; anyEv=true;
-    ev+='<div class="nb evrow"><div class="evh"><span class="nbn">'+('0'+(i+1)).slice(-2)+'</span><span style="font-weight:600;font-size:12px">'+esc(en.namaPenyedia||('Nota '+(i+1)))+'</span><span class="mut10">'+cnt+' berkas</span></div><div class="evg">'+figs+'</div></div>';
+  // Bukti DIPISAH: (A) scan nota/kuitansi, (B) foto barang diterima.
+  var evNota='', evBarang='', nNota=0, nBarang=0;
+  for(i=0;i<notas.length;i++){
+    var en=notas[i], edt=en.detail||[], efp=fotoPerNota[String(en.urutan)]||[];
+    // (A) scan nota — satu per nota
+    if(en.fileId){
+      evNota+=fig(en.fileId,lnk(en.urlFile,en.fileId),('0'+(i+1)).slice(-2)+'. '+(en.namaPenyedia||('Nota '+(i+1))),true);
+      nNota++;
+    }
+    // (B) foto barang — foto per item + foto barang bertag, dikelompokkan per nota
+    var bfig='', bcnt=0;
+    for(d=0;d<edt.length;d++){ if(edt[d].fileId){ bfig+=fig(edt[d].fileId,lnk(edt[d].urlFile,edt[d].fileId),edt[d].namaBarang||'Barang',false); bcnt++; } }
+    for(j=0;j<efp.length;j++){ if(efp[j].fileId){ bfig+=fig(efp[j].fileId,lnk(efp[j].urlFile,efp[j].fileId),'Barang diterima',false); bcnt++; } }
+    if(bcnt){
+      nBarang+=bcnt;
+      evBarang+='<div class="nb evrow"><div class="evh"><span class="nbn">'+('0'+(i+1)).slice(-2)+'</span>'
+        +'<span style="font-weight:600;font-size:12px">'+esc(en.namaPenyedia||('Nota '+(i+1)))+'</span>'
+        +'<span class="mut10">'+bcnt+' foto</span></div><div class="evg">'+bfig+'</div></div>';
+    }
   }
-  var evidence = anyEv ? ('<h3 class="sh">Bukti &mdash; Scan Nota &amp; Foto Barang</h3>'+ev) : '';
+  var evidence='';
+  if(nNota) evidence+='<h3 class="sh">Bukti A &mdash; Scan Nota / Kuitansi</h3>'
+    +'<div class="note" style="margin-bottom:6px">Berkas nota asli dari penyedia ('+nNota+' berkas).</div>'
+    +'<div class="evg nb">'+evNota+'</div>';
+  if(nBarang) evidence+='<h3 class="sh">Bukti B &mdash; Foto Barang Diterima</h3>'
+    +'<div class="note" style="margin-bottom:6px">Foto fisik barang/jasa yang diterima, dikelompokkan per nota ('+nBarang+' foto).</div>'
+    +evBarang;
 
   var statusSent = lengkap
     ? ('Dipertanggungjawabkan penuh &mdash; <b>'+rupiah(real)+'</b> dari <b>'+rupiah(targetSpj)+'</b> ('+pct+'%). '+(dikembalikan>0?('Sisa <b>'+rupiah(dikembalikan)+'</b> dikembalikan. '):'Tidak ada sisa uang muka. ')+'<span class="mut">'+notas.length+' nota &middot; '+totalBarang+' barang &middot; '+totalFoto+' bukti foto.</span>')
@@ -3747,7 +3778,7 @@ function openModalNota(no){
   document.getElementById('notaTxLabel').textContent='No '+no+(_ntPersediaan?' · Persediaan':'');
   _cancelEditNota();
   document.getElementById('notaList').innerHTML='<div class="empty">Memuat...</div>';
-  document.getElementById('ntAsFotoBarang').checked=true;
+  document.getElementById('ntAsFotoBarang').checked=false;   // foto nota & foto barang dipisah
   document.getElementById('ntGps').textContent='';
   _notaGps=null; _captureGps('ntGps', function(g){ _notaGps=g; });
   openModal('modalNota');
