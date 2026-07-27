@@ -114,6 +114,59 @@
   .spin{width:34px;height:34px;border:3px solid var(--n300);border-top-color:var(--ac);border-radius:50%;animation:sp .8s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
   .empty{text-align:center;color:var(--n600);padding:28px 0;font-size:14px}
+
+  /* ===== Catat pengeluaran ===== */
+  .step{font-size:14px;color:var(--n700);margin-top:2px}
+  .seg{display:flex;border:2px solid var(--ac);border-radius:999px;padding:3px;margin:18px 0 22px}
+  .seg button{flex:1;min-height:44px;border:none;background:none;border-radius:999px;font-size:15px;color:var(--n700)}
+  .seg button.on{background:var(--ac);color:#fff;font-family:var(--fh);font-weight:600}
+  .nilai{display:flex;align-items:baseline;gap:8px;border-bottom:2px solid var(--ink);padding:4px 0 8px}
+  .nilai span{font-size:22px;color:var(--n600)}
+  .f .nilai input{flex:1;border:none;background:none;font-family:var(--fh);font-size:38px;font-weight:600;
+    color:var(--ink);padding:0;width:100%;min-width:0;font-variant-numeric:tabular-nums}
+  .f{margin-top:20px}
+  .f label{display:block;font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--n600);margin-bottom:2px}
+  .f input,.f select,.f textarea{width:100%;border:none;border-bottom:1px solid var(--n400);background:none;
+    font-family:var(--fb);font-size:16px;color:var(--ink);padding:10px 0;border-radius:0}
+  .f .hint{font-size:12.5px;color:var(--n600);margin-top:5px}
+  .f2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .autosave{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--n600);margin-top:22px}
+  .sticky{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;padding:12px 20px 16px;
+    background:var(--bg);border-top:1px solid var(--n300);display:flex;gap:10px;z-index:25}
+  .sticky .btn{min-height:52px;font-size:17px;flex:1}
+
+  /* ===== Kamera ===== */
+  #scKamera{position:fixed;inset:0;max-width:480px;margin:0 auto;background:var(--cam);color:#fff;
+    display:none;flex-direction:column;z-index:40}
+  #scKamera.on{display:flex}
+  .camTop{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px}
+  .camTop button{background:none;border:none;color:#fff;font-size:24px;min-width:44px;min-height:44px}
+  .camTop .ttl{text-align:center;flex:1}
+  .camTop .ttl b{font-family:var(--fh);font-size:16px;font-weight:600;display:block}
+  .camTop .ttl span{font-size:12px;opacity:.7}
+  .view{flex:1;margin:0 18px;border:1px dashed rgba(243,242,242,.35);border-radius:20px;position:relative;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:20px}
+  .view i{font-size:44px;opacity:.75}
+  .view p{font-size:14px;opacity:.8;margin:0;max-width:250px;line-height:1.4}
+  .view .lokal{position:absolute;left:14px;bottom:14px;background:var(--a2);color:#fff;border-radius:999px;
+    padding:4px 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+  .thumbs{display:flex;gap:8px;padding:14px 18px 0;min-height:66px}
+  .thumbs .t{width:52px;height:52px;border-radius:12px;background:rgba(243,242,242,.18);overflow:hidden}
+  .thumbs .t img{width:100%;height:100%;object-fit:cover}
+  .camBot{display:flex;align-items:center;justify-content:space-between;padding:10px 24px 26px}
+  .camBot button{background:none;border:none;color:#fff;font-size:15px;min-height:44px}
+  .camBot .shutter{width:72px;height:72px;border-radius:50%;background:#fff;border:4px solid rgba(243,242,242,.35);flex:none}
+  .camBot .sel{color:var(--ac3);font-family:var(--fh);font-size:16px;font-weight:600}
+
+  /* ===== Periksa foto ===== */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+  .ph{position:relative;aspect-ratio:3/4;border-radius:18px;background:var(--n300);overflow:hidden;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--n700);font-size:13px}
+  .ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .ph .cap{position:absolute;left:0;right:0;bottom:0;padding:6px 8px;background:rgba(32,30,29,.55);color:#fff;font-size:12px}
+  .ph .del{position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:50%;background:var(--a2);
+    color:#fff;border:none;font-size:16px;display:flex;align-items:center;justify-content:center}
+  .ph.add{background:none;border:2px dashed var(--ac);color:var(--ac7)}
   @media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
 </style>
 
@@ -159,8 +212,8 @@
   </button>
 
   <div class="quick" style="margin-bottom:26px">
-    <button class="qc ac" onclick="belumSiap('Catat pengeluaran')"><i class="ph-duotone ph-note-pencil"></i><span>Catat pengeluaran</span></button>
-    <button class="qc pink" onclick="belumSiap('Foto nota')"><i class="ph-duotone ph-camera"></i><span>Foto nota</span></button>
+    <button class="qc ac" onclick="bukaCatat()"><i class="ph-duotone ph-note-pencil"></i><span>Catat pengeluaran</span></button>
+    <button class="qc pink" onclick="bukaCatat()"><i class="ph-duotone ph-camera"></i><span>Foto nota</span></button>
     <button class="qc grey" onclick="belumSiap('Potongan pajak')"><i class="ph-duotone ph-percent"></i><span>Potongan pajak</span></button>
     <button class="qc grey" onclick="belumSiap('Pengembalian')"><i class="ph-duotone ph-arrow-u-down-left"></i><span>Pengembalian</span></button>
   </div>
@@ -191,14 +244,102 @@
   <div id="dtIsi"></div>
 </div>
 
+<!-- ================= CATAT (langkah 1/3) ================= -->
+<div id="scCatat" class="scr task">
+  <button class="back" onclick="batalCatat()"><i class="ph-duotone ph-x"></i> Batal</button>
+  <div class="h1" style="margin-top:10px">Catat transaksi</div>
+  <div class="step" id="ctStep">Langkah 1 dari 3 · Rincian transaksi</div>
+
+  <div class="seg">
+    <button id="ctSegKeluar" class="on" onclick="setJenis('keluar')">Pengeluaran</button>
+    <button id="ctSegMasuk" onclick="setJenis('masuk')">Penerimaan</button>
+  </div>
+
+  <div class="f" style="margin-top:0">
+    <label>Nilai</label>
+    <div class="nilai"><span>Rp</span><input id="ctNilai" inputmode="numeric" placeholder="0" oninput="fmtNilai(this);simpanDraft()"></div>
+  </div>
+
+  <div class="f"><label>Uraian / Kegiatan</label>
+    <input id="ctUraian" placeholder="mis. Belanja bahan praktik" oninput="simpanDraft()"></div>
+
+  <div class="f"><label>Penyedia</label>
+    <input id="ctPenyedia" list="ctPenyediaList" placeholder="Nama toko / rekanan" oninput="onPenyedia();simpanDraft()">
+    <datalist id="ctPenyediaList"></datalist>
+    <div class="hint" id="ctPenyediaHint">Dari Master Penyedia · NPWP tersimpan otomatis</div>
+  </div>
+
+  <div class="f2">
+    <div class="f"><label>Tanggal</label><input type="date" id="ctTanggal" onchange="simpanDraft()"></div>
+    <div class="f"><label>Sumber dana</label>
+      <select id="ctSumber" onchange="simpanDraft()"><option value="TUNAI">Kas Tunai</option><option value="BANK">Kas Bank</option></select>
+    </div>
+  </div>
+
+  <div class="f" id="ctAkunWrap"><label>Akun / MAK</label>
+    <input id="ctAkun" list="ctAkunList" placeholder="mis. 521211" oninput="simpanDraft()">
+    <datalist id="ctAkunList">
+      <option value="521811">521811 — Persediaan Barang Konsumsi</option>
+      <option value="521211">521211 — Belanja Bahan</option>
+      <option value="521111">521111 — Keperluan Perkantoran</option>
+      <option value="522141">522141 — Belanja Sewa</option>
+      <option value="524111">524111 — Perjalanan Dinas Biasa</option>
+      <option value="523121">523121 — Pemeliharaan Peralatan</option>
+    </datalist>
+  </div>
+
+  <div class="autosave"><i class="ph-duotone ph-floppy-disk" style="font-size:18px"></i>
+    <span id="ctDraftInfo">Draft tersimpan otomatis di perangkat</span></div>
+</div>
+
+<!-- ================= KAMERA NOTA ================= -->
+<div id="scKamera">
+  <div class="camTop">
+    <button onclick="go('review')" aria-label="Tutup"><i class="ph-duotone ph-x"></i></button>
+    <div class="ttl"><b id="kmNota">Nota 1</b><span id="kmInfo">0 foto diambil</span></div>
+    <button onclick="toast('Lampu kilat mengikuti aplikasi kamera HP')" aria-label="Kilat"><i class="ph-duotone ph-lightning"></i></button>
+  </div>
+  <div class="view">
+    <i class="ph-duotone ph-receipt"></i>
+    <p>Ketuk tombol putih untuk memotret nota dengan kamera HP. Ambil beberapa foto bila nota panjang.</p>
+    <span class="lokal" id="kmLokal">Disimpan lokal</span>
+  </div>
+  <div class="thumbs" id="kmThumbs"></div>
+  <div class="camBot">
+    <button onclick="pilihGaleri()"><i class="ph-duotone ph-image-square" style="font-size:22px"></i><br>Galeri</button>
+    <button class="shutter" onclick="ambilFoto()" aria-label="Ambil foto"></button>
+    <button class="sel" onclick="go('review')">Selesai</button>
+  </div>
+  <input type="file" id="kmCam" accept="image/*" capture="environment" style="display:none" onchange="terimaFoto(this)">
+  <input type="file" id="kmGal" accept="image/*" multiple style="display:none" onchange="terimaFoto(this)">
+</div>
+
+<!-- ================= PERIKSA FOTO (langkah 2/3) ================= -->
+<div id="scReview" class="scr task">
+  <button class="back" onclick="go('kamera')"><i class="ph-duotone ph-arrow-left"></i> Kamera</button>
+  <div class="h1" style="margin-top:10px">Periksa foto</div>
+  <div class="step" id="rvStep">Langkah 2 dari 3</div>
+  <div class="grid2" id="rvGrid"></div>
+  <div class="strip" style="margin-top:16px">Dikompres ke maks. 1280px sebelum diunggah — hemat kuota.</div>
+  <div id="rvRingkas" style="margin-top:16px;font-size:14px;color:var(--n700)"></div>
+</div>
+
 <!-- ================= NAV BAWAH ================= -->
 <nav id="nav" class="hide">
   <button id="nvBeranda" onclick="go('beranda')"><i class="ph-duotone ph-house"></i>Beranda</button>
   <button id="nvTransaksi" onclick="go('transaksi')"><i class="ph-duotone ph-list-bullets"></i>Transaksi</button>
-  <button class="mid" onclick="belumSiap('Catat pengeluaran')"><i class="ph-duotone ph-plus-circle"></i>Catat</button>
+  <button class="mid" onclick="bukaCatat()"><i class="ph-duotone ph-plus-circle"></i>Catat</button>
   <button id="nvAntrean" onclick="belumSiap('Antrean unggah')"><i class="ph-duotone ph-cloud-arrow-up"></i>Antrean</button>
   <button id="nvAkun" onclick="belumSiap('Akun')"><i class="ph-duotone ph-user"></i>Akun</button>
 </nav>
+
+<div id="stickyCatat" class="sticky hide">
+  <button class="btn ac full" onclick="lanjutKeKamera()">Lanjut — foto nota</button>
+</div>
+<div id="stickyReview" class="sticky hide">
+  <button class="btn" style="flex:1" onclick="simpanDraftManual()">Simpan draft</button>
+  <button class="btn ac" style="flex:1.4" onclick="simpanSemua()">Simpan &amp; unggah</button>
+</div>
 
 <div id="toast"></div>
 <div id="load"><div class="spin"></div><div id="loadMsg">Memuat…</div></div>
@@ -236,17 +377,26 @@ function tglPendek(iso){
 }
 
 /* ===================== Navigasi ===================== */
+/* Layar tugas (catat/kamera/review) menyembunyikan navigasi bawah — mode fokus. */
+var TUGAS = {catat:1, kamera:1, review:1};
 function go(scr){
   SCREEN = scr;
-  var semua = ['Login','Beranda','Transaksi','Detail'];
+  var semua = ['Login','Beranda','Transaksi','Detail','Catat','Review'];
   for (var i=0;i<semua.length;i++){
-    var el = $('sc'+semua[i]); if(el) el.className = 'scr' + (semua[i].toLowerCase()===scr ? ' on' : '');
+    var el = $('sc'+semua[i]);
+    if(el) el.className = 'scr' + (semua[i]==='Catat'||semua[i]==='Review' ? ' task' : '')
+                        + (semua[i].toLowerCase()===scr ? ' on' : '');
   }
-  $('nav').className = (scr==='login') ? 'hide' : '';
+  $('scKamera').className = (scr==='kamera') ? 'on' : '';
+  $('nav').className = (scr==='login' || TUGAS[scr]) ? 'hide' : '';
+  $('stickyCatat').className  = (scr==='catat')  ? 'sticky' : 'sticky hide';
+  $('stickyReview').className = (scr==='review') ? 'sticky' : 'sticky hide';
   $('nvBeranda').className   = (scr==='beranda') ? 'on' : '';
   $('nvTransaksi').className = (scr==='transaksi'||scr==='detail') ? 'on' : '';
   window.scrollTo(0,0);
   if (scr==='transaksi') renderTransaksi();
+  if (scr==='kamera')    renderKamera();
+  if (scr==='review')    renderReview();
 }
 
 /* ===================== Login ===================== */
@@ -501,6 +651,215 @@ function detailNota(t, notas){
     + '<div class="strip" style="margin-top:18px">Pencatatan, kamera nota, pajak, dan pengembalian hadir bertahap. '
     + 'Untuk sekarang gunakan versi desktop untuk aksi tersebut.</div>';
   return h;
+}
+
+/* ===================== Catat transaksi (Tahap 2) ===================== */
+var JENIS = 'keluar';      // 'keluar' | 'masuk'
+var FOTOS = [];            // [{base64, mimeType, namaFile}]
+var PENYEDIA = null;       // cache master penyedia
+
+function angka(s){ return parseInt(String(s||'').replace(/[^0-9]/g,''),10) || 0; }
+function fmtNilai(el){
+  var n = angka(el.value);
+  el.value = n ? n.toLocaleString('id-ID') : '';
+}
+function setJenis(j){
+  JENIS = j;
+  $('ctSegKeluar').className = (j==='keluar') ? 'on' : '';
+  $('ctSegMasuk').className  = (j==='masuk')  ? 'on' : '';
+  $('ctAkunWrap').style.display = (j==='keluar') ? '' : 'none';
+  simpanDraft();
+}
+function bukaCatat(){
+  muatPenyedia();
+  var d = muatDraft();
+  if (!d){
+    $('ctNilai').value=''; $('ctUraian').value=''; $('ctPenyedia').value='';
+    $('ctAkun').value=''; $('ctSumber').value='TUNAI';
+    $('ctTanggal').value = new Date().toISOString().slice(0,10);
+    FOTOS = []; setJenis('keluar');
+  }
+  go('catat');
+}
+function batalCatat(){
+  if (($('ctUraian').value||'') || angka($('ctNilai').value) || FOTOS.length){
+    if (!confirm('Buang draft ini? Data yang belum diunggah akan hilang.')) return;
+  }
+  hapusDraft(); FOTOS = []; go('beranda');
+}
+
+/* ---- Master penyedia (autocomplete + NPWP) ---- */
+function muatPenyedia(){
+  if (PENYEDIA || !_tok) return;
+  google.script.run
+    .withSuccessHandler(function(list){
+      PENYEDIA = list||[];
+      var h=''; for (var i=0;i<PENYEDIA.length;i++) h += '<option value="'+esc(PENYEDIA[i].nama)+'"></option>';
+      $('ctPenyediaList').innerHTML = h;
+    })
+    .withFailureHandler(function(){})
+    .serverGetAllPenyedia(_tok);
+}
+function penyediaTerpilih(){
+  var v = ($('ctPenyedia').value||'').trim();
+  for (var i=0;i<(PENYEDIA||[]).length;i++) if (PENYEDIA[i].nama===v) return PENYEDIA[i];
+  return { nama:v, npwp:'', alamat:'' };
+}
+function onPenyedia(){
+  var p = penyediaTerpilih();
+  $('ctPenyediaHint').textContent = p.npwp
+    ? ('NPWP ' + p.npwp + ' · tersimpan di Master Penyedia')
+    : 'Dari Master Penyedia · NPWP tersimpan otomatis';
+}
+
+/* ---- Draft lokal ---- */
+function isiDraft(){
+  return { jenis:JENIS, nilai:angka($('ctNilai').value), uraian:$('ctUraian').value||'',
+           penyedia:$('ctPenyedia').value||'', tanggal:$('ctTanggal').value||'',
+           sumber:$('ctSumber').value||'TUNAI', akun:$('ctAkun').value||'', fotos:FOTOS };
+}
+function simpanDraft(){
+  try { localStorage.setItem('kt_draft', JSON.stringify(isiDraft())); } catch(e){}
+  var el=$('ctDraftInfo'); if(el) el.textContent='Draft tersimpan otomatis di perangkat';
+}
+function simpanDraftManual(){ simpanDraft(); toast('Draft disimpan di perangkat'); }
+function muatDraft(){
+  var d=null; try { d = JSON.parse(localStorage.getItem('kt_draft')||'null'); } catch(e){}
+  if (!d) return null;
+  JENIS = d.jenis||'keluar';
+  $('ctNilai').value = d.nilai ? d.nilai.toLocaleString('id-ID') : '';
+  $('ctUraian').value = d.uraian||''; $('ctPenyedia').value = d.penyedia||'';
+  $('ctTanggal').value = d.tanggal || new Date().toISOString().slice(0,10);
+  $('ctSumber').value = d.sumber||'TUNAI'; $('ctAkun').value = d.akun||'';
+  FOTOS = d.fotos||[];
+  setJenis(JENIS);
+  return d;
+}
+function hapusDraft(){ try { localStorage.removeItem('kt_draft'); } catch(e){} }
+
+function lanjutKeKamera(){
+  if (angka($('ctNilai').value) <= 0){ toast('Nilai harus lebih dari 0', true); return; }
+  if (!($('ctUraian').value||'').trim()){ toast('Uraian wajib diisi', true); return; }
+  simpanDraft();
+  go(FOTOS.length ? 'review' : 'kamera');
+}
+
+/* ===================== Kamera nota ===================== */
+/* Halaman GAS berada dalam iframe tanpa izin kamera, sehingga viewfinder
+   langsung (getUserMedia) diblokir browser. Kita pakai kamera bawaan HP. */
+function ambilFoto(){ $('kmCam').click(); }
+function pilihGaleri(){ $('kmGal').click(); }
+function terimaFoto(input){
+  var files = input.files; if (!files || !files.length) return;
+  var sisa = files.length;
+  loading(true, 'Memproses foto…');
+  for (var i=0;i<files.length;i++){
+    kompres(files[i], function(f){
+      if (f) FOTOS.push(f);
+      if (--sisa <= 0){ loading(false); simpanDraft(); renderKamera(); }
+    });
+  }
+  input.value = '';
+}
+/* Kompres maks 1280px sisi terpanjang, kualitas 0.7 — sama dengan versi desktop. */
+function kompres(file, cb){
+  if (!file || !/^image\//.test(file.type||'')) { cb(null); return; }
+  var rd = new FileReader();
+  rd.onload = function(ev){
+    var img = new Image();
+    img.onload = function(){
+      var w = img.width, h = img.height, maks = 1280;
+      if (w > maks || h > maks){ if (w >= h){ h = Math.round(h*maks/w); w = maks; } else { w = Math.round(w*maks/h); h = maks; } }
+      var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      var url = cv.toDataURL('image/jpeg', 0.7);
+      cb({ base64: url.split(',')[1], mimeType: 'image/jpeg',
+           namaFile: (file.name||'nota').replace(/\.[^.]+$/,'') + '.jpg', _prev: url });
+    };
+    img.onerror = function(){ cb(null); };
+    img.src = ev.target.result;
+  };
+  rd.onerror = function(){ cb(null); };
+  rd.readAsDataURL(file);
+}
+function prev(f){ return f._prev || ('data:' + (f.mimeType||'image/jpeg') + ';base64,' + f.base64); }
+function renderKamera(){
+  var p = penyediaTerpilih();
+  $('kmNota').textContent = 'Nota 1' + (p.nama ? (' — ' + p.nama) : '');
+  $('kmInfo').textContent = FOTOS.length + ' foto diambil';
+  $('kmLokal').textContent = navigator.onLine ? 'Disimpan lokal' : 'Luring · disimpan lokal';
+  var h = '', mulai = Math.max(0, FOTOS.length-3);
+  for (var i=mulai;i<FOTOS.length;i++) h += '<div class="t"><img src="'+prev(FOTOS[i])+'" alt=""></div>';
+  $('kmThumbs').innerHTML = h;
+}
+
+/* ===================== Periksa foto ===================== */
+function renderReview(){
+  var p = penyediaTerpilih();
+  $('rvStep').textContent = 'Langkah 2 dari 3 · Nota 1' + (p.nama?(' — '+p.nama):'') + ' · ' + FOTOS.length + ' foto';
+  var h = '';
+  for (var i=0;i<FOTOS.length;i++){
+    h += '<div class="ph"><img src="'+prev(FOTOS[i])+'" alt="">'
+      + '<button class="del" onclick="hapusFoto('+i+')" aria-label="Hapus"><i class="ph-duotone ph-trash"></i></button>'
+      + '<span class="cap">Nota 1 · foto '+(i+1)+'</span></div>';
+  }
+  h += '<button class="ph add" onclick="go(\'kamera\')"><i class="ph-duotone ph-plus" style="font-size:26px"></i>Tambah foto</button>';
+  $('rvGrid').innerHTML = h;
+  var d = isiDraft();
+  $('rvRingkas').innerHTML = '<b>' + esc(d.uraian||'-') + '</b><br>'
+    + rp(d.nilai) + (d.penyedia?(' · ' + esc(d.penyedia)):'') + ' · ' + esc(d.sumber==='BANK'?'Kas Bank':'Kas Tunai');
+}
+function hapusFoto(i){ FOTOS.splice(i,1); simpanDraft(); renderReview(); }
+
+/* ===================== Simpan ke server ===================== */
+function simpanSemua(){
+  var d = isiDraft();
+  if (d.nilai <= 0 || !d.uraian){ toast('Lengkapi nilai dan uraian dulu', true); go('catat'); return; }
+  if (!navigator.onLine){ toast('Tidak ada koneksi — draft tetap tersimpan di perangkat', true); return; }
+  var keluar = (d.jenis==='keluar');
+  loading(true, 'Menyimpan transaksi…');
+  google.script.run
+    .withSuccessHandler(function(res){
+      var no = res && res.no;
+      if (!no){ loading(false); toast('Transaksi tersimpan', false); selesai(null); return; }
+      if (!keluar || !d.penyedia){ loading(false); selesai(no); return; }
+      // Nota 1 = penyedia dari langkah 1
+      var p = penyediaTerpilih();
+      loading(true, 'Menyimpan nota…');
+      google.script.run
+        .withSuccessHandler(function(){ unggahFoto(no); })
+        .withFailureHandler(function(e){ loading(false); gagal(e); selesai(no); })
+        .serverTambahNota(_tok, no, { namaPenyedia:p.nama, npwp:p.npwp||'', alamat:p.alamat||'', nilai:d.nilai, tglNota:d.tanggal });
+    })
+    .withFailureHandler(gagal)
+    .serverTambahTransaksi(_tok, {
+      tanggal: d.tanggal, kegiatan: d.uraian, penjab: (USER && (USER.namaUser||USER.email)) || '',
+      debet: keluar ? 0 : d.nilai, kredit: keluar ? d.nilai : 0,
+      sumber: d.sumber, keterangan: 'Dicatat dari HP', akun: keluar ? d.akun : '', persediaan: false
+    });
+}
+function unggahFoto(no){
+  if (!FOTOS.length){ loading(false); selesai(no); return; }
+  loading(true, 'Mengunggah ' + FOTOS.length + ' foto…');
+  var arr = [];
+  for (var i=0;i<FOTOS.length;i++)
+    arr.push({ base64:FOTOS[i].base64, mimeType:FOTOS[i].mimeType, namaFile:FOTOS[i].namaFile, keterangan:'Foto nota (HP)' });
+  google.script.run
+    .withSuccessHandler(function(){ loading(false); selesai(no); })
+    .withFailureHandler(function(e){ loading(false); gagal(e); selesai(no); })
+    .serverUploadFotoNota(_tok, no, 1, arr);
+}
+function selesai(no){
+  hapusDraft(); FOTOS = [];
+  toast('Tersimpan' + (no ? (' — transaksi No ' + no) : ''));
+  google.script.run
+    .withSuccessHandler(function(d){
+      TX = (d && d.transaksi) || []; FOTO = (d && d.fotoMap) || {}; SALDO = (d && d.saldo) || null;
+      renderBeranda();
+      if (no) bukaDetail(String(no)); else go('beranda');
+    })
+    .withFailureHandler(function(){ go('beranda'); })
+    .serverGetDashboard(_tok);
 }
 
 /* ===================== Mulai ===================== */
