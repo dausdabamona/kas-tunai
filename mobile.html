@@ -282,11 +282,23 @@
   <div class="f"><label>Uraian / Kegiatan</label>
     <input id="ctUraian" placeholder="mis. Belanja bahan praktik" oninput="simpanDraft()"></div>
 
-  <div class="f"><label>Penyedia</label>
-    <input id="ctPenyedia" list="ctPenyediaList" placeholder="Nama toko / rekanan" oninput="onPenyedia();simpanDraft()">
-    <datalist id="ctPenyediaList"></datalist>
-    <div class="hint" id="ctPenyediaHint">Dari Master Penyedia · NPWP tersimpan otomatis</div>
+  <div class="f" id="ctPumWrap"><label>Diserahkan kepada (PUM)</label>
+    <input id="ctPum" list="ctPumList" placeholder="Nama pemegang uang muka" oninput="simpanDraft()">
+    <datalist id="ctPumList"></datalist>
+    <div class="hint">Uang muka diserahkan kepada orang ini. Nota dari toko dilampirkan
+      belakangan lewat <b>Kelola Nota</b> di transaksi ini.</div>
   </div>
+
+  <details id="ctLangsungWrap" style="margin-top:18px;border:1px solid var(--n300);border-radius:12px;padding:10px 12px"
+           ontoggle="simpanDraft();perbaruiTombolLanjut()">
+    <summary style="cursor:pointer;font-size:14px;color:var(--ac7);font-weight:600">Belanja langsung — notanya sudah ada sekarang</summary>
+    <div class="f" style="margin-top:10px"><label>Penyedia / Toko</label>
+      <input id="ctPenyedia" list="ctPenyediaList" placeholder="Nama toko / rekanan" oninput="onPenyedia();simpanDraft();perbaruiTombolLanjut()">
+      <datalist id="ctPenyediaList"></datalist>
+      <div class="hint" id="ctPenyediaHint">Isi hanya bila Anda membayar langsung ke toko dan notanya
+        sudah di tangan — Nota 1 akan otomatis dibuat atas nama toko ini.</div>
+    </div>
+  </details>
 
   <div class="f2">
     <div class="f"><label>Tanggal</label><input type="date" id="ctTanggal" onchange="simpanDraft()"></div>
@@ -448,7 +460,7 @@
 </nav>
 
 <div id="stickyCatat" class="sticky hide">
-  <button class="btn ac full" onclick="lanjutKeKamera()">Lanjut — foto nota</button>
+  <button class="btn ac full" id="btnLanjut" onclick="lanjutKeKamera()">Lanjut — foto bukti</button>
 </div>
 <div id="stickyReview" class="sticky hide">
   <button class="btn" style="flex:1" onclick="simpanDraftManual()">Simpan draft</button>
@@ -795,10 +807,10 @@ function setJenis(j){
   simpanDraft();
 }
 function bukaCatat(){
-  muatPenyedia();
+  muatPenyedia(); isiDaftarPum();
   var d = muatDraft();
   if (!d){
-    $('ctNilai').value=''; $('ctUraian').value=''; $('ctPenyedia').value='';
+    $('ctNilai').value=''; $('ctUraian').value=''; $('ctPum').value=''; $('ctPenyedia').value='';
     $('ctAkun').value=''; $('ctSumber').value='TUNAI';
     $('ctTanggal').value = new Date().toISOString().slice(0,10);
     FOTOS = []; setJenis('keluar');
@@ -806,7 +818,7 @@ function bukaCatat(){
   go('catat');
 }
 function batalCatat(){
-  if (($('ctUraian').value||'') || angka($('ctNilai').value) || FOTOS.length){
+  if (($('ctUraian').value||'') || ($('ctPum').value||'') || angka($('ctNilai').value) || FOTOS.length){
     if (!confirm('Buang draft ini? Data yang belum diunggah akan hilang.')) return;
   }
   hapusDraft(); FOTOS = []; go('beranda');
@@ -824,6 +836,16 @@ function muatPenyedia(){
     .withFailureHandler(function(){})
     .serverGetAllPenyedia(_tok);
 }
+/* Nama PUM diambil dari penanggung jawab transaksi pengeluaran sebelumnya. */
+function isiDaftarPum(){
+  var seen={}, h='';
+  for (var i=0;i<TX.length;i++){
+    var p=String(TX[i].penjab||'').trim();
+    if (!p || seen[p] || !isKeluar(TX[i])) continue;
+    seen[p]=1; h += '<option value="'+esc(p)+'"></option>';
+  }
+  var dl=$('ctPumList'); if(dl) dl.innerHTML=h;
+}
 function penyediaTerpilih(){
   var v = ($('ctPenyedia').value||'').trim();
   for (var i=0;i<(PENYEDIA||[]).length;i++) if (PENYEDIA[i].nama===v) return PENYEDIA[i];
@@ -839,7 +861,7 @@ function onPenyedia(){
 /* ---- Draft lokal ---- */
 function isiDraft(){
   return { jenis:JENIS, nilai:angka($('ctNilai').value), uraian:$('ctUraian').value||'',
-           penyedia:$('ctPenyedia').value||'', tanggal:$('ctTanggal').value||'',
+           pum:$('ctPum').value||'', penyedia:$('ctPenyedia').value||'', tanggal:$('ctTanggal').value||'',
            sumber:$('ctSumber').value||'TUNAI', akun:$('ctAkun').value||'', fotos:FOTOS };
 }
 function simpanDraft(){
@@ -852,7 +874,8 @@ function muatDraft(){
   if (!d) return null;
   JENIS = d.jenis||'keluar';
   $('ctNilai').value = d.nilai ? d.nilai.toLocaleString('id-ID') : '';
-  $('ctUraian').value = d.uraian||''; $('ctPenyedia').value = d.penyedia||'';
+  $('ctUraian').value = d.uraian||''; $('ctPum').value = d.pum||''; $('ctPenyedia').value = d.penyedia||'';
+  if (d.penyedia) { var dt=$('ctLangsungWrap'); if(dt) dt.open = true; }
   $('ctTanggal').value = d.tanggal || new Date().toISOString().slice(0,10);
   $('ctSumber').value = d.sumber||'TUNAI'; $('ctAkun').value = d.akun||'';
   FOTOS = d.fotos||[];
@@ -861,6 +884,10 @@ function muatDraft(){
 }
 function hapusDraft(){ try { localStorage.removeItem('kt_draft'); } catch(e){} }
 
+function perbaruiTombolLanjut(){
+  var b=$('btnLanjut'); if(!b) return;
+  b.textContent = (($('ctPenyedia').value||'').trim()) ? 'Lanjut — foto nota' : 'Lanjut — foto bukti';
+}
 function lanjutKeKamera(){
   if (angka($('ctNilai').value) <= 0){ toast('Nilai harus lebih dari 0', true); return; }
   if (!($('ctUraian').value||'').trim()){ toast('Uraian wajib diisi', true); return; }
@@ -909,7 +936,7 @@ function kompres(file, cb){
 function prev(f){ return f._prev || ('data:' + (f.mimeType||'image/jpeg') + ';base64,' + f.base64); }
 function renderKamera(){
   var p = penyediaTerpilih();
-  $('kmNota').textContent = 'Nota 1' + (p.nama ? (' — ' + p.nama) : '');
+  $('kmNota').textContent = p.nama ? ('Nota 1 — ' + p.nama) : 'Foto bukti';
   $('kmInfo').textContent = FOTOS.length + ' foto diambil';
   $('kmLokal').textContent = navigator.onLine ? 'Disimpan lokal' : 'Luring · disimpan lokal';
   var h = '', mulai = Math.max(0, FOTOS.length-3);
@@ -920,18 +947,21 @@ function renderKamera(){
 /* ===================== Periksa foto ===================== */
 function renderReview(){
   var p = penyediaTerpilih();
-  $('rvStep').textContent = 'Langkah 2 dari 3 · Nota 1' + (p.nama?(' — '+p.nama):'') + ' · ' + FOTOS.length + ' foto';
+  $('rvStep').textContent = 'Langkah 2 dari 3 · ' + (p.nama ? ('Nota 1 — '+p.nama) : 'Foto bukti')
+    + ' · ' + FOTOS.length + ' foto';
   var h = '';
   for (var i=0;i<FOTOS.length;i++){
     h += '<div class="ph"><img src="'+prev(FOTOS[i])+'" alt="">'
       + '<button class="del" onclick="hapusFoto('+i+')" aria-label="Hapus"><i class="ph-duotone ph-trash"></i></button>'
-      + '<span class="cap">Nota 1 · foto '+(i+1)+'</span></div>';
+      + '<span class="cap">'+(penyediaTerpilih().nama?'Nota 1':'Bukti')+' · foto '+(i+1)+'</span></div>';
   }
   h += '<button class="ph add" onclick="go(\'kamera\')"><i class="ph-duotone ph-plus" style="font-size:26px"></i>Tambah foto</button>';
   $('rvGrid').innerHTML = h;
   var d = isiDraft();
   $('rvRingkas').innerHTML = '<b>' + esc(d.uraian||'-') + '</b><br>'
-    + rp(d.nilai) + (d.penyedia?(' · ' + esc(d.penyedia)):'') + ' · ' + esc(d.sumber==='BANK'?'Kas Bank':'Kas Tunai');
+    + rp(d.nilai) + ' · ' + esc(d.sumber==='BANK'?'Kas Bank':'Kas Tunai')
+    + (d.pum?('<br>Diserahkan kepada <b>' + esc(d.pum) + '</b>'):'')
+    + (d.penyedia?('<br>Nota dari <b>' + esc(d.penyedia) + '</b>'):'');
 }
 function hapusFoto(i){ FOTOS.splice(i,1); simpanDraft(); renderReview(); }
 
@@ -946,8 +976,9 @@ function simpanSemua(){
     .withSuccessHandler(function(res){
       var no = res && res.no;
       if (!no){ loading(false); toast('Transaksi tersimpan', false); selesai(null); return; }
-      if (!keluar || !d.penyedia){ loading(false); selesai(no); return; }
-      // Nota 1 = penyedia dari langkah 1
+      // Nota HANYA dibuat bila memang belanja langsung ke toko. Pada penyerahan
+      // uang muka, notanya belum ada — dilampirkan belakangan lewat Kelola Nota.
+      if (!keluar || !d.penyedia){ unggahFoto(no); return; }
       var p = penyediaTerpilih();
       loading(true, 'Menyimpan nota…');
       google.script.run
@@ -957,7 +988,9 @@ function simpanSemua(){
     })
     .withFailureHandler(gagal)
     .serverTambahTransaksi(_tok, {
-      tanggal: d.tanggal, kegiatan: d.uraian, penjab: (USER && (USER.namaUser||USER.email)) || '',
+      tanggal: d.tanggal, kegiatan: d.uraian,
+      // Penanggung jawab = pemegang uang muka (penerima uang), bukan toko.
+      penjab: (d.pum || '').trim() || (USER && (USER.namaUser||USER.email)) || '',
       debet: keluar ? 0 : d.nilai, kredit: keluar ? d.nilai : 0,
       sumber: d.sumber, keterangan: 'Dicatat dari HP', akun: keluar ? d.akun : '', persediaan: false
     });
