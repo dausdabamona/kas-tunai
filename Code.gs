@@ -128,10 +128,40 @@ function perbaikiNomorTransaksi() {
     SheetRepo.setCells(nama, i + 2, Util.set(C.NO, maks));
     diperbaiki.push({ baris: i + 2, no: maks, kegiatan: r[C.KEGIATAN] });
   }
+
+  // Sambungkan kembali data anak yang sempat tersimpan ke transaksi tanpa nomor
+  // (nota, foto, item, dll). Hanya bila TEPAT SATU transaksi diperbaiki —
+  // selain itu tidak bisa dipastikan milik siapa, jadi dibiarkan.
+  var relink = [];
+  if (diperbaiki.length === 1) {
+    var noBaru = diperbaiki[0].no;
+    var anak = ['MULTI_NOTA', 'FOTO_NOTA', 'DETAIL_NOTA', 'FOTO_BARANG',
+                'PENGEMBALIAN', 'BUKTI_PD', 'SURAT_TUGAS'];
+    for (var a = 0; a < anak.length; a++) {
+      var sName = CONFIG.SHEETS[anak[a]];
+      if (!sName) continue;
+      var cmap = Util.colMap(sName);
+      if (!cmap || cmap.NO_TRANSAKSI === undefined) continue;
+      var rows = SheetRepo.getData(sName), n = 0;
+      for (var k = 0; k < rows.length; k++) {
+        var v = rows[k][cmap.NO_TRANSAKSI];
+        var yatim = (v === '' || v === null || v === undefined ||
+                     String(v).toLowerCase() === 'undefined');
+        if (!yatim) continue;
+        SheetRepo.setCells(sName, k + 2, Util.set(cmap.NO_TRANSAKSI, noBaru));
+        n++;
+      }
+      if (n) relink.push({ sheet: sName, baris: n });
+    }
+    if (relink.length) {
+      try { KasTunai.recalcNota(noBaru); } catch (e) { Logger.log('[recalcNota] ' + e.message); }
+    }
+  }
+
   DeferredFlush.commitAndInvalidate();
-  Logger.log('[perbaikiNomorTransaksi] ' + diperbaiki.length + ' baris diberi nomor: ' +
-    JSON.stringify(diperbaiki));
-  return { success: true, jumlah: diperbaiki.length, detail: diperbaiki };
+  Logger.log('[perbaikiNomorTransaksi] ' + diperbaiki.length + ' transaksi diberi nomor: ' +
+    JSON.stringify(diperbaiki) + ' | data anak disambungkan: ' + JSON.stringify(relink));
+  return { success: true, jumlah: diperbaiki.length, detail: diperbaiki, disambungkan: relink };
 }
 
 /** Migrasi Fase 1 rekonsiliasi: pastikan lebar kolom cukup lalu isi 3 label baru

@@ -614,6 +614,7 @@ var KasTunai = (function () {
     simpanPajak: simpanPajak,
     simpanPajakNota: simpanPajakNota,
     getNotaPajak: getNotaPajak,
+    recalcNota: _recalcNota,
     getRekap: getRekap
   };
 })();
