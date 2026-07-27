@@ -1120,13 +1120,14 @@ function _htmlTandaTerima(t){
   + (t.kodeItem?('<br><i>'+esc(t.kodeItem+' — '+(t.uraianItem||''))+'</i>'):'') +'</td></tr>'
   +'<tr><td class="terb" colspan="3">Terbilang : <i>'+esc(terbilang(jumlah))+' Rupiah</i></td></tr>'
   +'</table>'
+  // Cukup dua tanda tangan: penerima (PUM) dan Bendahara Pengeluaran —
+  // sama dengan dokumen versi desktop (tanpa blok PPK).
   +'<table class="sig"><tr>'
-  +'<td>Mengetahui,<br>Pejabat Pembuat Komitmen<div class="nm">'+esc(I.ppk||'')+'</div>'
-  +'<span class="nip">NIP. '+esc(I.nipPpk||'')+'</span></td>'
-  +'<td>Bendahara Pengeluaran,<div class="nm">'+esc(I.bendahara||'')+'</div>'
+  +'<td style="width:50%">'+(bank?'Penerima Transfer,':'Penerima,')+'<br>'
+  +esc(I.kota||'Sorong')+', '+esc(tglPanjang(t.tanggal))
+  +'<div class="nm">'+esc(penerima)+'</div></td>'
+  +'<td style="width:50%">Bendahara Pengeluaran,<div class="nm">'+esc(I.bendahara||'')+'</div>'
   +'<span class="nip">NIP. '+esc(I.nipBendahara||'')+'</span></td>'
-  +'<td>'+esc(I.kota||'Sorong')+', '+esc(tglPanjang(t.tanggal))+'<br>Yang menerima,<div class="nm">'
-  +esc(penerima)+'</div></td>'
   +'</tr></table>'
   +'</div></body></html>';
 }
