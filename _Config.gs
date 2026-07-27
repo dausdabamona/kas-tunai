@@ -83,7 +83,10 @@ var CONFIG = {
       'NO_TRANSAKSI', 'ROW_INDEX', 'URUTAN', 'NAMA_NOTA', 'NOMINAL',
       'FILE_ID', 'NAMA_FILE', 'URL_FILE', 'TGL_UPLOAD',
       'NPWP_PENYEDIA', 'ALAMAT_PENYEDIA', 'IS_DELETED', 'DELETED_AT', 'DELETED_BY',
-      'TGL_NOTA'
+      'TGL_NOTA',
+      // Pajak per nota (melekat pada penyedia nota, bukan pada pengambilan uang)
+      'PAJAK_KATEGORI_IDX', 'PAJAK_DPP', 'PAJAK_PPH', 'PAJAK_PPN',
+      'PAJAK_TERMASUK_PPN', 'PAJAK_ADA_NPWP'
     ],
     FOTO_NOTA: [
       'NO_TRANSAKSI', 'NOTA_ID', 'URUTAN', 'FILE_ID', 'NAMA_FILE', 'URL_FILE',

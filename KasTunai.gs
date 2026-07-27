@@ -223,7 +223,14 @@ var KasTunai = (function () {
         npwp: r[n.NPWP_PENYEDIA], alamat: r[n.ALAMAT_PENYEDIA],
         noNota: '', tglNota: Util.fmtDate(r[n.TGL_NOTA] || r[n.TGL_UPLOAD]), nilai: Util.num(r[n.NOMINAL]),
         keterangan: '', fileId: r[n.FILE_ID], namaFile: r[n.NAMA_FILE], urlFile: r[n.URL_FILE],
-        detail: detail, jmlItem: detail.length
+        detail: detail, jmlItem: detail.length,
+        // Pajak per nota — katIdx null berarti belum pernah ditetapkan.
+        pajakKatIdx: (r[n.PAJAK_KATEGORI_IDX] !== '' && r[n.PAJAK_KATEGORI_IDX] != null) ? Util.num(r[n.PAJAK_KATEGORI_IDX]) : null,
+        pajakDpp: Util.num(r[n.PAJAK_DPP]),
+        pajakPph: Util.num(r[n.PAJAK_PPH]),
+        pajakPpn: Util.num(r[n.PAJAK_PPN]),
+        pajakTermasukPPN: String(r[n.PAJAK_TERMASUK_PPN] || '').toUpperCase() !== 'N',
+        pajakAdaNpwp: String(r[n.PAJAK_ADA_NPWP] || '').toUpperCase() !== 'N'
       };
     });
   }
@@ -234,11 +241,13 @@ var KasTunai = (function () {
     var hasDetail = notaData.detail && notaData.detail.length;
     var nilai = hasDetail ? DetailNota.totalItems(notaData.detail) : Util.num(notaData.nilai);
 
+    SheetRepo.ensureMinCols(CONFIG.SHEETS.MULTI_NOTA, CONFIG.HEADERS.MULTI_NOTA.length);
     SheetRepo.appendRow(CONFIG.SHEETS.MULTI_NOTA, [
       transactionId, 0, urutan, notaData.namaPenyedia || '', nilai,
       file ? file.fileId : '', file ? file.namaFile : '', file ? file.url : '', new Date(),
       notaData.npwp || '', notaData.alamat || '', FLAG_ACTIVE, '', '',
-      notaData.tglNota ? new Date(notaData.tglNota) : ''
+      notaData.tglNota ? new Date(notaData.tglNota) : '',
+      '', 0, 0, 0, '', ''          // pajak per nota — diisi lewat simpanPajakNota
     ]);
     DeferredFlush.mark();
     if (hasDetail) DetailNota.save(transactionId, urutan, notaData.detail);
@@ -486,6 +495,55 @@ var KasTunai = (function () {
     return { success: true };
   }
 
+  /* -------------------------------------------------------- *
+   * Pajak PER NOTA (melekat pada penyedia nota, bukan pada
+   * pengambilan uang). Total tiap nota dijumlahkan otomatis ke
+   * kolom pajak transaksi agar kartu, ekspor SAKTI, dan Papan
+   * Kerja tetap membaca satu sumber angka.
+   * -------------------------------------------------------- */
+  function simpanPajakNota(transactionId, urutan, d) {
+    var hit = _findNotaRow(transactionId, urutan);
+    if (!hit) throw new Error('Nota tidak ditemukan');
+    var n = NC();
+    SheetRepo.ensureMinCols(CONFIG.SHEETS.MULTI_NOTA, CONFIG.HEADERS.MULTI_NOTA.length);
+    SheetRepo.setCells(CONFIG.SHEETS.MULTI_NOTA, hit.rowIndex, Util.set(
+      n.PAJAK_KATEGORI_IDX,  (d.katIdx != null ? d.katIdx : ''),
+      n.PAJAK_DPP,           Util.num(d.dpp),
+      n.PAJAK_PPH,           Util.num(d.pph),
+      n.PAJAK_PPN,           Util.num(d.ppn),
+      n.PAJAK_TERMASUK_PPN,  (d.termasukPPN === false ? 'N' : 'Y'),
+      n.PAJAK_ADA_NPWP,      (d.adaNpwp === false ? 'N' : 'Y')));
+    DeferredFlush.mark();
+    AuditLog.write('SIMPAN_PAJAK_NOTA', CONFIG.SHEETS.MULTI_NOTA, transactionId + '#' + urutan,
+      'katIdx=' + d.katIdx + ' pph=' + d.pph + ' ppn=' + d.ppn + ' dpp=' + d.dpp);
+    var tot = _recalcPajakTransaksi(transactionId);
+    return { success: true, total: tot };
+  }
+
+  /** Jumlahkan pajak seluruh nota aktif → tulis ke kolom pajak transaksi. */
+  function _recalcPajakTransaksi(transactionId) {
+    var notas = getMultiNota(transactionId);
+    var dpp = 0, pph = 0, ppn = 0, katIdx = null, adaYangDiisi = false;
+    for (var i = 0; i < notas.length; i++) {
+      var nt = notas[i];
+      if (nt.pajakKatIdx === null) continue;          // nota ini belum ditetapkan pajaknya
+      adaYangDiisi = true;
+      dpp += Util.num(nt.pajakDpp);
+      pph += Util.num(nt.pajakPph);
+      ppn += Util.num(nt.pajakPpn);
+      if (katIdx === null && nt.pajakKatIdx >= 0) katIdx = nt.pajakKatIdx;
+    }
+    if (!adaYangDiisi) return null;                   // jangan sentuh data lama bila belum ada pajak nota
+    SheetRepo.ensureMinCols(CONFIG.SHEETS.KAS_TUNAI, CONFIG.HEADERS.KAS_TUNAI.length);
+    updateByTransactionId(transactionId, Util.set(
+      C.PAJAK_KATEGORI_IDX, (katIdx != null ? katIdx : 0),
+      C.PAJAK_PPH,          pph,
+      C.PAJAK_PPN,          ppn,
+      C.PAJAK_DPP,          dpp));
+    DeferredFlush.mark();
+    return { dpp: dpp, pph: pph, ppn: ppn };
+  }
+
   return {
     getTransaksi: getTransaksi,
     ringkasanSaldo: ringkasanSaldo,
@@ -507,6 +565,7 @@ var KasTunai = (function () {
     uploadKuitansi: uploadKuitansi,
     hapusKuitansi: hapusKuitansi,
     simpanPajak: simpanPajak,
+    simpanPajakNota: simpanPajakNota,
     getRekap: getRekap
   };
 })();

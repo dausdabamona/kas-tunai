@@ -56,9 +56,9 @@ function serverGetDashboard(token) {
   return _run(token, function (auth) {
     // Perbaiki/isi label header kolom yang kosong (sekali per TTL cache; idempotent).
     // Bump kunci ke v3 agar kolom rekonsiliasi (No Kuitansi/DRPP/SPP) ikut ter-migrasi.
-    if (!AppCache.get('hdr_fixed_v3')) {
+    if (!AppCache.get('hdr_fixed_v4')) {
       try { SheetRepo.ensureHeaders(); } catch (e) { Logger.log('[ensureHeaders] ' + e.message); }
-      AppCache.put('hdr_fixed_v3', 1);
+      AppCache.put('hdr_fixed_v4', 1);
     }
     var role = auth.role;
     var full = (role === 'admin' || role === 'full');
@@ -278,6 +278,10 @@ function serverUpdateTransaksi(token, no, data) {
 }
 function serverSimpanPajak(token, no, d) {
   return _run(token, function (auth) { return KasTunai.simpanPajak(no, d); });
+}
+/** Simpan pajak satu nota (per penyedia); total otomatis dijumlahkan ke transaksi. */
+function serverSimpanPajakNota(token, no, urutan, d) {
+  return _run(token, function (auth) { return KasTunai.simpanPajakNota(no, urutan, d); });
 }
 
 /* ============================================================
