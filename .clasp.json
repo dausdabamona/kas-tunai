@@ -18,6 +18,7 @@
     "Users.gs",
     "ScanInbox.gs",
     "DetailNota.gs",
+    "Anggaran.gs",
     "Rekonsiliasi.gs",
     "Code.gs"
   ]

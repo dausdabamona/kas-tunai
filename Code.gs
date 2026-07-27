@@ -66,9 +66,9 @@ function serverGetDashboard(token) {
   return _run(token, function (auth) {
     // Perbaiki/isi label header kolom yang kosong (sekali per TTL cache; idempotent).
     // Bump kunci ke v3 agar kolom rekonsiliasi (No Kuitansi/DRPP/SPP) ikut ter-migrasi.
-    if (!AppCache.get('hdr_fixed_v4')) {
+    if (!AppCache.get('hdr_fixed_v5')) {
       try { SheetRepo.ensureHeaders(); } catch (e) { Logger.log('[ensureHeaders] ' + e.message); }
-      AppCache.put('hdr_fixed_v4', 1);
+      AppCache.put('hdr_fixed_v5', 1);
     }
     var role = auth.role;
     var full = (role === 'admin' || role === 'full');
@@ -359,6 +359,22 @@ function serverSimpanPajakNota(token, no, urutan, d) {
 /** Daftar seluruh nota yang dipotong pajak (rekap setoran / SPT Masa). */
 function serverGetNotaPajak(token) {
   return _run(token, function (auth) { return KasTunai.getNotaPajak(); });
+}
+
+/* ============================================================
+ * Anggaran / ketersediaan dana (Laporan FA Detail 16 Segmen)
+ * ============================================================ */
+/** Impor pagu per item POK. list sudah dipetakan di frontend. Idempoten. */
+function serverImporPagu(token, list, periode) {
+  return _run(token, function (auth) { return Anggaran.imporPagu(list, periode); });
+}
+/** Daftar item pagu (untuk pemilih Detail Kegiatan di form transaksi). */
+function serverGetPagu(token) {
+  return _run(token, function (auth) { return Anggaran.getPagu(); });
+}
+/** Pagu disandingkan dengan belanja kas → sisa aman per item. */
+function serverKetersediaanDana(token) {
+  return _run(token, function (auth) { return Anggaran.ketersediaan(); });
 }
 
 /* ============================================================

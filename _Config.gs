@@ -46,7 +46,8 @@ var CONFIG = {
     USERS:          'Users',
     DETAIL_NOTA:    'Detail Nota',
     SESSIONS:       'Sessions',
-    SAKTI_SPBY:     'SAKTI_SPBy'
+    SAKTI_SPBY:     'SAKTI_SPBy',
+    PAGU:           'Pagu'
   },
 
   // Index kolom sheet Kas Tunai (0-based, A-X = 24 kolom inti + kolom kuitansi TTD)
@@ -62,7 +63,9 @@ var CONFIG = {
     // Kunci penghubung rekonsiliasi SAKTI (Fase 1) — ditambah di kanan.
     NO_KUITANSI: 36, NO_DRPP: 37, NO_SPP: 38,
     // Status rekonsiliasi SAKTI (Fase 2) — diisi engine, jangan diketik manual.
-    STATUS_REKON: 39, REKON_REF_PB: 40, REKON_BATCH: 41
+    STATUS_REKON: 39, REKON_REF_PB: 40, REKON_BATCH: 41,
+    // Detail kegiatan (item POK) yang dibebani belanja ini.
+    KODE_ITEM: 42, URAIAN_ITEM: 43
   },
 
   // Header tiap sheet (urut sesuai kolom FISIK sheet asli)
@@ -77,7 +80,8 @@ var CONFIG = {
       'SUMBER', 'REF_TRANSFER', 'NILAI_SPBY', 'AKUN', 'PERSEDIAAN',
       'PAJAK_KATEGORI_IDX', 'PAJAK_PPH', 'PAJAK_PPN', 'PAJAK_DPP',
       'NO_KUITANSI', 'NO_DRPP', 'NO_SPP',
-      'STATUS_REKON', 'REKON_REF_PB', 'REKON_BATCH'
+      'STATUS_REKON', 'REKON_REF_PB', 'REKON_BATCH',
+      'KODE_ITEM', 'URAIAN_ITEM'
     ],
     MULTI_NOTA: [
       'NO_TRANSAKSI', 'ROW_INDEX', 'URUTAN', 'NAMA_NOTA', 'NOMINAL',
@@ -134,6 +138,13 @@ var CONFIG = {
       'HARGA_SATUAN', 'SUBTOTAL', 'KETERANGAN', 'NOTA_URUTAN', 'FILE_ID',
       'NAMA_FILE', 'URL_FILE', 'LAT', 'LNG', 'MAPS_URL', 'WAKTU',
       'IS_DELETED', 'DELETED_AT', 'DELETED_BY'
+    ],
+    // Pagu / ketersediaan dana per item POK (Laporan FA Detail 16 Segmen SAKTI).
+    // Ditulis hanya oleh impor pagu; angka realisasi di sini = versi SAKTI.
+    PAGU: [
+      'KODE_ITEM', 'URAIAN_ITEM', 'AKUN', 'URAIAN_AKUN',
+      'KODE_KOMPONEN', 'KODE_RO', 'URAIAN_RO', 'KODE_KEGIATAN', 'KODE_PROGRAM',
+      'PAGU', 'REALISASI_SAKTI', 'SISA_SAKTI', 'PERIODE', 'IMPORT_BATCH'
     ],
     // Acuan ekspor SAKTI (Fase 2) — ditulis hanya oleh impor & engine cocok.
     SAKTI_SPBY: [

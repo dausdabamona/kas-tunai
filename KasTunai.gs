@@ -53,7 +53,9 @@ var KasTunai = (function () {
       noSpp:           row[C.NO_SPP] || '',
       statusRekon:     row[C.STATUS_REKON] || '',  // status rekonsiliasi SAKTI (Fase 2)
       rekonRefPb:      row[C.REKON_REF_PB] || '',
-      rekonBatch:      row[C.REKON_BATCH] || ''
+      rekonBatch:      row[C.REKON_BATCH] || '',
+      kodeItem:        row[C.KODE_ITEM] || '',     // detail kegiatan (item POK)
+      uraianItem:      row[C.URAIAN_ITEM] || ''
     };
   }
   /** Normalkan spasi No Kuitansi (kunci rekonsiliasi) tanpa mengubah isi lain. */
@@ -133,6 +135,8 @@ var KasTunai = (function () {
     row[C.NO_KUITANSI]  = _normKuitansi(data.noKuitansi);   // kunci penghubung SAKTI
     row[C.NO_DRPP]      = data.noDrpp || '';
     row[C.NO_SPP]       = data.noSpp || '';
+    row[C.KODE_ITEM]    = data.kodeItem || '';
+    row[C.URAIAN_ITEM]  = data.uraianItem || '';
 
     SheetRepo.ensureMinCols(CONFIG.SHEETS.KAS_TUNAI, CONFIG.HEADERS.KAS_TUNAI.length);
     SheetRepo.appendRow(CONFIG.SHEETS.KAS_TUNAI, row);
@@ -180,6 +184,8 @@ var KasTunai = (function () {
     if (data.noKuitansi !== undefined) upd[C.NO_KUITANSI] = _normKuitansi(data.noKuitansi);
     if (data.noDrpp !== undefined) upd[C.NO_DRPP] = data.noDrpp || '';
     if (data.noSpp !== undefined) upd[C.NO_SPP] = data.noSpp || '';
+    if (data.kodeItem !== undefined) upd[C.KODE_ITEM] = data.kodeItem || '';
+    if (data.uraianItem !== undefined) upd[C.URAIAN_ITEM] = data.uraianItem || '';
     SheetRepo.ensureMinCols(CONFIG.SHEETS.KAS_TUNAI, CONFIG.HEADERS.KAS_TUNAI.length); // aman utk tail-col
     var ok = updateByTransactionId(no, upd);
     if (ok) AuditLog.write('UPDATE', CONFIG.SHEETS.KAS_TUNAI, no, 'kegiatan: ' + (data.kegiatan || ''));
