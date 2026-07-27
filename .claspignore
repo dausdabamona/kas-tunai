@@ -5,6 +5,7 @@
 !appsscript.json
 !*.gs
 !index.html
+!mobile.html
 
 # Halaman redirect GitHub Pages — JANGAN diunggah ke Apps Script
 docs/**

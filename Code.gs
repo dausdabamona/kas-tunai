@@ -8,13 +8,18 @@
 /* ============================================================
  * Entry point
  * ============================================================ */
-function doGet() {
+function doGet(e) {
   // Cangkang HTML saja. Identitas & role TIDAK lagi dari Session.getActiveUser()
   // (staf pakai Gmail biasa → selalu kosong). Frontend memperoleh role dari
   // respons serverLogin/serverGetDashboard yang berbasis sesi token.
-  return HtmlService.createTemplateFromFile('index').evaluate()
+  // ?m=1 → tampilan mobile (mobile.html); selain itu tampilan desktop.
+  var p = (e && e.parameter) ? e.parameter : {};
+  var mobile = (p.m === '1' || p.mobile === '1');
+  return HtmlService.createTemplateFromFile(mobile ? 'mobile' : 'index').evaluate()
     .setTitle('Kas Tunai - Poltek KP Sorong')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .addMetaTag('viewport', mobile
+      ? 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover'
+      : 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
