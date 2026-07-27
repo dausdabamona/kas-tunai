@@ -101,6 +101,39 @@ function perbaikiHeader() {
   return SheetRepo.ensureHeaders();
 }
 
+/**
+ * PERBAIKAN DATA: isi kolom NO yang kosong pada sheet "Kas Tunai".
+ * Baris transaksi tanpa nomor tak bisa ditautkan ke nota/foto — nota yang
+ * disimpan ke baris seperti itu akan "hilang". Jalankan dari editor Apps
+ * Script: pilih fungsi ini → Run. Aman diulang (hanya mengisi yang kosong).
+ */
+function perbaikiNomorTransaksi() {
+  var C = CONFIG.COLS, nama = CONFIG.SHEETS.KAS_TUNAI;
+  var data = SheetRepo.getData(nama);
+  var maks = 0, i;
+  for (i = 0; i < data.length; i++) {
+    var n = parseInt(data[i][C.NO], 10);
+    if (!isNaN(n) && n > maks) maks = n;
+  }
+  var diperbaiki = [];
+  for (i = 0; i < data.length; i++) {
+    var r = data[i];
+    if (isDeleted(r[C.IS_DELETED])) continue;
+    var kosong = (r[C.NO] === '' || r[C.NO] === null || r[C.NO] === undefined);
+    if (!kosong) continue;
+    // hanya baris yang benar-benar berisi data transaksi
+    var adaIsi = (r[C.KEGIATAN] || Util.num(r[C.DEBET]) > 0 || Util.num(r[C.KREDIT]) > 0);
+    if (!adaIsi) continue;
+    maks++;
+    SheetRepo.setCells(nama, i + 2, Util.set(C.NO, maks));
+    diperbaiki.push({ baris: i + 2, no: maks, kegiatan: r[C.KEGIATAN] });
+  }
+  DeferredFlush.commitAndInvalidate();
+  Logger.log('[perbaikiNomorTransaksi] ' + diperbaiki.length + ' baris diberi nomor: ' +
+    JSON.stringify(diperbaiki));
+  return { success: true, jumlah: diperbaiki.length, detail: diperbaiki };
+}
+
 /** Migrasi Fase 1 rekonsiliasi: pastikan lebar kolom cukup lalu isi 3 label baru
  *  (No Kuitansi/DRPP/SPP). Idempoten — aman dijalankan berulang dari editor GAS. */
 function migrasiKolomRekonsiliasi() {

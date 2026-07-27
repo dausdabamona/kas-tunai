@@ -236,6 +236,10 @@ var KasTunai = (function () {
   }
 
   function tambahNota(transactionId, notaData) {
+    // Tolak bila transaksi tak bernomor — kalau diteruskan, nota tersimpan
+    // dengan NO_TRANSAKSI kosong/undefined dan tidak akan pernah ditemukan lagi.
+    if (transactionId === undefined || transactionId === null || String(transactionId).trim() === '')
+      throw new Error('Transaksi tidak punya Nomor. Jalankan perbaikiNomorTransaksi() dari editor Apps Script.');
     var urutan = getMultiNota(transactionId).length + 1;
     var file = (notaData.file && notaData.file.base64) ? DriveHelper.upload(notaData.file, {noTransaksi:transactionId}) : null;
     var hasDetail = notaData.detail && notaData.detail.length;

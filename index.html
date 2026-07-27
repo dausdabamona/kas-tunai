@@ -1854,7 +1854,11 @@ function _cardHtml(t, mode){
   var srcBadge = (t.sumber==='BANK')
     ? ' <span class="srcbadge bank">&#127974; Bank</span>'
     : ' <span class="srcbadge tunai">&#128181; Tunai</span>';
-  var head='<div class="top"><div><div class="jd">#'+t.no+' '+esc(t.kegiatan||'-')+srcBadge+'</div>'
+  // Tandai jelas bila baris transaksi kehilangan Nomor (kolom NO kosong di sheet):
+  // tanpa nomor, nota/foto tidak bisa ditautkan ke transaksi ini.
+  var noHilang=(t.no===undefined||t.no===null||String(t.no).trim()==='');
+  var noLabel=noHilang?'<span class="chip no">&#9888; TANPA NOMOR</span> ':('#'+t.no+' ');
+  var head='<div class="top"><div><div class="jd">'+noLabel+esc(t.kegiatan||'-')+srcBadge+'</div>'
     +'<div class="sb">&#128100; '+esc(t.penjab||'-')+(t.keterangan?(' &middot; '+esc(t.keterangan)):'')+'</div></div>';
   if(mode==='masuk'){
     return '<div class="tcard">'+head
@@ -3773,6 +3777,15 @@ function submitTransaksi(){
 
 /* ============== Nota ============== */
 function openModalNota(no){
+  // Pengaman: baris transaksi tanpa nomor (kolom NO kosong di sheet) akan
+  // membuat nota tersimpan ke transaksi "undefined" dan seolah hilang.
+  if(no===undefined||no===null||String(no).trim()===''){
+    toast('Transaksi ini belum punya Nomor. Jalankan perbaikan nomor transaksi (lihat pesan di bawah).','error');
+    alert('Transaksi ini tidak punya NOMOR di kolom "NO" sheet Kas Tunai, sehingga nota tidak bisa ditautkan.\n\n'
+      +'Perbaikan: buka editor Apps Script (clasp open) → pilih fungsi "perbaikiNomorTransaksi" → Run.\n'
+      +'Fungsi itu akan mengisi nomor untuk semua baris yang kosong. Setelah itu muat ulang aplikasi.');
+    return;
+  }
   _notaTarget=no;
   var _t=_cariTransaksi(no); _ntPersediaan=!!(_t&&_t.persediaan);
   document.getElementById('notaTxLabel').textContent='No '+no+(_ntPersediaan?' · Persediaan':'');
