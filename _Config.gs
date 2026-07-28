@@ -47,7 +47,8 @@ var CONFIG = {
     DETAIL_NOTA:    'Detail Nota',
     SESSIONS:       'Sessions',
     SAKTI_SPBY:     'SAKTI_SPBy',
-    PAGU:           'Pagu'
+    PAGU:           'Pagu',
+    MASTER_PUM:     'Master PUM'
   },
 
   // Index kolom sheet Kas Tunai (0-based, A-X = 24 kolom inti + kolom kuitansi TTD)
@@ -166,6 +167,11 @@ var CONFIG = {
       'KODE_ITEM', 'URAIAN_ITEM', 'AKUN', 'URAIAN_AKUN',
       'KODE_KOMPONEN', 'KODE_RO', 'URAIAN_RO', 'KODE_KEGIATAN', 'KODE_PROGRAM',
       'PAGU', 'REALISASI_SAKTI', 'SISA_SAKTI', 'PERIODE', 'IMPORT_BATCH'
+    ],
+    // Nomor WhatsApp pemegang uang muka, untuk tombol Tagih (tugas 9).
+    // Key = nama PUM (case-insensitive), sama seperti MASTER_PENYEDIA.
+    MASTER_PUM: [
+      'NAMA_PUM', 'NO_HP', 'TERAKHIR_DIPAKAI'
     ],
     // Acuan ekspor SAKTI (Fase 2) — ditulis hanya oleh impor & engine cocok.
     SAKTI_SPBY: [

@@ -185,6 +185,29 @@
   /* Baris antrean dibedakan tegas dari transaksi yang sudah tersimpan. */
   .row.antre{border-left:3px solid var(--a2);padding-left:9px;background:var(--a2-100)}
 
+  /* ===== Kartu ringkas uang muka belum dipertanggungjawabkan ===== */
+  .kartupum{border-radius:18px;padding:16px 18px;background:var(--a2-100);cursor:pointer}
+  .kartupum.hide{display:none}
+  .kartupum.mendesak{background:var(--a2);color:#fff}
+  .kartupum .kick{font-size:12px;letter-spacing:.1em;text-transform:uppercase;opacity:.8}
+  .kartupum .besar{font-family:var(--fh);font-size:26px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums}
+  .kartupum .sub{font-size:13px;margin-top:4px;opacity:.9}
+
+  /* ===== Baris papan pemantau PUM — ambang warna dari AMBANG_HARI_PUM ===== */
+  .pumRow{border:1px solid var(--n300);border-left-width:5px;border-radius:14px;padding:14px 16px;margin-bottom:12px}
+  .pumRow.netral{border-left-color:var(--n400)}
+  .pumRow.perhatian{border-left-color:#d97706;background:#fffbeb}
+  .pumRow.mendesak{border-left-color:var(--a2);background:var(--a2-100)}
+  .pumRow .atas{display:flex;justify-content:space-between;align-items:baseline}
+  .pumRow .nm{font-family:var(--fh);font-size:16px;font-weight:600}
+  .pumRow .umur{font-size:12.5px;color:var(--n600)}
+  .pumRow.mendesak .umur{color:var(--a2-700);font-weight:600}
+  .pumRow .ur{font-size:13.5px;color:var(--n700);margin-top:2px}
+  .pumRow .progres{height:6px;border-radius:3px;background:var(--n300);margin-top:10px;overflow:hidden}
+  .pumRow .progres .isi{height:100%;background:var(--ac)}
+  .pumRow .bawah{display:flex;justify-content:space-between;font-size:12.5px;color:var(--n600);margin-top:6px}
+  .pumRow .sisa{font-weight:600;color:var(--ink)}
+
   /* ===== Badge jumlah antrean di navigasi ===== */
   #nav button{position:relative}
   .badge{position:absolute;top:4px;left:50%;margin-left:6px;min-width:18px;height:18px;padding:0 5px;
@@ -284,6 +307,8 @@
       <span class="pill" id="bdJml">—</span>
     </div>
   </div>
+
+  <div id="bdPum" class="kartupum hide" style="margin-bottom:26px" onclick="bukaPum()"></div>
 
   <button id="bdOffline" class="banner hide" style="margin-bottom:26px" onclick="bukaAntrean()">
     <i class="ph-duotone ph-wifi-slash"></i>
@@ -522,6 +547,14 @@
   <div id="pgRiwayat"></div>
 </div>
 
+<!-- ================= UANG MUKA BELUM DIPERTANGGUNGJAWABKAN ================= -->
+<div id="scPum" class="scr">
+  <button class="back" onclick="go('beranda')"><i class="ph-duotone ph-arrow-left"></i> Beranda</button>
+  <div class="h1" style="margin-top:10px">Uang muka menunggu nota</div>
+  <div class="step">Diurutkan dari yang paling lama menunggu.</div>
+  <div id="pumList" style="margin-top:16px"><div class="empty">Memuat…</div></div>
+</div>
+
 <!-- ================= ANTREAN UNGGAH ================= -->
 <div id="scAntrean" class="scr">
   <div class="h1" style="margin-bottom:4px">Antrean unggah</div>
@@ -731,6 +764,7 @@ var _tok = '';
 try { _tok = localStorage.getItem('kt_token') || ''; } catch(e){}
 var TX = [], FOTO = {}, SALDO = null, USER = null, NOTAS = [], SCREEN = 'beranda', FILTER = 'semua', DETAIL_NO = null;
 var CETAK_TT = false;   /* true bila pengguna memilih "Simpan & cetak tanda terima" */
+var PETA_PUM = {};      /* nama(lowercase) -> nomor HP, untuk tombol Tagih */
 var ANTREAN = [];       /* isi antrean luring, disegarkan aqRender() */
 var FOTO_NOTA = {};     /* foto bertag per nota (Bukti B) pada transaksi yang dibuka */
 
@@ -765,7 +799,7 @@ var TUGAS = {catat:1, kamera:1, review:1, pajak:1, kembali:1, pindah:1, nota:1, 
 var TASKSCR = {Catat:1, Review:1, Pajak:1, Kembali:1, Pindah:1, Nota:1, Edit:1};
 function go(scr){
   SCREEN = scr;
-  var semua = ['Login','Beranda','Transaksi','Detail','Catat','Review','Pajak','Kembali','Pindah','Nota','Edit','Akun','Antrean'];
+  var semua = ['Login','Beranda','Transaksi','Detail','Catat','Review','Pajak','Kembali','Pindah','Nota','Edit','Akun','Antrean','Pum'];
   for (var i=0;i<semua.length;i++){
     var el = $('sc'+semua[i]);
     if(el) el.className = 'scr' + (TASKSCR[semua[i]] ? ' task' : '')
@@ -791,6 +825,7 @@ function go(scr){
   if (scr==='catat')     perbaruiTombolLanjut();
   if (scr==='akun')      renderAkun();
   if (scr==='antrean')   aqRender();
+  if (scr==='pum')       renderPum();
 }
 function kembaliDetail(){ if (DETAIL_NO) bukaDetail(DETAIL_NO); else go('transaksi'); }
 
@@ -851,7 +886,8 @@ function muat(){
         var u = JSON.parse(localStorage.getItem('kt_user')||'null');
         if(u) USER = u;
       } catch(e){}
-      renderBeranda();
+      PETA_PUM = (d && d.petaPUM) || {};
+      renderBeranda(); renderKartuPum();
       if (SCREEN==='login' || !SCREEN) go('beranda'); else go(SCREEN);
     })
     .withFailureHandler(gagal)
@@ -876,6 +912,7 @@ function lolosFilter(t){
   if (FILTER==='semua') return true;
   if (FILTER==='belumspby') return isKeluar(t) && !t.noSpby;
   if (FILTER==='pajakbelum') return pajakBelum(t);
+  if (FILTER==='pumbelum') return isKeluar(t) && bukanPindahDana(t) && hitungNeraca(t, null, null).sisaPUM > 0;
   if (FILTER==='draft') return false;      // antrean ditangani terpisah di renderTransaksi()
   return true;
 }
@@ -942,6 +979,7 @@ var CHIPS = [
   {k:'semua',      n:'Semua'},
   {k:'belumspby',  n:'Belum SPBY'},
   {k:'pajakbelum', n:'Pajak belum'},
+  {k:'pumbelum',   n:'PUM belum bernota'},
   {k:'draft',      n:'Draft offline'}
 ];
 function renderChips(){
@@ -1048,9 +1086,17 @@ function detailKepala(t){
  *               (kolom JENIS baru lahir di tugas 5 — untuk sekarang semua SISA)
  */
 function hitungNeraca(t, notas, kmb){
-  t = t || {}; notas = notas || [];
+  t = t || {};
+  // notas === null (bukan []) berarti detail nota TIDAK dimuat — dipakai oleh
+  // papan pemantau uang muka (tugas 9) yang harus menghitung sisaPUM lintas
+  // banyak transaksi sekaligus tanpa memuat nota tiap satu. sNota diambil
+  // dari NOTA_TOTAL yang sudah dijaga server (KasTunai.gs), rincian pajak
+  // per nota tidak tersedia dalam mode ini. Rumus SisaDiTanganPUM tetap sama
+  // persis — hanya sumber ΣNota-nya berbeda, sama seperti kmb=null di bawah.
+  var ringkas = (notas === null || notas === undefined);
+  notas = notas || [];
   var um = (+t.uangDiserahkan > 0) ? (+t.uangDiserahkan) : (+t.kredit || 0);
-  var sNota = 0, sPajak = 0, sDibayar = 0, sDitarik = 0, i;
+  var sNota = ringkas ? (+t.notaTotal || 0) : 0, sPajak = 0, sDibayar = 0, sDitarik = 0, i;
   for (i=0;i<notas.length;i++){
     var n = notas[i];
     var nilai = +n.nilai || 0;
@@ -2225,6 +2271,98 @@ function hapusPengembalian(urutan){
     .withSuccessHandler(function(){ loading(false); toast('Catatan dihapus'); muat(); bukaPengembalian(PG.no); })
     .withFailureHandler(gagal)
     .serverHapusPengembalian(_tok, PG.no, urutan);
+}
+
+/* ===================== Uang muka belum dipertanggungjawabkan =====================
+ * Risiko terbesar bendahara: uang keluar ke PUM, notanya tidak pernah masuk,
+ * baru ketahuan saat SPJ disusun atau saat diperiksa. Definisi "belum
+ * dipertanggungjawabkan" = transaksi pengeluaran (bukan Pindah Dana) dengan
+ * SisaDiTanganPUM > 0 menurut hitungNeraca() tugas 2 — TIDAK ada rumus kedua
+ * di sini, hanya notas=null (mode ringkas) karena memuat nota tiap transaksi
+ * satu per satu terlalu mahal untuk papan pemantau.                        */
+var AMBANG_HARI_PUM = { perhatian: 7, mendesak: 14 };   // satu tempat, jangan diketik ulang
+function _umurHari(tanggalIso){
+  var t = new Date(String(tanggalIso||'').slice(0,10));
+  if (isNaN(t.getTime())) return 0;
+  var ms = (new Date()).setHours(0,0,0,0) - t.setHours(0,0,0,0);
+  return Math.max(0, Math.round(ms / 86400000));
+}
+function daftarPumBelumTanggungjawab(){
+  var out = [], i;
+  for (i=0;i<TX.length;i++){
+    var t = TX[i];
+    // Definisi eksplisit (bukan hanya mengandalkan penyaringan muat()):
+    // pengeluaran, dan bukan Pindah Dana.
+    if (!isKeluar(t) || !bukanPindahDana(t)) continue;
+    var b = hitungNeraca(t, null, null);         // mode ringkas — lihat komentar di hitungNeraca
+    if (b.sisaPUM > 0) out.push({ t:t, sisaPUM:b.sisaPUM, umur:_umurHari(t.tanggal) });
+  }
+  out.sort(function(a,b){ return b.umur - a.umur; });   // paling tua dulu
+  return out;
+}
+function tierPum(umur){
+  if (umur >= AMBANG_HARI_PUM.mendesak) return 'mendesak';
+  if (umur >= AMBANG_HARI_PUM.perhatian) return 'perhatian';
+  return 'netral';
+}
+function renderKartuPum(){
+  var el = $('bdPum'); if (!el) return;
+  var list = daftarPumBelumTanggungjawab();
+  if (!list.length){ el.className = 'kartupum hide'; return; }
+  var total = 0, i; for (i=0;i<list.length;i++) total += list[i].sisaPUM;
+  var orang = {}; for (i=0;i<list.length;i++) orang[String(list[i].t.penjab||'').toLowerCase()] = 1;
+  var mendesak = list.filter(function(x){ return tierPum(x.umur)==='mendesak'; }).length;
+  el.className = 'kartupum' + (mendesak ? ' mendesak' : '');
+  el.innerHTML = '<div class="kick">Uang muka belum dipertanggungjawabkan</div>'
+    + '<div class="besar">' + rp(total) + '</div>'
+    + '<div class="sub">' + list.length + ' transaksi &middot; ' + Object.keys(orang).length + ' orang'
+    + (mendesak ? (' &middot; <b>' + mendesak + ' sudah &ge; ' + AMBANG_HARI_PUM.mendesak + ' hari</b>') : '') + '</div>';
+  el.onclick = bukaPum;
+}
+function bukaPum(){ go('pum'); renderPum(); }
+function renderPum(){
+  var list = daftarPumBelumTanggungjawab();
+  var el = $('pumList');
+  if (!list.length){ el.innerHTML = '<div class="empty">Tidak ada uang muka yang belum dipertanggungjawabkan. &#127881;</div>'; return; }
+  var h = '', i;
+  for (i=0;i<list.length;i++){
+    var x = list[i], t = x.t, tier = tierPum(x.umur);
+    var sudah = +t.notaTotal || 0, um = (+t.uangDiserahkan>0) ? +t.uangDiserahkan : (+t.kredit||0);
+    h += '<div class="pumRow ' + tier + '">'
+      + '<div class="atas"><span class="nm">' + esc(t.penjab||'(tanpa nama)') + '</span>'
+      + '<span class="umur">' + x.umur + ' hari</span></div>'
+      + '<div class="ur">' + esc(t.kegiatan||'-') + ' &middot; No ' + esc(String(t.no)) + '</div>'
+      + '<div class="progres"><div class="isi" style="width:' + Math.min(100, Math.round(sudah/um*100)) + '%"></div></div>'
+      + '<div class="bawah"><span>Nota ' + rp(sudah) + ' dari ' + rp(um) + '</span>'
+      + '<span class="sisa">Sisa ' + rp(x.sisaPUM) + '</span></div>'
+      + '<div style="display:flex;gap:10px;margin-top:10px">'
+      + '<button class="btn" style="flex:1" onclick="bukaDetail(' + JSON.stringify(String(t.no)) + ')">Buka transaksi</button>'
+      + '<button class="btn ac" style="flex:1" onclick="tagihPum(' + JSON.stringify(String(t.no)) + ')">Tagih</button>'
+      + '</div></div>';
+  }
+  el.innerHTML = h;
+}
+/* Nomor HP PUM disimpan sekali di Master PUM (sheet baru, pola Master Penyedia).
+   Baru diminta saat PERTAMA KALI menagih orang itu. */
+function tagihPum(no){
+  var t = null; for (var i=0;i<TX.length;i++) if (String(TX[i].no)===String(no)) { t = TX[i]; break; }
+  if (!t){ toast('Transaksi tidak ditemukan', true); return; }
+  var b = hitungNeraca(t, null, null);
+  var nama = t.penjab || '';
+  var noHp = (PETA_PUM && PETA_PUM[nama.toLowerCase()]) || '';
+  if (!noHp){
+    noHp = (prompt('Nomor WhatsApp ' + nama + ' belum tersimpan.\nMasukkan nomornya (mis. 08123456789):', '') || '').trim();
+    if (!noHp) return;
+    PETA_PUM = PETA_PUM || {}; PETA_PUM[nama.toLowerCase()] = noHp;
+    google.script.run.serverSimpanNoHpPUM(_tok, nama, noHp);
+  }
+  var tujuan = noHp.replace(/[^0-9]/g,'');
+  if (tujuan.indexOf('0') === 0) tujuan = '62' + tujuan.slice(1);   // 08xx -> 628xx
+  var pesan = 'Yth. ' + nama + ',\n\nMohon segera diserahkan nota untuk uang muka berikut:\n'
+    + '- No transaksi: ' + t.no + '\n- Tanggal: ' + tglPanjang(t.tanggal) + '\n'
+    + '- Uraian: ' + (t.kegiatan||'-') + '\n- Nilai belum bernota: ' + rp(b.sisaPUM) + '\n\n'
+    + 'Terima kasih.\nBendahara Pengeluaran';
+  window.open('https://wa.me/' + tujuan + '?text=' + encodeURIComponent(pesan), '_blank');
 }
 
 /* ===================== Item POK & sisa pagu =====================

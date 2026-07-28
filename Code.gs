@@ -81,10 +81,12 @@ function serverGetDashboard(token) {
     // Naikkan versi kunci ini SETIAP KALI ada kolom baru di CONFIG.HEADERS,
     // kalau tidak migrasi header dilewati sampai cache 6 jam kedaluwarsa.
     // v6 = DIBAYAR_PENYEDIA, v7 = MODE_BAYAR (Multi Nota), v8 = JENIS
-    // (Pengembalian), v9 = CLIENT_ID (Kas Tunai, anti-dobel antrean luring).
-    if (!AppCache.get('hdr_fixed_v9')) {
+    // (Pengembalian), v9 = CLIENT_ID (Kas Tunai). v10 tak menambah kolom sheet
+    // yang sudah ada (MASTER_PUM sheet baru dibuat oleh SheetRepo.sheet()
+    // otomatis saat dipakai), tapi kunci dinaikkan untuk konsistensi.
+    if (!AppCache.get('hdr_fixed_v10')) {
       try { SheetRepo.ensureHeaders(); } catch (e) { Logger.log('[ensureHeaders] ' + e.message); }
-      AppCache.put('hdr_fixed_v9', 1);
+      AppCache.put('hdr_fixed_v10', 1);
     }
     var role = auth.role;
     var full = (role === 'admin' || role === 'full');
@@ -99,7 +101,10 @@ function serverGetDashboard(token) {
       isAdmin: (role === 'admin'),
       // Tabel pajak dikirim dari server supaya desktop dan mobile memakai
       // acuan yang sama persis (tarif, ambang batas, kode MAP/KJS).
-      pajakRef: { list: CONFIG.PAJAK_REF, def: CONFIG.PAJAK_DEFAULT }
+      pajakRef: { list: CONFIG.PAJAK_REF, def: CONFIG.PAJAK_DEFAULT },
+      // Nomor HP PUM untuk tombol Tagih — dikirim sekali di sini supaya tidak
+      // perlu pemanggilan terpisah tiap membuka papan pemantau uang muka.
+      petaPUM: MasterPUM.getSemuaPeta()
     };
   });
 }
@@ -578,6 +583,14 @@ function serverSimpanPenyedia(token, data) {
 }
 function serverCariPenyedia(token, keyword) {
   return _run(token, function (auth) { return MasterPenyedia.cari(keyword); });
+}
+/** Peta nama PUM -> nomor HP, untuk tombol Tagih di papan pemantau uang muka. */
+function serverGetPetaPUM(token) {
+  return _run(token, function (auth) { return MasterPUM.getSemuaPeta(); });
+}
+/** Simpan nomor HP PUM (dipakai saat pertama kali menagih orang itu). */
+function serverSimpanNoHpPUM(token, nama, noHp) {
+  return _run(token, function (auth) { return MasterPUM.simpan(nama, noHp); });
 }
 
 /* ============================================================
