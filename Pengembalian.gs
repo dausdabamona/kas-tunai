@@ -18,7 +18,9 @@ var Pengembalian = (function () {
         rowIndex: x.rowIndex,
         noTransaksi: r[p.NO_TRANSAKSI], urutan: r[p.URUTAN],
         tanggal: Util.fmtDate(r[p.TANGGAL]), nilai: Util.num(r[p.JUMLAH]),
-        keterangan: r[p.KETERANGAN], refMasukNo: r[p.REF_MASUK_NO]
+        keterangan: r[p.KETERANGAN], refMasukNo: r[p.REF_MASUK_NO],
+        // Baris lama belum punya kolom ini -> dianggap SISA.
+        jenis: (String(r[p.JENIS] || '').toUpperCase() === 'TITIPAN_PAJAK') ? 'TITIPAN_PAJAK' : 'SISA'
       };
     });
   }
@@ -33,9 +35,11 @@ var Pengembalian = (function () {
     var urutan = getPengembalian(transactionId).length + 1;
     var tgl = data.tanggal ? new Date(data.tanggal) : new Date();
 
+    var jenis = (String(data.jenis || '').toUpperCase() === 'TITIPAN_PAJAK') ? 'TITIPAN_PAJAK' : 'SISA';
+    SheetRepo.ensureMinCols(CONFIG.SHEETS.PENGEMBALIAN, CONFIG.HEADERS.PENGEMBALIAN.length);
     var rowIndex = SheetRepo.appendRow(CONFIG.SHEETS.PENGEMBALIAN, [
       transactionId, urutan, tgl, nilai, data.keterangan || '',
-      getOperator(), new Date(), FLAG_ACTIVE, '', '', ''
+      getOperator(), new Date(), FLAG_ACTIVE, '', '', '', jenis
     ]);
     DeferredFlush.mark();
 
@@ -45,8 +49,12 @@ var Pengembalian = (function () {
     var kegAsal = asal ? asal.values[CONFIG.COLS.KEGIATAN] : '';
     var masuk = KasTunai.tambahTransaksi({
       tanggal: tgl, debet: nilai, kredit: 0, penjab: penjab,
-      kegiatan: 'Pengembalian: ' + kegAsal,
-      keterangan: 'Otomatis dari pengembalian transaksi No ' + transactionId +
+      // Uangnya memang masuk kas untuk KEDUA jenis; yang berbeda hanya maknanya,
+      // jadi keterangannya wajib menyebut jenisnya.
+      kegiatan: (jenis === 'TITIPAN_PAJAK' ? 'Titipan pajak: ' : 'Pengembalian: ') + kegAsal,
+      keterangan: (jenis === 'TITIPAN_PAJAK'
+                    ? 'Titipan pajak yang ditahan dari transaksi No '
+                    : 'Otomatis dari pengembalian transaksi No ') + transactionId +
                   (data.keterangan ? (' - ' + data.keterangan) : '')
     });
 
@@ -101,8 +109,12 @@ var Pengembalian = (function () {
   /** Hitung ulang KEMBALIAN_JML & KEMBALIAN_TOTAL pada transaksi induk. */
   function _recalc(transactionId) {
     var list = getPengembalian(transactionId);
+    // HANYA jenis SISA yang mengurangi kewajiban pertanggungjawaban.
+    // Titipan pajak uangnya juga masuk kas, tetapi itu pajak yang wajib
+    // disetor — bukan bukti bahwa uang muka sudah dipertanggungjawabkan.
     var total = 0;
-    for (var i = 0; i < list.length; i++) total += list[i].nilai;
+    for (var i = 0; i < list.length; i++)
+      if (list[i].jenis !== 'TITIPAN_PAJAK') total += list[i].nilai;
     var u = Util.set(CONFIG.COLS.KEMBALIAN_JML, list.length, CONFIG.COLS.KEMBALIAN_TOTAL, total);
     // STATUS_SPJ lengkap bila nota + pengembalian menutupi uang muka
     var t = getRowByTransactionId(transactionId);

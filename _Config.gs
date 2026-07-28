@@ -109,7 +109,14 @@ var CONFIG = {
     PENGEMBALIAN: [
       'NO_TRANSAKSI', 'URUTAN', 'TANGGAL', 'JUMLAH', 'KETERANGAN',
       'DICATAT_OLEH', 'TGL_CATAT', 'IS_DELETED', 'DELETED_AT', 'DELETED_BY',
-      'REF_MASUK_NO'
+      'REF_MASUK_NO',
+      // SISA = sisa uang muka yang tidak jadi dibelanjakan.
+      // TITIPAN_PAJAK = uang pajak yang ditahan dari nota bermode NETTO.
+      // Keduanya sama-sama uang masuk, TETAPI hanya SISA yang boleh mengurangi
+      // kewajiban pertanggungjawaban (KEMBALIAN_TOTAL & STATUS_SPJ). Kalau
+      // titipan pajak ikut dihitung, sisanya berkurang dua kali dan transaksi
+      // terlihat lunas padahal belum. Baris lama dibaca sebagai SISA.
+      'JENIS'
     ],
     FOTO_BARANG: [
       'NO_TRANSAKSI', 'ROW_INDEX', 'URUTAN', 'FILE_ID', 'NAMA_FILE', 'URL_FILE',
