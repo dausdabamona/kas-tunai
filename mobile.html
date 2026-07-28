@@ -709,6 +709,7 @@
   <div class="sec-h" style="margin-top:22px"><div class="t">Bukti B — Barang diterima</div>
     <button class="lnk" onclick="ntAmbil('barang')">Ambil foto</button></div>
   <div class="grid2 mini" id="ntFotoBarang" style="margin-top:8px"></div>
+  <input type="file" id="ntGantiBFile" accept="image/*" capture="environment" style="display:none" onchange="_ntGantiFotoBFile(this)">
 
   <div class="strip" style="margin-top:18px">Foto dikompres ke maks. 1280px sebelum diunggah — hemat kuota.</div>
 
@@ -3348,6 +3349,50 @@ function _ntHapusFotoServerLanjut(i){
     })
     .withFailureHandler(gagal)
     .serverHapusFotoNota(_tok, NT.no, NT.urutan, f.urutan);
+}
+/* Ganti gambar foto barang (Bukti B) yang sudah tersimpan — langsung upload,
+   tanpa konfirmasi (meniru tombol ganti Bukti A), tanpa menunggu "Simpan". */
+var _NT_GANTI_B_IDX = null;
+function ntGantiFotoB(i){ _NT_GANTI_B_IDX = i; $('ntGantiBFile').click(); }
+function _ntGantiFotoBFile(el){
+  var file = el.files && el.files[0];
+  el.value = '';                          // supaya bisa pilih file yang sama lagi lain kali
+  if (!file || _NT_GANTI_B_IDX === null) return;
+  var i = _NT_GANTI_B_IDX; _NT_GANTI_B_IDX = null;
+  var f = NT.lamaB[i]; if (!f) return;
+  var urutanLama = f.urutan;
+  kompres(file, function(foto){
+    if (!foto){ toast('Foto tidak valid', true); return; }
+    loading(true, 'Mengganti foto…');
+    google.script.run
+      .withSuccessHandler(function(){
+        google.script.run
+          .withSuccessHandler(function(res){
+            loading(false);
+            // serverGetFotoNota mengembalikan ARRAY langsung — cocokkan lewat
+            // field urutan milik foto itu sendiri, bukan indeks posisi array.
+            var baru = null, k;
+            for (k=0; res && k<res.length; k++)
+              if (String(res[k].urutan) === String(urutanLama)) { baru = res[k]; break; }
+            if (baru) NT.lamaB[i] = baru;
+            ntRenderFoto(); toast('Foto diganti');
+          })
+          .withFailureHandler(function(e){ loading(false); gagal(e); })
+          .serverGetFotoNota(_tok, NT.no, NT.urutan);
+      })
+      .withFailureHandler(function(e){ loading(false); gagal(e); })
+      .serverUpdateFotoNota(_tok, NT.no, NT.urutan, urutanLama,
+        { keterangan: f.keterangan||'', file: { base64: foto.base64, mimeType: foto.mimeType } });
+  });
+}
+/* Keterangan foto barang — tersimpan saat kotak teks kehilangan fokus. */
+function ntSimpanKeteranganB(i, teks){
+  var f = NT.lamaB[i]; if (!f) return;
+  teks = (teks||'').trim();
+  if (teks === (f.keterangan||'')) return;   // tak berubah, jangan panggil server percuma
+  f.keterangan = teks;
+  google.script.run.withFailureHandler(gagal)
+    .serverUpdateFotoNota(_tok, NT.no, NT.urutan, f.urutan, { keterangan: teks, file: null });
 }
 function simpanNotaBaru(){
   var nama = ($('ntPenyedia').value||'').trim();
