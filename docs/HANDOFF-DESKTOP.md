@@ -12,6 +12,17 @@ rail-nav) dan Bagian III (Pencocokan Pagu & Realisasi / GLP039)**.
 > ada di bagian 0. Baca bagian 0 dan 5 dulu — di situ letak hal yang bisa merugikan
 > uang, bukan cuma tampilan.
 
+> **Tambalan 28 Jul 2026 (v2, desain ulang tampilan).** Paket desain kedua
+> (`Kas Tunai Desktop v2.dc.html`) **menambal** rev-2, tidak menggantinya — rumus,
+> papan status, keputusan pengguna, dan daftar risiko di atas **tetap berlaku**.
+> Yang ditambahkan: jawaban visual konkret untuk 4 risiko yang sebelumnya belum
+> punya bentuk (R-3 item yatim, R-4 dialog tandai wajar, R-5 kartu konfirmasi
+> unggah, R-8 breakpoint 1366/1280). **Bagian §4 (sumber data GLP039) dikonfirmasi
+> TIDAK berubah** dari rev-2. Ringkas di bagian **0b**; detail visual di bagian
+> **3b**. Paket ini juga memberi desain "Papan kerja" yang **berbeda** dari spec
+> `docs/superpowers/specs/2026-07-28-papan-kerja-desktop-design.md` yang sudah
+> ditulis sebelumnya — lihat catatan di bagian 0b.
+
 ---
 
 ## 0. Yang berubah di rev-2 (baca ini dulu)
@@ -35,6 +46,51 @@ dengan sistem lama) → [jalankan paralel 1 siklus GUP penuh] → 8 + 12 (migras
 matikan sistem lama) → 10 → 11 → 13 → 2,3,4,5,6 (kosmetik, paling akhir)
 ```
 
+Urutan **tidak berubah** di v2 (paket v2 §8 menegaskan ini eksplisit) — v2 murni
+memberi bentuk visual, bukan mengubah prioritas.
+
+---
+
+## 0b. Paket v2 — desain ulang tampilan (baca sebelum tugas 1, 9, 11, 13, 14)
+
+Sumber: bundel `handoff_desktop_v2/` (README + `Kas Tunai Desktop v2.dc.html` +
+`design-system/styles.css`), diunggah pengguna sebagai zip terpisah. **Tidak
+disalin ke repo** kecuali cuplikan mengikat di bawah — minta pengguna mengunggah
+ulang bila detail lain dibutuhkan di sesi berikutnya.
+
+### Kenapa desain v1 diganti (alasan, bukan cuma "berubah")
+
+| # | v1 | v2 | Alasan |
+|---|---|---|---|
+| 1 | Tabel pohon berindentasi `level × 22px`, 8 level | **Penelusuran bertingkat**: jejak langkah (breadcrumb) + daftar anak satu tingkat | 8 × 22 = 176px indentasi; di 1366px sisa ≈726px untuk 6 kolom rupiah → menggulung mendatar. Menutup R-8 tanpa mengorbankan kolom angka. |
+| 2 | Breakpoint hanya 1440px | **Tiga kerapatan** 1440 / 1366 / 1280 didefinisikan penuh (lihat tabel di bagian 3) | Laptop satker umum 1366×768 dan 1280×800. |
+| 3 | Tanggal data hanya di subjudul | **Strip umur data** tetap terlihat, jadi magenta bila >14 hari | GLP039 potret satu waktu; keputusan pembebanan tidak boleh diambil dari angka basi. |
+| 4 | Klasifikasi lama (`51xxxx` = wajar) | Klasifikasi rev-2 berbasis `NO_DRPP`/`NO_SPP` + catatan lingkup | Sudah diadopsi di bagian 4 — v2 tidak mengubah ini lagi, hanya memastikan tampilannya konsisten. |
+| 5 | Tidak ada | Baris **"Item di luar POK versi ini"** tetap di akar pohon/breadcrumb | R-3: revisi POK pasti terjadi; realisasi tidak boleh hilang diam-diam. |
+| 6 | "Tandai wajar" = tombol langsung | **Dialog dengan alasan wajib** + pencatat otomatis + tanda kedaluwarsa otomatis | R-4: tombol ini mematikan peringatan pengendalian, perlu jejak. |
+| 7 | Unggah langsung simpan | **Kartu konfirmasi manusia** (7 angka baca-ulang) sebelum apa pun ditulis ke Sheets | R-5: angka nol yang salah lebih berbahaya daripada error. |
+| 8 | Merek rail hanya teks | Ikon aplikasi `assets/icon-192.png` 34px radius 9px di rail | Konsisten dengan pintasan HP yang sudah dipakai pengguna. |
+
+### §4 (sumber data GLP039) — dikonfirmasi TIDAK berubah
+
+Paket v2 menyatakan eksplisit: hierarki 8 level, kolom nilai (Q/S/W/X/Y-Z/AC/AD),
+rumus `sisaTersedia`/`serapan`, aturan `KODE_ITEM` (R-1), dan angka acuan uji —
+semuanya **identik** dengan bagian 4 dokumen ini. Parser GLP039 yang sudah
+diimplementasikan dan direview (papan status urutan-2) **tidak perlu dikerjakan
+ulang** karena paket ini.
+
+### ⚠️ Konflik dengan spec yang sudah ditulis: Papan kerja
+
+`docs/superpowers/specs/2026-07-28-papan-kerja-desktop-design.md` (ditulis
+sebelum paket v2 diunggah) mendeskripsikan susunan kartu dan panel yang **berbeda**
+dari desain v2 §3.1 (bagian 3b di bawah) — di antaranya 4 kartu statistik yang
+tidak sama persis, dan panel kanan v2 memakai `serverRingkasanRekon` untuk
+"Kartu ketenangan" yang tidak ada di spec lama. Layar ini **belum pernah
+diimplementasikan** (tidak ada kode/plan yang menggantung padanya), jadi
+memperbarui spec sekarang murah. **Belum diputuskan** apakah spec lama ditulis
+ulang mengikuti v2 §3.1 — tanyakan pengguna sebelum tugas urutan-11 (Papan kerja)
+dimulai.
+
 ---
 
 ## 1. Papan status
@@ -44,8 +100,8 @@ Yang berubah: kolom **Urutan** dan tambahan tugas 12–14.
 
 | # | Urutan | Tugas | Status |
 |---|---|-------|--------|
-| 1 | **1** | Kerangka rail-nav (menggantikan tab atas) | 🟡 kode selesai → `f89dd42` (markup+CSS `2476395`; verifikasi klik nyata 8/8 lolos; **belum diuji manual di browser sungguhan** — wajib sebelum apa pun lanjut) |
-| 7 | **2** | Parser GLP039 di klien (`FileReader` + unzip xlsx) | ⬜ belum |
+| 1 | **1** | Kerangka rail-nav (menggantikan tab atas) | 🟡 kode selesai → `f89dd42` (markup+CSS `2476395`; verifikasi klik nyata 8/8 lolos; **belum diuji manual di browser sungguhan** — wajib sebelum apa pun lanjut). Breakpoint 1366/1280 **sudah ditetapkan** oleh paket v2 (bagian 3, tabel kerapatan) — belum diimplementasikan di kode, hanya markup+sticky-position dasar yang ada. |
+| 7 | **2** | Parser GLP039 di klien (`FileReader` + unzip xlsx) | 🟡 kode selesai → plan `a53db5f`, implementasi `1f77ec0` (Task 1+2, self-test 8/8 PASS). Review akhir whole-branch menemukan 3 temuan Important (rumus `ringkasan.sisa` menyimpang dari §4, sel `inlineStr` multi-run terpotong, catatan uji-belum-pernah-jalan-di-file-asli hilang dari kode) — fix wave sedang berjalan, lihat `.superpowers/sdd/glp-fixwave-report.md` setelah selesai. |
 | 9 | **3** | Layar Pagu & realisasi: tab Pencocokan (tabel pohon) — **baca-saja, berdampingan** | ⬜ belum |
 | — | **4** | *Gerbang:* jalankan paralel 1 siklus GUP, cocokkan hasil lama vs baru | ⬜ belum |
 | 8 | **5** | Sheet `PAGU_POK` + `PAGU_UPLOAD`, endpoint pencocokan | ⬜ belum |
@@ -97,6 +153,11 @@ menyentuh data produksi. Kalau angka belum cocok, hentikan — jangan lanjut ke 
 | 6 | **Perlakuan saat revisi DIPA/POK**: item lama yang hilang di versi baru — disembunyikan, atau tetap tampil sebagai "item yatim" dengan realisasinya? | Menentukan apakah total realisasi bisa "hilang" diam-diam. Blokir tugas 14. Rekomendasi: tetap tampil terpisah. |
 | 7 | **Siapa boleh menekan "Tandai wajar"?** (Bendahara saja, atau PPK juga?) | Tombol ini mematikan peringatan pengendalian. Blokir tugas 13. |
 
+Paket v2 (§9) menegaskan ulang: ketiga pertanyaan ini **masih terbuka** — desain
+v2 memberi *bentuk* visual (mis. item yatim didesain tampil terpisah, bagian 3b)
+tapi itu bukan jawaban keputusan #6, hanya opsi yang sudah siap dipakai begitu
+pengguna mengonfirmasi.
+
 ---
 
 ## 3. Ringkasan desain — Bagian II: Desktop rail-nav
@@ -128,43 +189,231 @@ Bahasa visual identik desain mobile 1a (design system **Broadsheet**) — deskto
   600 (Source Serif 4).
 - **Panel detail kanan** 404–408px, isi `--color-neutral-200`, `overflow:auto`.
 
-### Perilaku di bawah 1280px (**baru di rev-2 — wajib diputuskan di tugas 1**)
+### Tabel kerapatan (**digantikan tabel v2 ini — implementasikan persis**)
 
-Desain hanya menetapkan 1440px. Laptop satker banyak yang 1366×768 dan 1280×800.
-Aturan yang dipakai, kecuali pengguna memutuskan lain:
+Tabel rev-2 di atas (ambang 1280px, rail 72px, panel drawer generik) **digantikan**
+oleh tabel paket v2 yang lebih rinci — ambang naik ke 1366px dan mencakup lebih
+banyak elemen. Ini yang mengikat untuk tugas urutan-1 (rail-nav, belum
+diimplementasikan) dan urutan-3 (tab Pencocokan):
 
-| Lebar viewport | Rail kiri | Panel detail kanan |
-|---|---|---|
-| ≥ 1440px | 236px, penuh | 404px, menetap |
-| 1280–1439px | 236px, penuh | 360px, menetap |
-| 1024–1279px | 72px, ikon saja (label muncul saat hover) | **drawer**, muncul menimpa konten saat baris dipilih, ada tombol tutup |
-| < 1024px | arahkan ke `mobile.html` | — |
+| | ≥ 1440px | 1366–1439px | 1024–1365px | < 1024px |
+|---|---|---|---|---|
+| Rail | 236px, label penuh | 236px, label penuh | **76px, ikon saja** (label lewat `title`, lencana jadi titik 8px di pojok) | arahkan ke `mobile.html` |
+| Panel detail | 404px menetap | 348px menetap | **drawer**: `position:absolute; right:0`, lebar 396px, `box-shadow:-18px 0 40px rgba(32,30,29,.18)` (satu-satunya shadow yang dipakai di seluruh desain), tombol "Tutup" pil di kanan atas | — |
+| Kartu statistik | 4 sejajar, angka 31px (accent) / 24px | grid 2×2, angka 26px / 21px, padding `16px 18px` | sama seperti 1366 | — |
+| Angka di tabel | penuh (`Rp 4.443.868.000`) | **disingkat** (`Rp 4,44 M`, `Rp 6,8 jt`) — nilai penuh tetap tampil di panel kanan | sama seperti 1366 | — |
+| Lebar kolom tabel pohon/anak | `1fr 134 134 134 122 38` | `1fr 118 118 118 104 34` | sama seperti 1366 | — |
 
-Alasan: rail 236 + panel 404 = 640px terpakai; di 1366 hanya sisa 726px untuk tabel
-pohon 6 kolom dengan indentasi sampai `8 × 22px = 176px`. Tanpa aturan ini, tabel
-pohon akan menggulung mendatar — bentuk paling buruk untuk membaca angka rupiah.
+Pemendekan rupiah (`rpk`): ≥ 1 miliar → `Rp x,xx M`; ≥ 1 juta → `Rp x,x jt`;
+sisanya angka penuh. Desimal pakai koma. **Panel detail dan dialog selalu
+memakai angka penuh** — pemendekan hanya untuk kolom tabel. Berpindah menu
+menutup drawer yang sedang terbuka.
+
+Alasan tetap sama seperti rev-2: rail + panel menetap menyisakan terlalu sedikit
+ruang untuk kolom rupiah di 1366px. Tabel pohon berindentasi juga sudah diganti
+pendekatan "penelusuran bertingkat" (breadcrumb + daftar anak satu tingkat, lihat
+3b) — itu sendiri bagian dari solusi R-8, bukan cuma breakpoint.
 
 ### 6 layar
 1. **Papan kerja** (beranda desktop) — 4 kartu statistik, daftar "Menunggu tindakan
    Anda", bar serapan per akun (bar tinggi 8px radius 999px, isi >80% jadi magenta),
    panel kanan: antrean unggah (magenta), kotak masuk scan, catatan batas setor pajak.
+   **Digantikan tampilan v2** (bagian 3b.1) — kartu dan panel kanan berbeda dari
+   ringkasan di atas; lihat juga catatan konflik-spec di bagian 0b.
 2. **Transaksi** — chip filter + tabel 5 kolom (No/Tgl, Uraian & penyedia, Status,
    Bukti, Nilai) dan panel detail kanan (meta, strip foto 68px, blok hitung pajak,
    aksi SPBY/pengembalian/kuitansi). Redesain dari tab "Transaksi" yang sudah ada —
-   backend (`server*`) sudah lengkap, ini murni tampilan.
-3. **Pagu & realisasi** — lihat bagian 4.
+   backend (`server*`) sudah lengkap, ini murni tampilan. Detail chip & panel v2 di
+   bagian 3b.2.
+3. **Pagu & realisasi** — lihat bagian 4 (rumus/data) dan bagian 3b.3–3b.5 (tampilan
+   v2: breadcrumb menggantikan tabel pohon berindentasi, strip umur data, kartu
+   konfirmasi unggah).
 4. **Perjalanan dinas** — form surat tugas (grid 3 kolom, field bergaris bawah),
    tabel pelaksana, panel kanan: kartu accent total uang muka, rincian biaya riil,
    blok "Wajib dikembalikan" (angka magenta). Redesain dari `SuratTugas.gs`.
 5. **Rekonsiliasi** — kas tunai vs SAKTI, 4 kartu statistik, tabel dengan baris
    selisih disorot. Redesain visual dari `Rekonsiliasi.gs` — **beda dari pencocokan
    pagu Bagian III**: ini rekonsiliasi rekening koran/SAKTI transaksi-per-transaksi.
+   v2 menambah kartu keempat "Dikecualikan — Pindah dana & non-rekon".
 6. **Laporan & cetakan** — grid 3×2 kartu keluaran (SPBY, DRPP, BKU, rekap pajak,
-   berkas SPD, ekspor CSV) + daftar cetakan terakhir.
+   berkas SPD, ekspor CSV) + daftar cetakan terakhir. v2 menambah kartu "Bundel SPJ
+   perjalanan" (ZIP, `BuktiPD.zipBukti`).
 
-Detail ukuran/warna persis ada di README paket desain (Bagian II) dan prototipe
+Detail ukuran/warna persis (v1) ada di README paket desain (Bagian II) dan prototipe
 `Kas Tunai Desktop.dc.html` — **tidak disalin ke repo**; minta pengguna mengunggah
-ulang paketnya bila dibutuhkan di sesi berikutnya.
+ulang paketnya bila dibutuhkan di sesi berikutnya. Detail v2 yang mengikat ada di
+bagian 3b (disalin penuh karena menjawab risiko R-3/R-4/R-5/R-8 yang memblokir tugas).
+
+---
+
+## 3b. Detail visual v2 — per layar (mengikat, menggantikan uraian v1 di atas)
+
+Semua ukuran/warna memakai token Broadsheet di bagian 6 (tidak ada warna baru).
+Target sentuh/klik minimal 40px (tombol pil 40px, baris tabel ≈48px).
+
+### 3b.1 Papan kerja
+1. 4 kartu statistik: **Saldo kas tunai** (accent) · Bank/UP · Belum di-SPBY ·
+   Pajak belum disetor.
+2. **Menunggu tindakan Anda** — tabel `1fr 148px 130px`: uraian + `No · penyedia`,
+   pil status, nominal. Klik baris → layar Transaksi dengan baris itu terpilih.
+3. **Sisa pagu paling tipis** (baru di v2) — tabel `1fr 120px` diurut serapan
+   menurun; bar 54×7px (>90% magenta) + persen; baris >90% berlatar
+   `--color-accent-2-100` radius 14px. Klik → layar Pagu. Subjudul: "tempat
+   pembebanan berikutnya paling mudah melampaui pagu".
+4. Panel kanan: kartu antrean HP (magenta radius 20px) · Kotak masuk scan (3 baris,
+   pil "Belum dikaitkan" magenta) · **Kartu ketenangan** (kotak netral radius 16px,
+   ringkasan rekonsiliasi — pakai `serverRingkasanRekon` yang sudah ada).
+
+### 3b.2 Transaksi
+- Chip filter: Semua / Belum DRPP / Pajak belum / Draft dari HP / Perjalanan dinas.
+  Aktif = isi accent putih; nonaktif = border `1px --color-neutral-400`.
+- Tabel `No/Tgl · Uraian & penyedia · Status · Bukti · Nilai`. Kolom uraian
+  menampilkan `penyedia · item <KODE_ITEM>`. Baris `TF-` (pindah dana) diberi pil
+  ink **"Bukan belanja"** — wajib tampil, karena pengecualian `TF-` sudah ada di
+  `Anggaran.gs` (bagian 4) dan pengguna harus melihat kenapa baris itu tidak
+  dihitung sebagai belanja.
+- Panel detail: meta (Tanggal, Penyedia, Item POK, Sumber, DRPP/SPP), strip foto
+  64px radius 14px + tile "+" `2px dashed accent`, blok hitung pajak (DPP = nilai
+  ÷ 1,11; PPN 11% 411211/900; PPh 22 1,5% 411122/900; total magenta 20px), aksi:
+  Terbitkan SPBY (accent) · Pecah transaksi · Cetak kuitansi.
+
+### 3b.3 Pagu & realisasi — tab Pencocokan (menggantikan tabel pohon v1)
+Segmented pil 3 tab (kontainer `--color-neutral-200` padding 4px, opsi aktif
+accent putih): Pencocokan · Selisih & tindakan · Unggah GLP039.
+
+1. **Strip umur data** (radius 16px, marginBottom 18px):
+   - segar: isi `--color-accent-100`, border `1px --color-accent-300`, ikon jam,
+     teks "**Data SAKTI per 25 Jul 2026** · diunggah oleh &lt;nama dari sesi&gt; ·
+     umur 3 hari.", kanan tautan "Riwayat unggahan →".
+   - basi (>14 hari): isi `--color-accent-2` teks putih, ikon peringatan, kalimat
+     ditutup "— angka ini sudah kedaluwarsa, unggah GLP039 terbaru sebelum
+     membebani pagu.", kanan tombol putih "Unggah GLP039".
+2. **4 kartu statistik**, judul kartu pertama mengikuti simpul aktif (mis. "Pagu
+   revisi — DL", subteks "Lock pagu Rp …"). Kartu berubah nilainya saat menelusuri
+   (nilai simpul aktif, bukan total satker) — di akar memakai total satker
+   berlabel `DIPA 2026`.
+3. **Jejak langkah** (breadcrumb) — **menggantikan indentasi tabel pohon**: "Satker"
+   lalu `kode · uraian` per tingkat, dipisah `›`. Segmen bukan-terakhir = teks
+   accent-700 dapat diklik (kembali ke tingkat itu); segmen terakhir = pil
+   `--color-accent-100` 600. Uraian >26 karakter dipotong elipsis.
+4. **Tabel anak satu tingkat** (bukan pohon penuh), kolom: Segmen anggaran · Pagu
+   revisi · Realisasi SAKTI · Kas tunai · Serapan · (chevron).
+   - Sel pertama: uraian 15px; baris kedua `<tingkat> <kode>` 12px neutral-600 +
+     pil temuan bila ada. **Nama tingkat ditulis eksplisit** (Program / Kegiatan /
+     KRO / RO / Komponen / SubKomponen / Akun / Item POK) — ini yang menggantikan
+     informasi yang tadinya dibawa oleh indentasi.
+   - Kolom Kas tunai magenta 600 bila ≠ SAKTI.
+   - Serapan: bar 44px (34px saat dense §3 tabel kerapatan) + persen 13px/600.
+   - Kolom terakhir: chevron accent-700 bila punya anak, titik neutral-400 bila
+     item POK terdalam (tidak punya anak).
+   - Klik baris **punya anak** → menelusuri masuk (breadcrumb bertambah satu
+     segmen, anak pertama otomatis terpilih untuk panel kanan). Klik baris
+     **terdalam** → hanya memilih (tidak menelusuri). Pada mode drawer (<1366px),
+     klik juga membuka drawer.
+   - Baris bermasalah (flag temuan ≠ "di luar lingkup") berlatar
+     `--color-accent-2-100` radius 14px; baris terpilih `--color-accent-100`.
+   - Bila simpul tidak punya anak: teks "Item POK terdalam — rinciannya ada di
+     panel kanan." (bukan tabel kosong).
+5. **Panel kanan**:
+   - kicker `<tingkat> <kode>`, uraian 20px/600, pil temuan.
+   - **Kartu accent** "Sisa dana tersedia" 28px/600 + catatan rumus
+     `pagu − lock − MAX(SAKTI, kas tunai)` (rumus persis bagian 4, ditulis ulang
+     sebagai teks bantu, bukan dihitung ulang di tampilan).
+   - **Bila pagu terkunci** (`lockPagu > 0`), kartu accent **diganti** kartu
+     magenta "Pembebanan diblokir" (ikon gembok) — ini blokir keras, bukan
+     sekadar peringatan (konsisten dengan R-4/klasifikasi "Pagu terkunci" bagian 4).
+   - Rincian 5 baris: Pagu revisi · Lock pagu · Realisasi SAKTI · Tercatat kas
+     tunai · Selisih (magenta bila ≠ 0).
+   - Daftar transaksi kas tunai pada item itu: nomor, `tanggal · penyedia`, nilai,
+     pil status (Belum DRPP / DRPP 06 / Draft HP). Untuk baris **item yatim**
+     (R-3): tampil `tanggal · kode item <yang hilang>` — bukan dihilangkan.
+   - Aksi: "Catat pada item ini" (accent; berubah jadi "Pantau status revisi" bila
+     terkunci) · "Tandai wajar" (buka dialog 3b.7) · "Riwayat".
+   - **Versi pertama tetap baca-saja** (papan status bagian 1) — kartu/aksi di
+     atas adalah desain akhir; implementasi tugas urutan-3 hanya membangun bagian
+     baca (tabel + panel tanpa tombol aksi tulis).
+
+### 3b.4 Tab Selisih & tindakan
+- 3 kartu: Perlu tindakan (accent) · Sudah ditandai wajar (subteks "Kedaluwarsa
+  bila nilai berubah") · Di luar lingkup kas tunai (subteks "Dibayar LS — tidak
+  dihitung temuan").
+- **Catatan lingkup** (kotak netral radius 16px) wajib ada, teks: "Item yang tidak
+  pernah dibebani kas tunai tidak muncul di sini. Kas tunai hanya menampung
+  UP/GUP, jadi belanja LS — kontraktual, modal, gaji — memang nol di sisi kas dan
+  bukan temuan."
+- Tabel `Kode · Temuan · Jenis · Nilai · Tindakan`: kolom Temuan = uraian 15px +
+  penjelasan 13px neutral-700 yang menyebut **bukti** (No DRPP/SPP/SP2D atau
+  tanggal revisi POK). Kolom Tindakan = 13px/600 accent-700 + panah, **tautan
+  nyata** ke layar tujuan (lihat bagian 4, "harus benar-benar berfungsi").
+- Lima jenis yang harus bisa tampil (semua pil magenta): Belum di-DRPP · Menunggu
+  SPM/SP2D · Sudah SP2D nilai beda · Item yatim · Pagu terkunci — cocok dengan
+  tabel klasifikasi bagian 4.
+
+### 3b.5 Tab Unggah GLP039
+- Zona jatuh berkas: radius 20px, `2px dashed --color-accent`, isi
+  `--color-accent-100`, ikon berkas xls, judul "Tarik berkas GLP039 ke sini",
+  instruksi jalur SAKTI + kalimat "Berkas dibaca di peramban ini; hanya hasil
+  ringkasnya dikirim ke Sheets.", tombol "Pilih berkas" (accent).
+- **Tabel pemetaan kolom** `128px 1fr 1.2fr 108px` — 12 baris, pil "Terdeteksi"
+  cyan / "Diabaikan" outline, isinya sesuai tabel kolom nilai di bagian 4.
+- Panel kanan:
+  1. **Kartu konfirmasi hasil baca** (R-5) — teks "Bandingkan dengan cetakan
+     GLP039 Anda. Belum ada yang disimpan sampai Anda menekan Simpan." + 7 baris
+     baca-ulang (Tanggal data, Baris terbaca, Item POK, Akun belanja, Total pagu
+     revisi, Realisasi s.d. periode, Serapan) + tombol "Angka cocok — simpan
+     versi" (accent) dan "Batalkan". **Tanpa penekanan tombol ini, tidak ada
+     tulisan ke Sheets** — ini syarat keras, bukan UX opsional.
+  2. **Kartu peringatan magenta** — satu baris per elemen `peringatan[]` dari
+     `parseGlp039()`. Contoh yang wajib bisa muncul: pagu terkunci; kode item
+     transaksi lama yang hilang di versi ini ("akan tampil sebagai item yatim,
+     bukan dihilangkan").
+  3. Catatan versioning: "Versi lama tidak ditimpa… tanggal berkas, tanggal
+     unggah, pengunggah, dan sidik berkas." (sesuai `PAGU_UPLOAD`, bagian 4).
+
+### 3b.6 Perjalanan dinas / Rekonsiliasi / Laporan
+Sama seperti uraian v1 di atas, dengan penyesuaian kerapatan (tabel §3) dan
+tambahan: SPD → kartu uang muka accent menyebut PUM (mis. "2 pelaksana · 4 hari ·
+PUM R. Latumahina", sambungkan ke `MasterPUM.gs`); Rekonsiliasi → kartu keempat
+"Dikecualikan"; Laporan → kartu "Bundel SPJ perjalanan" (ZIP).
+
+### 3b.7 Dialog "Tandai wajar" (R-4)
+Backdrop `rgba(32,30,29,.42)`; kotak 520px, `--color-bg`, radius 22px, padding
+`26px 28px`.
+- kicker "Item &lt;kode&gt; · selisih Rp …" — **nilai selisih ikut tercatat di
+  kicker**, bukan cuma di form.
+- judul "Tandai selisih ini wajar" 23px/600.
+- paragraf penjelasan: tanda mematikan peringatan pengendalian; alasan dicatat
+  bersama nama dan nilai selisih; **bila nilai selisih berubah, tanda gugur
+  otomatis** (konsisten dengan R-4).
+- field **Alasan — wajib**: area teks 84px radius 14px isi `--color-neutral-200`;
+  placeholder contoh kalimat nyata. Tombol simpan **nonaktif selagi kosong**.
+- meta baca-saja: Ditandai oleh (dari sesi login, bukan diketik) · Waktu ·
+  "Berlaku sampai nilai selisih berubah".
+- aksi: Batal · "Simpan tanda wajar" (accent).
+
+Tanda tangan mengikat: `serverTandaiWajar(token, kodeItem, nilaiSelisih, alasan)`
+— `alasan` wajib, tolak di server bila kosong/whitespace. Simpan
+`kodeItem, nilaiSelisihSaatDitandai, alasan, olehUser, waktu, dicabutOleh, waktuCabut`
+(persis seperti R-4 di bagian 5 — dialog ini implementasi visualnya).
+
+### State layar (v2, untuk implementasi router/JS)
+
+| Nama | Isi |
+|---|---|
+| `tab` | `papan` \| `transaksi` \| `pagu` \| `spd` \| `rekon` \| `laporan` |
+| `paguSub` | `cocok` \| `selisih` \| `unggah` |
+| `path` | array kode simpul dari akar → tingkat aktif (jejak langkah/breadcrumb) |
+| `sel` | kode simpul terpilih untuk panel kanan |
+| `row` | indeks transaksi terpilih |
+| `filter` | chip aktif daftar transaksi |
+| `drawer` | drawer panel terbuka (hanya <1366px) |
+| `dialog` | `null` \| `wajar` |
+
+Satu router `showScreen(nama)`; **jangan ada `switchTab` kedua** (sudah jadi
+aturan di bagian 7, ditegaskan ulang paket v2). Berpindah menu menutup drawer.
+Jejak langkah dan tabel anak wajib bisa dioperasikan dari papan ketik: baris =
+elemen fokusabel, `aria-expanded` pada baris yang punya anak, fokus terlihat
+(`:focus-visible { outline:2px solid var(--color-accent); outline-offset:2px }`).
 
 ---
 
