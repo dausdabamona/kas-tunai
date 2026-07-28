@@ -65,7 +65,11 @@ var CONFIG = {
     // Status rekonsiliasi SAKTI (Fase 2) — diisi engine, jangan diketik manual.
     STATUS_REKON: 39, REKON_REF_PB: 40, REKON_BATCH: 41,
     // Detail kegiatan (item POK) yang dibebani belanja ini.
-    KODE_ITEM: 42, URAIAN_ITEM: 43
+    KODE_ITEM: 42, URAIAN_ITEM: 43,
+    // Penanda unik dari perangkat pengirim (antrean luring). Dipakai server
+    // untuk menolak baris kembar bila jaringan putus SESUDAH baris tersimpan
+    // tetapi SEBELUM jawabannya diterima HP.
+    CLIENT_ID: 44
   },
 
   // Header tiap sheet (urut sesuai kolom FISIK sheet asli)
@@ -81,7 +85,8 @@ var CONFIG = {
       'PAJAK_KATEGORI_IDX', 'PAJAK_PPH', 'PAJAK_PPN', 'PAJAK_DPP',
       'NO_KUITANSI', 'NO_DRPP', 'NO_SPP',
       'STATUS_REKON', 'REKON_REF_PB', 'REKON_BATCH',
-      'KODE_ITEM', 'URAIAN_ITEM'
+      'KODE_ITEM', 'URAIAN_ITEM',
+      'CLIENT_ID'
     ],
     MULTI_NOTA: [
       'NO_TRANSAKSI', 'ROW_INDEX', 'URUTAN', 'NAMA_NOTA', 'NOMINAL',

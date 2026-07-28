@@ -108,8 +108,30 @@ var KasTunai = (function () {
   /* -------------------------------------------------------- *
    * Tambah transaksi baru
    * -------------------------------------------------------- */
+  /** Cari transaksi (aktif) berdasarkan penanda perangkat, atau null. */
+  function cariByClientId(clientId) {
+    var cid = String(clientId || '').trim();
+    if (!cid) return null;
+    var data = SheetRepo.getData(CONFIG.SHEETS.KAS_TUNAI);
+    for (var i = 0; i < data.length; i++) {
+      if (isDeleted(data[i][C.IS_DELETED])) continue;
+      if (String(data[i][C.CLIENT_ID] || '').trim() === cid) return data[i][C.NO];
+    }
+    return null;
+  }
+
   function tambahTransaksi(data) {
     if (!data) throw new Error('Data transaksi kosong');
+
+    // Anti-dobel antrean luring: bila penanda perangkat ini sudah pernah
+    // tersimpan, kembalikan nomor yang lama. HP yang mengira pengirimannya
+    // gagal boleh mengulang tanpa membuat baris kedua.
+    var cid = String(data.clientId || '').trim();
+    if (cid) {
+      var lama = cariByClientId(cid);
+      if (lama !== null && lama !== undefined && lama !== '')
+        return { success: true, no: lama, duplikat: true };
+    }
 
     var no = nextTransactionNo();
     var row = Util.emptyRow(CONFIG.HEADERS.KAS_TUNAI.length);
@@ -137,6 +159,7 @@ var KasTunai = (function () {
     row[C.NO_SPP]       = data.noSpp || '';
     row[C.KODE_ITEM]    = data.kodeItem || '';
     row[C.URAIAN_ITEM]  = data.uraianItem || '';
+    row[C.CLIENT_ID]    = cid;
 
     SheetRepo.ensureMinCols(CONFIG.SHEETS.KAS_TUNAI, CONFIG.HEADERS.KAS_TUNAI.length);
     SheetRepo.appendRow(CONFIG.SHEETS.KAS_TUNAI, row);
@@ -698,6 +721,7 @@ var KasTunai = (function () {
     updateTransaksi: updateTransaksi,
     hapusTransaksi: hapusTransaksi,
     hitungDibayarPenyedia: hitungDibayarPenyedia,
+    cariByClientId: cariByClientId,
     pindahDana: pindahDana,
     konversiPindahDana: konversiPindahDana,
     findByRef: findByRef,
