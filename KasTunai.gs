@@ -688,6 +688,74 @@ var KasTunai = (function () {
     return out;
   }
 
+  /**
+   * SELURUH nota aktif lintas transaksi, dengan atau tanpa pajak, plus status
+   * setor — bahan worklist pajak (tugas 10). Berbeda dari getNotaPajak() yang
+   * HANYA mengembalikan nota terpotong (kontrak lama itu dipertahankan apa
+   * adanya karena dipakai desktop untuk mencetak; jangan diubah di sini).
+   */
+  function getSemuaNota() {
+    var n = NC();
+    var tx = {}, tdata = SheetRepo.getData(CONFIG.SHEETS.KAS_TUNAI);
+    for (var i = 0; i < tdata.length; i++) {
+      var r = tdata[i];
+      if (isDeleted(r[C.IS_DELETED])) continue;
+      tx[String(r[C.NO])] = {
+        tanggal: Util.fmtDate(r[C.TANGGAL]), kegiatan: r[C.KEGIATAN],
+        penjab: r[C.PENJAB], akun: r[C.AKUN] || ''
+      };
+    }
+    var rows = SheetRepo.getData(CONFIG.SHEETS.MULTI_NOTA), out = [];
+    for (var j = 0; j < rows.length; j++) {
+      var m = rows[j];
+      if (isDeleted(m[n.IS_DELETED])) continue;
+      var noTx = String(m[n.NO_TRANSAKSI]), t = tx[noTx];
+      if (!t) continue;                          // transaksi induk sudah terhapus
+      out.push({
+        no: noTx, tglTransaksi: t.tanggal || '', kegiatan: t.kegiatan || '',
+        penjab: t.penjab || '', akun: t.akun || '',
+        urutan: m[n.URUTAN], namaPenyedia: m[n.NAMA_NOTA] || '',
+        npwp: m[n.NPWP_PENYEDIA] || '', alamat: m[n.ALAMAT_PENYEDIA] || '',
+        tglNota: Util.fmtDate(m[n.TGL_NOTA] || m[n.TGL_UPLOAD]),
+        nilai: Util.num(m[n.NOMINAL]),
+        pajakKatIdx: (m[n.PAJAK_KATEGORI_IDX] !== '' && m[n.PAJAK_KATEGORI_IDX] != null) ? Util.num(m[n.PAJAK_KATEGORI_IDX]) : null,
+        pajakDpp: Util.num(m[n.PAJAK_DPP]), pajakPph: Util.num(m[n.PAJAK_PPH]), pajakPpn: Util.num(m[n.PAJAK_PPN]),
+        pajakTermasukPPN: String(m[n.PAJAK_TERMASUK_PPN] || '').toUpperCase() !== 'N',
+        pajakAdaNpwp: String(m[n.PAJAK_ADA_NPWP] || '').toUpperCase() !== 'N',
+        modeBayar: (String(m[n.MODE_BAYAR] || '').toUpperCase() === 'BRUTO') ? 'BRUTO' : 'NETTO',
+        setorStatus: String(m[n.SETOR_STATUS] || '').toUpperCase() === 'SETOR' ? 'SETOR' : '',
+        setorTanggal: Util.fmtDate(m[n.SETOR_TANGGAL]),
+        setorNtpn: m[n.SETOR_NTPN] || ''
+      });
+    }
+    out.sort(function (a, b) {
+      return String(b.tglNota || '').localeCompare(String(a.tglNota || '')) ||
+             (Util.num(b.no) - Util.num(a.no));
+    });
+    return out;
+  }
+
+  /** Tandai satu atau beberapa nota sudah disetor (tanggal + NTPN/kode billing). */
+  function tandaiSetorPajak(list) {
+    var n = NC(), i, hasil = [];
+    SheetRepo.ensureMinCols(CONFIG.SHEETS.MULTI_NOTA, CONFIG.HEADERS.MULTI_NOTA.length);
+    for (i = 0; i < (list || []).length; i++) {
+      var it = list[i];
+      var hit = _findNotaRow(it.no, it.urutan);
+      if (!hit) continue;
+      SheetRepo.setCells(CONFIG.SHEETS.MULTI_NOTA, hit.rowIndex, Util.set(
+        n.SETOR_STATUS, 'SETOR',
+        n.SETOR_TANGGAL, it.tanggal ? new Date(it.tanggal) : new Date(),
+        n.SETOR_NTPN, it.ntpn || ''));
+      hasil.push({ no: it.no, urutan: it.urutan });
+    }
+    DeferredFlush.mark();
+    AuditLog.write('SETOR_PAJAK', CONFIG.SHEETS.MULTI_NOTA,
+      hasil.map(function (x) { return x.no + '#' + x.urutan; }).join(','),
+      hasil.length + ' nota ditandai setor');
+    return { success: true, jml: hasil.length };
+  }
+
   /** Jumlahkan pajak seluruh nota aktif → tulis ke kolom pajak transaksi. */
   function _recalcPajakTransaksi(transactionId) {
     var notas = getMultiNota(transactionId);
@@ -740,6 +808,8 @@ var KasTunai = (function () {
     simpanPajak: simpanPajak,
     simpanPajakNota: simpanPajakNota,
     getNotaPajak: getNotaPajak,
+    getSemuaNota: getSemuaNota,
+    tandaiSetorPajak: tandaiSetorPajak,
     recalcNota: _recalcNota,
     getRekap: getRekap
   };

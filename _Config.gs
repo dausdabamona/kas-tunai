@@ -105,7 +105,11 @@ var CONFIG = {
       // NETTO = pajak ditahan bendahara, toko terima nilai - pajak.
       // BRUTO = toko terima nilai penuh, pajak disetor dari sumber lain.
       // Kosong pada baris lama dibaca sebagai NETTO.
-      'MODE_BAYAR'
+      'MODE_BAYAR',
+      // Status setor pajak nota ini (tugas 10 — worklist lintas transaksi).
+      // Kosong = belum disetor. 'SETOR' = sudah, dengan tanggal & NTPN/kode
+      // billing sebagai bukti. Hanya relevan bila PAJAK_PPH+PAJAK_PPN > 0.
+      'SETOR_STATUS', 'SETOR_TANGGAL', 'SETOR_NTPN'
     ],
     FOTO_NOTA: [
       'NO_TRANSAKSI', 'NOTA_ID', 'URUTAN', 'FILE_ID', 'NAMA_FILE', 'URL_FILE',
@@ -300,6 +304,16 @@ var CONFIG = {
       jenisPPh:'', tarifPPh:0, ppn:0,
       mapPPh:'', kjsPPh:'', minPPh:0, minPPN:0,
       catatan:'Tidak terklasifikasi - periksa manual' },
+
+  /**
+   * Batas waktu setor pajak yang dipungut/dipotong bendahara (PPh 21/22/23/
+   * 4(2) dan PPN Wapu). SATU konstanta untuk semua jenis pajak — dikonfirmasi
+   * pengguna (PPK/bendahara satker) 28 Jul 2026: tanggal 10 bulan BERIKUTNYA
+   * setelah bulan pemotongan, berlaku sama untuk seluruh jenis pajak di atas.
+   * Ganti di sini saja bila aturan/praktik satker berubah — jangan menaruh
+   * angka batas hari di tempat lain.
+   */
+  BATAS_SETOR_TANGGAL: 10,
 
   /**
    * Ikon aplikasi (favicon + ikon layar utama HP).

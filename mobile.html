@@ -185,6 +185,13 @@
   /* Baris antrean dibedakan tegas dari transaksi yang sudah tersimpan. */
   .row.antre{border-left:3px solid var(--a2);padding-left:9px;background:var(--a2-100)}
 
+  /* ===== Worklist pajak lintas transaksi ===== */
+  .prow.belumdiisi{border-left:4px solid var(--a2);padding-left:12px}
+  .prow.belumsetor{border-left:4px solid #d97706;padding-left:12px}
+  .prow.sudahsetor{border-left:4px solid var(--ac);padding-left:12px;opacity:.75}
+  .cek{display:flex;align-items:center;gap:6px;font-size:13px;min-height:32px;justify-content:flex-end}
+  .cek input{width:20px;height:20px}
+
   /* ===== Kartu ringkas uang muka belum dipertanggungjawabkan ===== */
   .kartupum{border-radius:18px;padding:16px 18px;background:var(--a2-100);cursor:pointer}
   .kartupum.hide{display:none}
@@ -309,6 +316,7 @@
   </div>
 
   <div id="bdPum" class="kartupum hide" style="margin-bottom:26px" onclick="bukaPum()"></div>
+  <div id="bdPajakMendesak" class="banner hide" style="margin-bottom:26px" onclick="bukaWorklistPajak()"></div>
 
   <button id="bdOffline" class="banner hide" style="margin-bottom:26px" onclick="bukaAntrean()">
     <i class="ph-duotone ph-wifi-slash"></i>
@@ -318,7 +326,7 @@
   <div class="quick" style="margin-bottom:26px">
     <button class="qc ac" onclick="bukaCatat()"><i class="ph-duotone ph-note-pencil"></i><span>Catat pengeluaran</span></button>
     <button class="qc pink" onclick="bukaCatat()"><i class="ph-duotone ph-camera"></i><span>Foto nota</span></button>
-    <button class="qc grey" onclick="toast('Buka transaksi lalu pilih notanya untuk mengisi pajak')"><i class="ph-duotone ph-percent"></i><span>Potongan pajak</span></button>
+    <button class="qc grey" onclick="bukaWorklistPajak()"><i class="ph-duotone ph-percent"></i><span>Worklist pajak</span></button>
     <button class="qc grey" onclick="toast('Buka transaksi lalu ketuk Pengembalian')"><i class="ph-duotone ph-arrow-u-down-left"></i><span>Pengembalian</span></button>
     <button class="qc grey" style="grid-column:1/-1;min-height:72px;flex-direction:row;align-items:center;gap:12px"
       onclick="bukaPindah()"><i class="ph-duotone ph-arrows-left-right"></i><span>Pindah dana (bank &#8596; tunai)</span></button>
@@ -547,6 +555,23 @@
   <div id="pgRiwayat"></div>
 </div>
 
+<!-- ================= WORKLIST PAJAK LINTAS TRANSAKSI ================= -->
+<div id="scPajakLintas" class="scr">
+  <button class="back" onclick="go('beranda')"><i class="ph-duotone ph-arrow-left"></i> Beranda</button>
+  <div class="h1" style="margin-top:10px">Worklist pajak</div>
+  <div class="step">Batas setor tanggal <span id="wpBatas">10</span> bulan berikutnya, untuk semua jenis pajak.</div>
+  <div id="wpIsi" style="margin-top:16px"><div class="empty">Memuat…</div></div>
+</div>
+
+<!-- ================= TANDAI SETOR PAJAK ================= -->
+<div id="scSetorPajak" class="scr task">
+  <button class="back" onclick="go('pajaklintas')"><i class="ph-duotone ph-arrow-left"></i> Worklist pajak</button>
+  <div class="h1" style="margin-top:10px">Tandai sudah disetor</div>
+  <div class="step">Berlaku untuk seluruh nota yang dicentang.</div>
+  <div class="f"><label>Tanggal setor</label><input type="date" id="stTanggal"></div>
+  <div class="f"><label>NTPN / kode billing</label><input id="stNtpn" placeholder="opsional"></div>
+</div>
+
 <!-- ================= UANG MUKA BELUM DIPERTANGGUNGJAWABKAN ================= -->
 <div id="scPum" class="scr">
   <button class="back" onclick="go('beranda')"><i class="ph-duotone ph-arrow-left"></i> Beranda</button>
@@ -745,6 +770,10 @@
 <div id="stickyEdit" class="sticky hide">
   <button class="btn ac full" onclick="simpanEdit()">Simpan perubahan</button>
 </div>
+<div id="wpBar" class="sticky hide"></div>
+<div id="stickySetor" class="sticky hide">
+  <button class="btn ac full" onclick="simpanSetor()">Simpan tanda setor</button>
+</div>
 
 <div id="lihatFoto" class="lf hide">
   <img id="lfImg" alt="">
@@ -772,6 +801,12 @@ var FOTO_NOTA = {};     /* foto bertag per nota (Bukti B) pada transaksi yang di
 function $(id){ return document.getElementById(id); }
 function esc(s){ s = String(s==null?'':s);
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+/* String literal AMAN untuk argumen di dalam onclick="..."/onchange="..."
+   (atribut HTML berkutip DUA). JSON.stringify() menghasilkan literal berkutip
+   dua juga — bentrok dengan kutip pembungkus atribut, memotong markup di
+   tengah jalan (contoh nyata: onclick="bukaDetail(" 250")"="") sehingga
+   handler-nya rusak dan tombol tidak bereaksi sama sekali saat diketuk. */
+function aq(s){ return "'" + String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'") + "'"; }
 function rp(n){ n = parseFloat(n)||0; return 'Rp ' + n.toLocaleString('id-ID'); }
 function toast(msg, isErr){
   var t = $('toast'); t.textContent = msg; t.className = isErr ? 'err' : '';
@@ -795,11 +830,11 @@ function tglPendek(iso){
 
 /* ===================== Navigasi ===================== */
 /* Layar tugas (catat/kamera/review) menyembunyikan navigasi bawah — mode fokus. */
-var TUGAS = {catat:1, kamera:1, review:1, pajak:1, kembali:1, pindah:1, nota:1, edit:1};
-var TASKSCR = {Catat:1, Review:1, Pajak:1, Kembali:1, Pindah:1, Nota:1, Edit:1};
+var TUGAS = {catat:1, kamera:1, review:1, pajak:1, kembali:1, pindah:1, nota:1, edit:1, setorpajak:1};
+var TASKSCR = {Catat:1, Review:1, Pajak:1, Kembali:1, Pindah:1, Nota:1, Edit:1, SetorPajak:1};
 function go(scr){
   SCREEN = scr;
-  var semua = ['Login','Beranda','Transaksi','Detail','Catat','Review','Pajak','Kembali','Pindah','Nota','Edit','Akun','Antrean','Pum'];
+  var semua = ['Login','Beranda','Transaksi','Detail','Catat','Review','Pajak','Kembali','Pindah','Nota','Edit','Akun','Antrean','Pum','PajakLintas','SetorPajak'];
   for (var i=0;i<semua.length;i++){
     var el = $('sc'+semua[i]);
     if(el) el.className = 'scr' + (TASKSCR[semua[i]] ? ' task' : '')
@@ -814,6 +849,8 @@ function go(scr){
   $('stickyPindah').className  = (scr==='pindah')  ? 'sticky' : 'sticky hide';
   $('stickyNota').className    = (scr==='nota')    ? 'sticky' : 'sticky hide';
   $('stickyEdit').className    = (scr==='edit')    ? 'sticky' : 'sticky hide';
+  $('stickySetor').className   = (scr==='setorpajak') ? 'sticky' : 'sticky hide';
+  if (scr !== 'pajaklintas') $('wpBar').className = 'sticky hide';
   $('nvBeranda').className   = (scr==='beranda') ? 'on' : '';
   $('nvTransaksi').className = (scr==='transaksi'||scr==='detail') ? 'on' : '';
   $('nvAkun').className      = (scr==='akun') ? 'on' : '';
@@ -826,6 +863,7 @@ function go(scr){
   if (scr==='akun')      renderAkun();
   if (scr==='antrean')   aqRender();
   if (scr==='pum')       renderPum();
+  if (scr==='pajaklintas' && SEMUA_NOTA) renderWorklistPajak();
 }
 function kembaliDetail(){ if (DETAIL_NO) bukaDetail(DETAIL_NO); else go('transaksi'); }
 
@@ -887,7 +925,14 @@ function muat(){
         if(u) USER = u;
       } catch(e){}
       PETA_PUM = (d && d.petaPUM) || {};
+      if (d && d.batasSetorTanggal) BATAS_SETOR = +d.batasSetorTanggal;
       renderBeranda(); renderKartuPum();
+      // Muat latar untuk penanda pajak mendesak di Beranda — tidak menunda
+      // tampilan utama; layar Worklist memuat ulang datanya sendiri saat dibuka.
+      google.script.run
+        .withSuccessHandler(function(list){ SEMUA_NOTA = list||[]; renderPenandaPajak(); })
+        .withFailureHandler(function(){})
+        .serverGetSemuaNota(_tok);
       if (SCREEN==='login' || !SCREEN) go('beranda'); else go(SCREEN);
     })
     .withFailureHandler(gagal)
@@ -955,7 +1000,7 @@ function barisTx(t, ringkas){
          + ' · ' + fotoCount(t) + ' foto';
     kanan = '';
   }
-  return '<button class="row" onclick="bukaDetail(' + JSON.stringify(String(t.no)) + ')">'
+  return '<button class="row" onclick="bukaDetail(' + aq(t.no) + ')">'
     + '<span style="flex:1;min-width:0">'
     +   '<span class="ur" style="display:block">' + esc(t.kegiatan||'-') + '</span>'
     +   '<span class="meta" style="display:block">' + meta + '</span>'
@@ -1186,7 +1231,7 @@ function detailPajak(t, notas){
       + ' · ' + (brt ? 'disetor dari sumber lain' : 'uangnya sudah ditahan') + '</div></div>'
       + '<div style="text-align:right"><div class="val" style="font-size:15px">' + rp(p) + '</div>'
       + '<button class="lnk" style="font-size:12.5px" onclick="cetakBuktiPotong('
-      + JSON.stringify(String(t.no)) + ',' + JSON.stringify(String(n.urutan)) + ')">Bukti potong</button></div></div>';
+      + aq(t.no) + ',' + aq(n.urutan) + ')">Bukti potong</button></div></div>';
   }
   return '<div class="neraca" style="margin-top:14px">'
     + '<div class="kick" style="margin-bottom:6px">Pajak transaksi ini</div>'
@@ -1208,12 +1253,12 @@ function lihatFoto(fileId, cbHapus){
 function tutupLihatFoto(){ $('lihatFoto').className = 'lf hide'; LIHAT_CB = null; }
 function lihatFotoHapus(){ var cb = LIHAT_CB; tutupLihatFoto(); if (cb) cb(); }
 function _dtTile(fileId, urlFile){
-  return '<button class="tile" onclick="lihatFoto(' + JSON.stringify(String(fileId)) + ')">'
+  return '<button class="tile" onclick="lihatFoto(' + aq(fileId) + ')">'
        + '<img src="https://drive.google.com/thumbnail?id=' + esc(fileId) + '&sz=w200" alt=""></button>';
 }
 function detailNota(t, notas){
   var h = '<div class="sec-h" style="margin-top:8px"><div class="t">Nota (' + notas.length + ')</div>'
-        + (isKeluar(t) ? ('<button class="lnk" onclick="bukaNotaBaru('+JSON.stringify(String(t.no))+')">+ Tambah nota</button>') : '')
+        + (isKeluar(t) ? ('<button class="lnk" onclick="bukaNotaBaru('+aq(t.no)+')">+ Tambah nota</button>') : '')
         + '</div>';
   if (!notas.length) h += '<div class="empty">Belum ada nota pada transaksi ini.'
     + (isKeluar(t) ? ' Catat notanya setelah PUM mengembalikan pertanggungjawaban.' : '') + '</div>';
@@ -1264,12 +1309,12 @@ function detailNota(t, notas){
       +  '<div class="kick" style="margin-top:8px">Bukti B — barang diterima · ' + jmlB + ' foto</div>'
       +  '<div class="fotoStrip">' + (fb || '<div class="tile"><i class="ph-duotone ph-package"></i></div>') + '</div>'
       + '<div style="display:flex;gap:10px;margin-top:12px">'
-      +   '<button class="btn pink" style="flex:1.4" onclick="bukaPajak('+JSON.stringify(String(t.no))+','+JSON.stringify(String(n.urutan))+')">Potongan pajak</button>'
-      +   '<button class="btn" style="flex:1" onclick="bukaNotaUbah('+JSON.stringify(String(t.no))+','+JSON.stringify(String(n.urutan))+')">&#9998; Ubah</button>'
+      +   '<button class="btn pink" style="flex:1.4" onclick="bukaPajak('+aq(t.no)+','+aq(n.urutan)+')">Potongan pajak</button>'
+      +   '<button class="btn" style="flex:1" onclick="bukaNotaUbah('+aq(t.no)+','+aq(n.urutan)+')">&#9998; Ubah</button>'
       + '</div>'
       + '</div>';
   }
-  var noJs = JSON.stringify(String(t.no));
+  var noJs = aq(t.no);
   h += '<div style="display:flex;gap:10px;margin-top:18px">'
     + '<button class="btn ac" style="flex:1" onclick="cetakTandaTerima('+noJs+')">'
     +   (t.sumber==='BANK'?'Bukti Transfer':'Tanda Terima')+'</button>'
@@ -2230,9 +2275,9 @@ function renderRiwayatKembali(list){
       + (k.refMasukNo ? (' \u00b7 masuk No ' + esc(String(k.refMasukNo))) : '') + '</div></div>'
       + '<div style="text-align:right"><div class="val" style="font-size:15px">' + rp(k.nilai) + '</div>'
       + '<button class="lnk" style="font-size:12.5px" onclick="cetakBuktiKembali('
-      +   JSON.stringify(String(k.urutan)) + ')">Bukti</button> '
+      +   aq(k.urutan) + ')">Bukti</button> '
       + '<button class="lnk" style="font-size:12.5px;color:var(--a2-700)" onclick="hapusPengembalian('
-      +   JSON.stringify(String(k.urutan)) + ')">Hapus</button></div></div>';
+      +   aq(k.urutan) + ')">Hapus</button></div></div>';
   }
   $('pgRiwayat').innerHTML = h;
 }
@@ -2271,6 +2316,169 @@ function hapusPengembalian(urutan){
     .withSuccessHandler(function(){ loading(false); toast('Catatan dihapus'); muat(); bukaPengembalian(PG.no); })
     .withFailureHandler(gagal)
     .serverHapusPengembalian(_tok, PG.no, urutan);
+}
+
+/* ===================== Worklist pajak lintas transaksi =====================
+ * Tugas 4 mengurus pajak SATU nota. Ini mengurus kewajiban setor LINTAS
+ * transaksi — satu-satunya area aplikasi yang sanksinya menempel ke bendahara
+ * secara pribadi, jadi dua aturannya dikonfirmasi eksplisit (28 Jul 2026):
+ *   - Deteksi "seharusnya kena pajak" memakai klasifikasiPajak() yang sama
+ *     dengan tugas 3/4 (tidak ada aturan baru).
+ *   - Batas setor: CONFIG.BATAS_SETOR_TANGGAL (server) — tanggal 10 bulan
+ *     berikutnya, SATU konstanta untuk semua jenis pajak.
+ * SEMUA_NOTA dimuat sekali dari serverGetSemuaNota() saat layar dibuka.     */
+var SEMUA_NOTA = null, BATAS_SETOR = 10, SETOR_PILIH = {};
+function bukaWorklistPajak(){
+  go('pajaklintas');
+  $('wpBatas').textContent = BATAS_SETOR;
+  $('wpIsi').innerHTML = '<div class="empty">Memuat…</div>';
+  SETOR_PILIH = {};
+  google.script.run
+    .withSuccessHandler(function(list){ SEMUA_NOTA = list||[]; renderWorklistPajak(); })
+    .withFailureHandler(function(e){ $('wpIsi').innerHTML = '<div class="empty">Gagal memuat.</div>'; gagal(e); })
+    .serverGetSemuaNota(_tok);
+}
+/** Tanggal jatuh tempo untuk nota bertanggal tglNota: tgl BATAS_SETOR bulan berikutnya. */
+function jatuhTempoSetor(tglNota){
+  var p = String(tglNota||'').split('-');
+  if (p.length<3) return null;
+  var d = new Date(+p[0], (+p[1]-1)+1, BATAS_SETOR);   // bulan berikutnya
+  return d;
+}
+function sisaHariTempo(tglNota){
+  var jt = jatuhTempoSetor(tglNota); if (!jt) return null;
+  var ms = jt.setHours(0,0,0,0) - (new Date()).setHours(0,0,0,0);
+  return Math.round(ms / 86400000);
+}
+function _wpKelompokkan(){
+  var a=[], b=[], c=[], i;
+  for (i=0;i<(SEMUA_NOTA||[]).length;i++){
+    var n = SEMUA_NOTA[i], pjk = (+n.pajakPph||0)+(+n.pajakPpn||0);
+    if (pjk > 0){
+      (n.setorStatus==='SETOR' ? c : b).push(n);
+    } else {
+      // Sama persis dengan penanda kartu nota di detailNota(): tebak kategori
+      // dari uraian, tandai bila kategori itu memang objek pajak.
+      var dugaan = pjRef(klasifikasiPajak(pjTeksKlasifikasi({kegiatan:n.kegiatan}, n)));
+      if (dugaan && (dugaan.jenisPPh || dugaan.ppn>0)) a.push(n);
+    }
+  }
+  b.sort(function(x,y){ return String(x.tglNota||'').localeCompare(String(y.tglNota||'')); });   // jatuh tempo terdekat dulu
+  return {belumDiisi:a, belumSetor:b, sudahSetor:c};
+}
+function renderWorklistPajak(){
+  var g = _wpKelompokkan();
+  var netto = g.belumSetor.filter(function(n){ return n.modeBayar!=='BRUTO'; });
+  var bruto = g.belumSetor.filter(function(n){ return n.modeBayar==='BRUTO'; });
+  var sPph=0, sPpn=0, i;
+  for (i=0;i<g.belumSetor.length;i++){ sPph += (+g.belumSetor[i].pajakPph||0); sPpn += (+g.belumSetor[i].pajakPpn||0); }
+
+  var h = '<div class="neraca"><div class="kick" style="margin-bottom:6px">Ringkasan belum disetor</div>'
+    + _dtBaris('Total PPh', sPph)
+    + _dtBaris('Total PPN', sPpn)
+    + _dtBaris('Uangnya sudah di tangan (NETTO)', netto.reduce(function(a,n){return a+(+n.pajakPph||0)+(+n.pajakPpn||0);},0),
+        netto.length + ' nota — ditahan saat pembayaran')
+    + _dtBaris('Harus disetor dari sumber lain (BRUTO)', bruto.reduce(function(a,n){return a+(+n.pajakPph||0)+(+n.pajakPpn||0);},0),
+        bruto.length + ' nota — belum ditarik dari mana pun')
+    + '</div>';
+
+  h += _wpSeksi('belumdiisi', '&#9888; Terindikasi kena pajak, belum diisi', g.belumDiisi, function(n){
+    return '<button class="lnk" onclick="wpBukaPajak(' + aq(n.no) + ',' + aq(n.urutan) + ')">Isi pajak</button>';
+  });
+  h += _wpSeksi('belumsetor', 'Sudah dipotong, belum disetor', g.belumSetor, function(n){
+    return '<label class="cek"><input type="checkbox" ' + (SETOR_PILIH[n.no+'#'+n.urutan]?'checked':'')
+      + ' onchange="wpCentang(' + aq(n.no) + ',' + aq(n.urutan) + ',this)"> Pilih</label>';
+  }, true);
+  h += _wpSeksi('sudahsetor', 'Sudah disetor', g.sudahSetor, function(n){
+    return '<span class="sub">' + esc(tglPendek(n.setorTanggal)) + (n.setorNtpn?(' &middot; '+esc(n.setorNtpn)):'') + '</span>';
+  });
+
+  $('wpIsi').innerHTML = h;
+  wpRenderBar();
+}
+function _wpSeksi(kelas, judul, list, aksiFn, adaTempo){
+  var h = '<div class="sec-h" style="margin-top:22px"><div class="t">' + esc(judul) + ' (' + list.length + ')</div></div>';
+  if (!list.length) return h + '<div class="empty">Tidak ada.</div>';
+  for (var i=0;i<list.length;i++){
+    var n = list[i], sisa = adaTempo ? sisaHariTempo(n.tglNota) : null;
+    var tempoTxt = '';
+    if (sisa !== null){
+      tempoTxt = (sisa < 0) ? ('<b style="color:var(--a2)">Lewat tempo ' + (-sisa) + ' hari</b>')
+        : (sisa <= 3) ? ('<b style="color:var(--a2)">Jatuh tempo ' + sisa + ' hari lagi</b>')
+        : ('Jatuh tempo ' + tglPendek(jatuhTempoSetor(n.tglNota).toISOString().slice(0,10)));
+    }
+    h += '<div class="prow ' + kelas + '"><div class="kiri">'
+      + '<div class="nm">' + esc(n.namaPenyedia||('Nota '+n.urutan)) + ' &middot; No ' + esc(n.no) + '</div>'
+      + '<div class="sub">' + esc(n.kegiatan||'-') + (tempoTxt?(' &middot; '+tempoTxt):'') + '</div></div>'
+      + '<div style="text-align:right">'
+      + (((+n.pajakPph||0)+(+n.pajakPpn||0)) ? ('<div class="val" style="font-size:15px">' + rp((+n.pajakPph||0)+(+n.pajakPpn||0)) + '</div>') : '')
+      + aksiFn(n) + '</div></div>';
+  }
+  return h;
+}
+function wpCentang(no, urutan, el){
+  var k = no+'#'+urutan;
+  if (el.checked) SETOR_PILIH[k] = true; else delete SETOR_PILIH[k];
+  wpRenderBar();
+}
+function wpRenderBar(){
+  var n = Object.keys(SETOR_PILIH).length;
+  var bar = $('wpBar');
+  bar.className = n ? 'sticky' : 'sticky hide';
+  bar.innerHTML = '<button class="btn ac full" onclick="bukaFormSetor()">Tandai ' + n + ' nota sudah disetor</button>';
+}
+/* bukaPajak() membaca dari NOTAS global — daftar nota transaksi yang SEDANG
+   dibuka di layar Detail. Worklist mencakup nota lintas BANYAK transaksi,
+   jadi sebelum membuka layar pajak, muat dulu nota milik transaksi yang
+   tepat (bila belum, atau bila transaksi terakhir dibuka berbeda). */
+function wpBukaPajak(no, urutan){
+  if (TX.length && DETAIL_NO !== null && String(DETAIL_NO) === String(no) && NOTAS.length){
+    bukaPajak(no, urutan); return;
+  }
+  loading(true,'Memuat nota…');
+  google.script.run
+    .withSuccessHandler(function(list){
+      loading(false); NOTAS = list||[]; DETAIL_NO = no;
+      bukaPajak(no, urutan);
+    })
+    .withFailureHandler(function(e){ loading(false); gagal(e); })
+    .serverGetMultiNota(_tok, no);
+}
+function bukaFormSetor(){
+  if (!Object.keys(SETOR_PILIH).length){ toast('Pilih dulu nota yang mau ditandai', true); return; }
+  $('stTanggal').value = new Date().toISOString().slice(0,10);
+  $('stNtpn').value = '';
+  go('setorpajak');
+}
+function simpanSetor(){
+  var tanggal = $('stTanggal').value, ntpn = ($('stNtpn').value||'').trim();
+  if (!tanggal){ toast('Tanggal setor wajib diisi', true); return; }
+  var list = [];
+  for (var k in SETOR_PILIH){
+    var p = k.split('#');
+    list.push({ no:p[0], urutan:p[1], tanggal:tanggal, ntpn:ntpn });
+  }
+  loading(true,'Menyimpan…');
+  google.script.run
+    .withSuccessHandler(function(r){
+      loading(false); toast((r&&r.jml||list.length) + ' nota ditandai sudah disetor');
+      SETOR_PILIH = {}; bukaWorklistPajak();
+    })
+    .withFailureHandler(gagal)
+    .serverTandaiSetorPajak(_tok, list);
+}
+/* Penanda mendesak di Beranda: ada pajak belum disetor dengan tempo <= 3 hari. */
+function renderPenandaPajak(){
+  var el = $('bdPajakMendesak'); if (!el) return;
+  if (!SEMUA_NOTA){ el.className = 'banner hide'; return; }
+  var g = _wpKelompokkan();
+  var mendesak = g.belumSetor.filter(function(n){ var s=sisaHariTempo(n.tglNota); return s!==null && s<=3; });
+  if (!mendesak.length){ el.className = 'banner hide'; return; }
+  var total = mendesak.reduce(function(a,n){return a+(+n.pajakPph||0)+(+n.pajakPpn||0);},0);
+  el.className = 'banner';
+  el.innerHTML = '<i class="ph-duotone ph-warning"></i><span><b>' + mendesak.length + ' pajak mendesak disetor</b> ('
+    + rp(total) + ') — jatuh tempo &le; 3 hari.</span>';
+  el.onclick = bukaWorklistPajak;
 }
 
 /* ===================== Uang muka belum dipertanggungjawabkan =====================
@@ -2336,8 +2544,8 @@ function renderPum(){
       + '<div class="bawah"><span>Nota ' + rp(sudah) + ' dari ' + rp(um) + '</span>'
       + '<span class="sisa">Sisa ' + rp(x.sisaPUM) + '</span></div>'
       + '<div style="display:flex;gap:10px;margin-top:10px">'
-      + '<button class="btn" style="flex:1" onclick="bukaDetail(' + JSON.stringify(String(t.no)) + ')">Buka transaksi</button>'
-      + '<button class="btn ac" style="flex:1" onclick="tagihPum(' + JSON.stringify(String(t.no)) + ')">Tagih</button>'
+      + '<button class="btn" style="flex:1" onclick="bukaDetail(' + aq(t.no) + ')">Buka transaksi</button>'
+      + '<button class="btn ac" style="flex:1" onclick="tagihPum(' + aq(t.no) + ')">Tagih</button>'
       + '</div></div>';
   }
   el.innerHTML = h;
