@@ -111,6 +111,7 @@ var FotoNota = (function () {
     var upd = Util.set(c.KETERANGAN, (data && data.keterangan) || '');
     if (data && data.file && data.file.base64) {
       var oldFileId = hit.values[c.FILE_ID];
+      data.file.namaFile = _namaFile(noTransaksi, notaId, urutan, new Date());
       var up = DriveHelper.upload(data.file, {noTransaksi: noTransaksi});
       upd[c.FILE_ID] = up.fileId; upd[c.NAMA_FILE] = up.namaFile; upd[c.URL_FILE] = up.url;
       if (oldFileId) DriveHelper.trash(oldFileId);

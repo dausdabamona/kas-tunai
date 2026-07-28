@@ -196,7 +196,7 @@
   .grid2.mini .ph .del{width:28px;height:28px;top:5px;right:5px;font-size:13px}
   .phWrap{display:flex;flex-direction:column}
   .ketFoto{width:100%;margin-top:4px;border:none;border-bottom:1px solid var(--n400);background:none;
-    font-family:var(--fb);font-size:11px;color:var(--ink);padding:3px 0}
+    font-family:var(--fb);font-size:13px;color:var(--ink);padding:3px 0;min-height:44px}
 
   /* Baris antrean dibedakan tegas dari transaksi yang sudah tersimpan. */
   .row.antre{border-left:3px solid var(--a2);padding-left:9px;background:var(--a2-100)}
@@ -3385,7 +3385,12 @@ function _ntGantiFotoBFile(el){
             var baru = null, k;
             for (k=0; res && k<res.length; k++)
               if (String(res[k].urutan) === String(urutanLama)) { baru = res[k]; break; }
-            if (baru) NT.lamaB[i] = baru;
+            if (baru) {
+              NT.lamaB[i] = baru;
+              var arrFN = FOTO_NOTA[String(NT.urutan)] || [];
+              for (var m=0; m<arrFN.length; m++)
+                if (String(arrFN[m].urutan) === String(urutanLama)) { arrFN[m] = baru; break; }
+            }
             ntRenderFoto(); toast('Foto diganti');
           })
           .withFailureHandler(function(e){ loading(false); gagal(e); })
@@ -3401,8 +3406,10 @@ function ntSimpanKeteranganB(i, teks){
   var f = NT.lamaB[i]; if (!f) return;
   teks = (teks||'').trim();
   if (teks === (f.keterangan||'')) return;   // tak berubah, jangan panggil server percuma
+  var lama = f.keterangan||'';
   f.keterangan = teks;
-  google.script.run.withFailureHandler(gagal)
+  google.script.run
+    .withFailureHandler(function(e){ f.keterangan = lama; gagal(e); })
     .serverUpdateFotoNota(_tok, NT.no, NT.urutan, f.urutan, { keterangan: teks, file: null });
 }
 function simpanNotaBaru(){
