@@ -23,7 +23,7 @@ mencetak bukti-buktinya. Fitur lain (offline, pagu, akun) menyusul setelah inti 
 | 7 | Layar Akun | `/kt-7-akun` | 🟡 kode selesai → e5455ad |
 | 8 | Item POK + cek sisa pagu | `/kt-8-pagu` | 🟡 kode selesai → f3a1c88 |
 | 9 | Papan PUM belum dipertanggungjawabkan | `/kt-9-pum` | 🟡 kode selesai → 47d256a |
-| 10 | Worklist pajak lintas transaksi + setor | `/kt-10-setor` | ⬜ belum |
+| 10 | Worklist pajak lintas transaksi + setor | `/kt-10-setor` | 🟡 kode selesai → 861f750 |
 
 Status: ⬜ belum · 🟡 jalan · ✅ selesai (sudah diuji di HP) · ⛔ terblokir
 
@@ -36,6 +36,23 @@ Status: ⬜ belum · 🟡 jalan · ✅ selesai (sudah diuji di HP) · ⛔ terblo
 >   pratinjau sebelum hapus foto, dan penanda nota tanpa Bukti A.
 > - **Tugas 7** selesai: layar Akun, ganti password, dan Keluar yang benar-benar
 >   menghapus sesi di server (token lama dijawab `SESI_BERAKHIR`).
+
+> **BUG KRITIS ditemukan dan diperbaiki 28 Jul 2026 (commit 861f750) — DEPLOY SEGERA.**
+> `onclick="fn(' + JSON.stringify(String(x)) + ')"` menghasilkan kutip GANDA di
+> dalam atribut HTML berkutip ganda, memotong markup dan membuat tombol sama
+> sekali tidak bereaksi saat diketuk. Dipakai 13 kali di `mobile.html`,
+> **termasuk `barisTx()` yang dipakai sejak Tahap 1** untuk membuka transaksi
+> dari daftar. Ditemukan lewat verifikasi klik NYATA (bukan memanggil fungsi
+> langsung) setelah laporan pengguna "belum bisa buka transaksi" pada layar
+> papan PUM baru. Semua 13 pemakaian sudah diganti helper `aq()` (kutip
+> tunggal) dan diuji ulang via klik sungguhan.
+>
+> **Pelajaran metodologi**: verifikasi otomatis di seluruh sesi ini (tugas
+> 1–9) memanggil fungsi JS langsung lewat `page.evaluate(() => fn(...))`,
+> TIDAK PERNAH via `page.click()` pada elemen yang benar-benar dirender. Itu
+> membuktikan LOGIKA benar tapi tidak membuktikan MARKUP-nya valid. Sesi
+> berikutnya: verifikasi UI wajib lewat klik nyata pada HTML yang dirender,
+> bukan hanya pemanggilan fungsi.
 
 **Tugas 2–5 adalah inti dan saling bergantung — kerjakan berurutan, jangan diloncat.**
 Tugas 1 dulu (kecil, melindungi foto). Sisanya bebas setelah inti beres, kecuali
@@ -110,6 +127,9 @@ Lunas  bila ΣNota + ΣKembaliSisa ≥ (nilaiSpby > 0 ? nilaiSpby : UM)
 | **Migrasi header** | Kunci `hdr_fixed_*` di `serverGetDashboard` **wajib dinaikkan setiap ada kolom baru**, kalau tidak migrasi dilewati sampai cache 6 jam habis. Sekarang **v9**. |
 | **Kolom baru (28 Jul, lanjutan)** | `KAS_TUNAI.CLIENT_ID` — atas persetujuan pengguna, anti-dobel antrean luring; `tambahTransaksi` mengembalikan `duplikat:true` bila penanda sudah pernah tersimpan. |
 | **Format kode item POK** | Tepat 6 digit angka (`\d{6}`, lihat `_apItemCell` di index.html) — BUKAN format bertitik ala `2360.QDB.001.051.A`. Pemilih HP menyaring karakter sama seperti `_cariItem()` desktop. |
+| **Kolom baru (28 Jul, tugas 10)** | `MULTI_NOTA.SETOR_STATUS` / `SETOR_TANGGAL` / `SETOR_NTPN`. `CONFIG.BATAS_SETOR_TANGGAL = 10` — tanggal 10 bulan berikutnya, SATU konstanta untuk semua jenis pajak, dikonfirmasi pengguna (bukan ditebak).
+| **getSemuaNota() vs getNotaPajak()** | `getNotaPajak()` (lama, dipakai desktop mencetak) HANYA mengembalikan nota terpotong pajak — kontraknya TIDAK diubah. `getSemuaNota()` (baru) mengembalikan SEMUA nota, dengan atau tanpa pajak, untuk worklist tugas 10.
+| **Helper `aq()`** | Wajib dipakai untuk SEMUA argumen string/angka di dalam `onclick="..."`/`onchange="..."` — jangan pernah `JSON.stringify()` di situ (lihat bug kritis di atas). |
 | **Kolom baru (28 Jul, tugas 9)** | Sheet baru `MASTER_PUM` (`NAMA_PUM`, `NO_HP`, `TERAKHIR_DIPAKAI`) — pola identik `MasterPenyedia.gs`. Nomor HP hanya diminta sekali, saat pertama kali menagih. |
 | **Ambang hari papan PUM** | `AMBANG_HARI_PUM = {perhatian:7, mendesak:14}` di `mobile.html` — satu konstanta, jangan diketik ulang. |
 | **hitungNeraca() mode ringkas** | `notas === null` (bukan `[]`) → ΣNota diambil dari `t.notaTotal` alih-alih menjumlah array nota. Dipakai papan PUM yang menyapu banyak transaksi tanpa memuat detail nota tiap satu. Sama fungsi, sama rumus — hanya sumber datanya beda, mengikuti pola `kmb=null` yang sudah ada. |
