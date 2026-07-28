@@ -2166,7 +2166,10 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
   imgB64=imgB64||{}; notas=notas||[]; fotoPerNota=fotoPerNota||{};
   function srcOf(fileId){ return imgB64[fileId] || ('https://drive.google.com/thumbnail?id='+fileId+'&sz=w800'); }
   function lnk(url,fileId){ return url||('https://drive.google.com/file/d/'+fileId+'/view'); }
-  function fig(fileId,url,cap,bold){ return '<figure style="margin:0"><div class="evb"><a href="'+esc(url)+'" target="_blank"><img src="'+srcOf(fileId)+'"></a></div><figcaption style="margin-top:3px;font-size:10px'+(bold?';font-weight:600':'')+'">'+esc(cap)+'</figcaption></figure>'; }
+  // bold=true menandai Bukti A (scan nota asli) — dokumen yang harus terbaca
+  // utuh untuk pemeriksaan BPK/Itjen, jadi TIDAK dipotong (object-fit:contain,
+  // tinggi menyesuaikan). Bukti B (foto barang) tetap galeri kotak dipotong rapi.
+  function fig(fileId,url,cap,bold){ return '<figure style="margin:0"><div class="evb'+(bold?' full':'')+'"><a href="'+esc(url)+'" target="_blank"><img src="'+srcOf(fileId)+'"></a></div><figcaption style="margin-top:3px;font-size:10px'+(bold?';font-weight:600':'')+'">'+esc(cap)+'</figcaption></figure>'; }
   var thn=(String(t.tanggal||'').split('-')[0])||(''+new Date().getFullYear());
   var noKt='KT-'+('00'+t.no).slice(-3)+'/'+thn;
   var nilai=(t.uangDiserahkan&&t.uangDiserahkan>0)?t.uangDiserahkan:t.kredit;
@@ -2268,7 +2271,7 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
   var evidence='';
   if(nNota) evidence+='<h3 class="sh">Bukti A &mdash; Scan Nota / Kuitansi</h3>'
     +'<div class="note" style="margin-bottom:6px">Berkas nota asli dari penyedia ('+nNota+' berkas).</div>'
-    +'<div class="evg nb">'+evNota+'</div>';
+    +'<div class="evg nb notaScan">'+evNota+'</div>';
   if(nBarang) evidence+='<h3 class="sh">Bukti B &mdash; Foto Barang Diterima</h3>'
     +'<div class="note" style="margin-bottom:6px">Foto fisik barang/jasa yang diterima, dikelompokkan per nota ('+nBarang+' foto).</div>'
     +evBarang;
@@ -2301,7 +2304,7 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
   +'.totline{text-align:right;font-size:14px;border-top:1px solid var(--tx);padding-top:7px;margin-top:6px}'
   +'.pjrow{display:flex;flex-wrap:wrap;gap:18px;font-size:10px;color:var(--mut);margin-top:4px;padding-left:7px} .pjrow b{color:var(--tx)}'
   +'.note{font-size:10px;font-style:italic;color:var(--mut2)}'
-  +'.evrow{border-top:1px solid var(--dv);padding-top:7px;margin-top:10px} .evh{display:flex;align-items:baseline;gap:8px;margin-bottom:5px} .evg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px} .evb{height:112px;border:1px solid var(--dv);border-radius:4px;overflow:hidden;background:var(--sf)} .evb img{width:100%;height:100%;object-fit:cover}'
+  +'.evrow{border-top:1px solid var(--dv);padding-top:7px;margin-top:10px} .evh{display:flex;align-items:baseline;gap:8px;margin-bottom:5px} .evg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px} .evg.notaScan{grid-template-columns:repeat(2,1fr)} .evb{height:112px;border:1px solid var(--dv);border-radius:4px;overflow:hidden;background:var(--sf)} .evb img{width:100%;height:100%;object-fit:cover} .evb.full{height:auto;break-inside:avoid} .evb.full img{width:100%;height:auto;object-fit:contain;display:block}'
   +'.sign{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:14px} .sign .nm{font-weight:600;border-top:1px solid var(--tx);padding-top:3px;display:inline-block;min-width:180px}'
   +'.foot{margin-top:22px;padding-top:6px;border-top:1px solid var(--dv);font-size:9px;color:#9a958f;display:flex;justify-content:space-between}'
   +'a{color:var(--ac);text-decoration:none} img{-webkit-print-color-adjust:exact;print-color-adjust:exact}'
