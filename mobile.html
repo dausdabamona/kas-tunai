@@ -182,6 +182,18 @@
   .grid2.mini .ph{aspect-ratio:1;border-radius:12px;font-size:12px}
   .grid2.mini .ph .del{width:28px;height:28px;top:5px;right:5px;font-size:13px}
 
+  /* ===== Penampil foto & bilah pulihkan ===== */
+  .lf{position:fixed;inset:0;z-index:60;background:rgba(20,19,18,.94);display:flex;
+    flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px}
+  .lf.hide{display:none}
+  .lf img{max-width:100%;max-height:72vh;border-radius:12px;object-fit:contain}
+  .lfbar{display:flex;gap:10px}
+  .lfbar .btn{min-width:120px}
+  .pulih{position:fixed;left:12px;right:12px;bottom:78px;z-index:55;background:var(--ink);color:#fff;
+    border-radius:14px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px}
+  .pulih.hide{display:none}
+  .pulih button{min-height:40px;padding:0 14px;border:none;border-radius:999px;background:var(--ac3);color:var(--ink);font-weight:600}
+
   /* ===== Neraca transaksi ===== */
   .neraca{margin-top:18px;border:1px solid var(--n300);border-radius:16px;padding:14px 16px}
   .nrow{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;min-height:44px;padding:6px 0}
@@ -356,7 +368,7 @@
 <!-- ================= KAMERA NOTA ================= -->
 <div id="scKamera">
   <div class="camTop">
-    <button onclick="go('review')" aria-label="Tutup"><i class="ph-duotone ph-x"></i></button>
+    <button onclick="tutupKamera()" aria-label="Tutup"><i class="ph-duotone ph-x"></i></button>
     <div class="ttl"><b id="kmNota">Nota 1</b><span id="kmInfo">0 foto diambil</span></div>
     <button onclick="toast('Lampu kilat mengikuti aplikasi kamera HP')" aria-label="Kilat"><i class="ph-duotone ph-lightning"></i></button>
   </div>
@@ -373,7 +385,7 @@
   <div class="camBot">
     <button onclick="pilihGaleri()"><i class="ph-duotone ph-image-square" style="font-size:22px"></i><br>Galeri</button>
     <button class="shutter" onclick="ambilFoto()" aria-label="Ambil foto"></button>
-    <button class="sel" onclick="go('review')">Selesai</button>
+    <button class="sel" onclick="tutupKamera()">Selesai</button>
   </div>
   <input type="file" id="kmCam" accept="image/*" capture="environment" style="display:none" onchange="terimaFoto(this)">
   <input type="file" id="kmGal" accept="image/*" multiple style="display:none" onchange="terimaFoto(this)">
@@ -562,8 +574,12 @@
     <datalist id="ntPenyediaList"></datalist>
     <div class="hint" id="ntNpwpHint">Nama pada nota. NPWP terisi otomatis bila penyedia sudah pernah dipakai.</div>
   </div>
+  <div class="f2">
+    <div class="f"><label>NPWP penyedia</label><input id="ntNpwp" placeholder="kosongkan bila non-NPWP"></div>
+    <div class="f"><label>Alamat</label><input id="ntAlamat" placeholder="opsional"></div>
+  </div>
   <div class="f"><label>Nilai nota</label>
-    <div class="nilai"><span>Rp</span><input id="ntNilai" inputmode="numeric" placeholder="0" oninput="fmtNilai(this);ntSisa()"></div>
+    <div class="nilai"><span>Rp</span><input id="ntNilai" inputmode="numeric" placeholder="0" oninput="fmtNilai(this);ntSisa();ntCekPajakBasi()"></div>
     <div class="hint" id="ntSisaHint">—</div>
   </div>
   <div class="f"><label>Tanggal nota</label><input type="date" id="ntTanggal"></div>
@@ -576,8 +592,9 @@
     <button class="lnk" onclick="ntAmbil('barang')">Ambil foto</button></div>
   <div class="grid2 mini" id="ntFotoBarang" style="margin-top:8px"></div>
 
-  <input type="file" id="ntCam" accept="image/*" capture="environment" style="display:none" onchange="ntTerima(this)">
   <div class="strip" style="margin-top:18px">Foto dikompres ke maks. 1280px sebelum diunggah — hemat kuota.</div>
+
+  <div id="ntPajakBasi" class="banner hide" style="margin-top:16px"></div>
 
   <div id="ntHapusWrap" class="hide" style="margin-top:22px;border-top:1px solid var(--n200);padding-top:18px">
     <button class="btn" style="width:100%;color:var(--a2-700)" onclick="hapusNota()">Hapus nota ini</button>
@@ -649,6 +666,14 @@
   <button class="btn ac full" onclick="simpanEdit()">Simpan perubahan</button>
 </div>
 
+<div id="lihatFoto" class="lf hide">
+  <img id="lfImg" alt="">
+  <div class="lfbar">
+    <button class="btn" onclick="tutupLihatFoto()">Tutup</button>
+    <button class="btn hide" id="lfHapus" style="color:var(--a2-700)" onclick="lihatFotoHapus()">Hapus foto ini</button>
+  </div>
+</div>
+<div id="pulihBar" class="pulih hide"></div>
 <div id="toast"></div>
 <div id="load"><div class="spin"></div><div id="loadMsg">Memuat…</div></div>
 
@@ -1030,9 +1055,19 @@ function detailNeraca(t, notas){
       + '</div>';
   return h + '</div>';
 }
+/* Penampil foto ukuran penuh. cbHapus opsional -> tombol Hapus ikut muncul. */
+var LIHAT_CB = null;
+function lihatFoto(fileId, cbHapus){
+  LIHAT_CB = cbHapus || null;
+  $('lfImg').src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(fileId) + '&sz=w1000';
+  $('lfHapus').className = LIHAT_CB ? 'btn' : 'btn hide';
+  $('lihatFoto').className = 'lf';
+}
+function tutupLihatFoto(){ $('lihatFoto').className = 'lf hide'; LIHAT_CB = null; }
+function lihatFotoHapus(){ var cb = LIHAT_CB; tutupLihatFoto(); if (cb) cb(); }
 function _dtTile(fileId, urlFile){
-  return '<a class="tile" href="' + esc(urlFile||('https://drive.google.com/file/d/'+fileId+'/view')) + '" target="_blank">'
-       + '<img src="https://drive.google.com/thumbnail?id=' + esc(fileId) + '&sz=w200" alt=""></a>';
+  return '<button class="tile" onclick="lihatFoto(' + JSON.stringify(String(fileId)) + ')">'
+       + '<img src="https://drive.google.com/thumbnail?id=' + esc(fileId) + '&sz=w200" alt=""></button>';
 }
 function detailNota(t, notas){
   var h = '<div class="sec-h" style="margin-top:8px"><div class="t">Nota (' + notas.length + ')</div>'
@@ -1067,9 +1102,14 @@ function detailNota(t, notas){
     for (d=0; d<det.length && d<4; d++) if (det[d].fileId) fb += _dtTile(det[d].fileId, det[d].urlFile);
     var fpn = FOTO_NOTA[String(n.urutan)] || [];
     for (d=0; d<fpn.length && d<6; d++) if (fpn[d].fileId) fb += _dtTile(fpn[d].fileId, fpn[d].urlFile);
-    h += '<div class="kick" style="margin-top:10px">Bukti A — nota</div>'
+    var jmlA = n.fileId ? 1 : 0, jmlB = det.length + fpn.length;
+    // Nota tanpa scan notanya = SPJ pasti ditolak. Tandai keras di kartunya.
+    h += (jmlA ? '' :
+        '<div class="banner" style="margin-top:10px"><i class="ph-duotone ph-warning"></i>'
+        + '<span>Belum ada foto nota. SPJ akan ditolak tanpa scan notanya.</span></div>')
+      +  '<div class="kick" style="margin-top:10px">Bukti A — nota · ' + jmlA + ' foto</div>'
       +  '<div class="fotoStrip">' + (fa || '<div class="tile"><i class="ph-duotone ph-receipt"></i></div>') + '</div>'
-      +  '<div class="kick" style="margin-top:8px">Bukti B — barang diterima</div>'
+      +  '<div class="kick" style="margin-top:8px">Bukti B — barang diterima · ' + jmlB + ' foto</div>'
       +  '<div class="fotoStrip">' + (fb || '<div class="tile"><i class="ph-duotone ph-package"></i></div>') + '</div>'
       + '<div style="display:flex;gap:10px;margin-top:12px">'
       +   '<button class="btn pink" style="flex:1.4" onclick="bukaPajak('+JSON.stringify(String(t.no))+','+JSON.stringify(String(n.urutan))+')">Potongan pajak</button>'
@@ -1286,20 +1326,33 @@ function setFotoJenis(j){
 }
 function ambilFoto(){ $('kmCam').click(); }
 function pilihGaleri(){ $('kmGal').click(); }
+/* Layar kamera dipakai dua alur; FOTO_TUJUAN menentukan foto masuk ke mana.
+   'catat' → FOTOS (draft transaksi baru, kena penjaga kuota localStorage)
+   'nota'  → NT.fotoNota / NT.fotoBarang (nota tersimpan, langsung diunggah)
+   Sengaja SATU alur kamera, bukan dua. */
+var FOTO_TUJUAN = 'catat';
+function _fotoKe(jenis){
+  if (FOTO_TUJUAN === 'nota') return (jenis==='barang') ? NT.fotoBarang : NT.fotoNota;
+  return FOTOS;
+}
 function terimaFoto(input){
   var files = input.files; if (!files || !files.length) return;
-  var sisa = files.length, jenis = FOTO_JENIS, ditolak = 0;
+  var sisa = files.length, jenis = FOTO_JENIS, ditolak = 0, keCatat = (FOTO_TUJUAN === 'catat');
   loading(true, 'Memproses foto…');
   for (var i=0;i<files.length;i++){
     kompres(files[i], function(f){
       if (f){
-        // Penjaga ukuran: tolak SEBELUM kuota jebol, supaya penolakannya
-        // terlihat jelas — bukan foto yang diam-diam tidak ikut tersimpan.
-        if (ukuranDraft() + (f.base64||'').length > BATAS_DRAFT) ditolak++;
-        else { f.jenis = jenis; FOTOS.push(f); }
+        f.jenis = jenis;
+        // Penjaga ukuran hanya untuk draft catat — foto nota langsung diunggah,
+        // tidak menumpuk di localStorage. Tolak SEBELUM kuota jebol supaya
+        // penolakannya terlihat, bukan foto yang diam-diam tidak tersimpan.
+        if (keCatat && ukuranDraft() + (f.base64||'').length > BATAS_DRAFT) ditolak++;
+        else _fotoKe(jenis).push(f);
       }
       if (--sisa <= 0){
-        loading(false); simpanDraft(); renderKamera();
+        loading(false);
+        if (keCatat) simpanDraft();
+        renderKamera();
         if (ditolak) toast(ditolak + ' foto tidak ditambahkan — penyimpanan draft penuh. '
           + 'Simpan & unggah dulu, baru lanjut memotret.', true);
       }
@@ -1310,7 +1363,8 @@ function terimaFoto(input){
 /* Foto lama (draft sebelum fitur ini) dianggap foto nota. */
 function jenisFoto(f){ return (f && f.jenis==='barang') ? 'barang' : 'nota'; }
 function fotoJenis(jenis){
-  var out=[]; for (var i=0;i<FOTOS.length;i++) if (jenisFoto(FOTOS[i])===jenis) out.push(FOTOS[i]);
+  var src = (FOTO_TUJUAN === 'nota') ? _fotoKe(jenis) : FOTOS, out=[];
+  for (var i=0;i<src.length;i++) if (jenisFoto(src[i])===jenis) out.push(src[i]);
   return out;
 }
 /* Kompres maks 1280px sisi terpanjang, kualitas 0.7 — sama dengan versi desktop. */
@@ -1385,7 +1439,13 @@ function _rvKelompok(jenis, judul, jml){
      + '<i class="ph-duotone ph-plus" style="font-size:26px"></i>Tambah foto '+jenis+'</button>';
   return h;
 }
-function tambahFotoJenis(jenis){ setFotoJenis(jenis); go('kamera'); }
+function tambahFotoJenis(jenis){ FOTO_TUJUAN='catat'; setFotoJenis(jenis); go('kamera'); }
+/* Dari layar nota: potret lewat layar kamera yang sama, lalu kembali ke nota. */
+function ntAmbil(jenis){ FOTO_TUJUAN='nota'; setFotoJenis(jenis); go('kamera'); }
+function tutupKamera(){
+  if (FOTO_TUJUAN === 'nota'){ FOTO_TUJUAN='catat'; ntRenderFoto(); go('nota'); return; }
+  go('review');
+}
 /* Salah pilih saat memotret bisa dibetulkan di sini, tanpa memotret ulang. */
 function tukarJenisFoto(i){
   if (!FOTOS[i]) return;
@@ -1961,7 +2021,9 @@ function bukaNotaBaru(no){
   _ntSiap(no, t);
   $('ntTajuk').textContent = 'Tambah nota';
   $('ntPenyedia').value = ''; $('ntNilai').value = '';
+  $('ntNpwp').value = ''; $('ntAlamat').value = '';
   $('ntTanggal').value = new Date().toISOString().slice(0,10);
+  $('ntPajakBasi').className = 'banner hide';
   $('ntJudul').textContent = 'No ' + no + ' · ' + (t.kegiatan||'-');
   $('ntHapusWrap').className = 'hide';
   ntIsiNpwp(); ntSisa(); ntRenderFoto();
@@ -1983,8 +2045,11 @@ function bukaNotaUbah(no, urutan){
   $('ntTajuk').textContent = 'Ubah nota';
   $('ntJudul').textContent = 'No ' + no + ' · nota ' + urutan;
   $('ntPenyedia').value = n.namaPenyedia || '';
+  $('ntNpwp').value = n.npwp || ''; $('ntAlamat').value = n.alamat || '';
   $('ntNilai').value = (+n.nilai||0) ? (+n.nilai).toLocaleString('id-ID') : '';
   $('ntTanggal').value = n.tglNota || '';
+  NT.nilaiAwal = +n.nilai || 0;
+  NT.adaPajak = ((+n.pajakPph||0) + (+n.pajakPpn||0)) > 0;
   $('ntHapusWrap').className = '';
   ntIsiNpwp();
   // NPWP/alamat dari nota dipakai bila penyedianya belum ada di master.
@@ -2013,22 +2078,27 @@ function ntIsiNpwp(){
   for (var i=0;PENYEDIA && i<PENYEDIA.length;i++)
     if (String(PENYEDIA[i].nama||'').trim().toLowerCase() === nama) { p = PENYEDIA[i]; break; }
   NT.penyedia = p;
+  // Isi otomatis HANYA bila kolomnya masih kosong — jangan menimpa koreksi
+  // yang baru saja diketik bendahara.
+  if (p){
+    if (!($('ntNpwp').value||'').trim())   $('ntNpwp').value = p.npwp || '';
+    if (!($('ntAlamat').value||'').trim()) $('ntAlamat').value = p.alamat || '';
+  }
   $('ntNpwpHint').textContent = p
-    ? ((p.npwp ? ('NPWP ' + p.npwp) : 'Penyedia non-NPWP') + (p.alamat ? (' · ' + p.alamat) : ''))
+    ? 'Penyedia dikenali dari daftar — NPWP dan alamat boleh dikoreksi.'
     : 'Nama pada nota. NPWP terisi otomatis bila penyedia sudah pernah dipakai.';
 }
-function ntAmbil(jenis){ NT.sasaran = jenis; $('ntCam').click(); }
-function ntTerima(input){
-  var files = input.files; if (!files || !files.length) return;
-  var sisa = files.length, jenis = NT.sasaran;
-  loading(true, 'Memproses foto…');
-  for (var i=0;i<files.length;i++){
-    kompres(files[i], function(f){
-      if (f){ f.jenis = jenis; (jenis==='barang' ? NT.fotoBarang : NT.fotoNota).push(f); }
-      if (--sisa <= 0){ loading(false); ntRenderFoto(); }
-    });
-  }
-  input.value = '';
+/* Nilai nota berubah padahal pajaknya sudah dihitung dari nilai lama.
+   Pajak TIDAK dihitung ulang otomatis — tarif dan kategorinya keputusan
+   bendahara. Yang bisa dilakukan aplikasi adalah menolak diam. */
+function ntCekPajakBasi(){
+  var el = $('ntPajakBasi'); if (!el) return;
+  var berubah = (NT.mode==='ubah') && NT.adaPajak && (angka($('ntNilai').value) !== NT.nilaiAwal);
+  if (!berubah){ el.className = 'banner hide'; return; }
+  el.className = 'banner';
+  el.innerHTML = '<i class="ph-duotone ph-warning"></i><span>Nilai nota berubah, tetapi pajaknya '
+    + 'masih dihitung dari nilai lama ' + rp(NT.nilaiAwal) + '. Setelah menyimpan, buka '
+    + '<b>Potongan pajak</b> nota ini dan hitung ulang.</span>';
 }
 function ntRenderFoto(){
   var a = '', b = '', i;
@@ -2067,11 +2137,23 @@ function ntHapusFoto(jenis, i){
 /* Foto yang sudah ada di server — hapus sungguhan, jadi perlu konfirmasi. */
 function ntHapusFotoServer(i){
   var f = NT.lamaB[i]; if (!f) return;
+  // Pratinjau besar dulu: petak kecil terlalu mudah salah pilih.
+  lihatFoto(f.fileId, function(){ _ntHapusFotoServerLanjut(i); });
+}
+function _ntHapusFotoServerLanjut(i){
+  var f = NT.lamaB[i]; if (!f) return;
   if (!confirm('Hapus foto ini? Berkasnya ikut dibuang dari Drive.')) return;
   loading(true,'Menghapus foto…');
   google.script.run
     .withSuccessHandler(function(){
-      loading(false); NT.lamaB.splice(i,1); ntRenderFoto(); toast('Foto dihapus');
+      loading(false);
+      NT.lamaB.splice(i,1);
+      // Layar detail membaca FOTO_NOTA; kalau tidak ikut dibuang, foto yang
+      // sudah terhapus masih tampil di sana sampai data dimuat ulang.
+      var arr = FOTO_NOTA[String(NT.urutan)] || [];
+      for (var k=0;k<arr.length;k++)
+        if (String(arr[k].urutan) === String(f.urutan)) { arr.splice(k,1); break; }
+      ntRenderFoto(); toast('Foto dihapus');
     })
     .withFailureHandler(gagal)
     .serverHapusFotoNota(_tok, NT.no, NT.urutan, f.urutan);
@@ -2082,16 +2164,18 @@ function simpanNotaBaru(){
   if (!nama){ toast('Nama penyedia wajib diisi', true); return; }
   if (nilai <= 0){ toast('Nilai nota harus lebih dari 0', true); return; }
   if (!navigator.onLine){ toast('Tidak ada koneksi — coba lagi setelah tersambung', true); return; }
-  var p = NT.penyedia || {}, no = NT.no, ubah = (NT.mode==='ubah');
+  var no = NT.no, ubah = (NT.mode==='ubah');
+  var npwp = ($('ntNpwp').value||'').trim(), alamat = ($('ntAlamat').value||'').trim();
   // updateNota SELALU menimpa nama, nominal, NPWP, alamat, dan tanggal nota —
   // jadi kelimanya dikirim lengkap, bukan hanya yang berubah.
   var data = {
-    namaPenyedia: nama, npwp: p.npwp||'', alamat: p.alamat||'',
+    namaPenyedia: nama, npwp: npwp, alamat: alamat,
     nilai: nilai, tglNota: $('ntTanggal').value || '',
     file: NT.fotoNota[0] ? _kirimFoto(NT.fotoNota[0], 'Scan nota (HP)') : null
   };
   var lanjutkan = function(urutan){
-    if (!NT.penyedia) google.script.run.serverSimpanPenyedia(_tok, { nama:nama, npwp:'', alamat:'' });
+    // Selalu simpan ke master supaya koreksi NPWP/alamat ikut terpakai lain kali.
+    google.script.run.serverSimpanPenyedia(_tok, { nama:nama, npwp:npwp, alamat:alamat });
     // Foto nota ke-2 dst = halaman lanjutan; sisanya foto barang (Bukti B).
     var lanjut = [], i;
     for (i=1;i<NT.fotoNota.length;i++) lanjut.push(_kirimFoto(NT.fotoNota[i], 'Nota (lanjutan, HP)'));
@@ -2118,15 +2202,48 @@ function simpanNotaBaru(){
 }
 function hapusNota(){
   if (NT.mode!=='ubah' || NT.urutan===null) return;
-  var n = NT.nota || {};
-  if (!confirm('Hapus nota ' + NT.urutan + ' (' + (n.namaPenyedia||'tanpa nama') + ' · ' + rp(n.nilai) + ')?\n\n'
-    + 'Total nota transaksi ini akan dihitung ulang.')) return;
-  var no = NT.no;
+  var n = NT.nota || {}, t = NT.transaksi || {}, urutan = NT.urutan, no = NT.no;
+  // Tunjukkan dampaknya ke neraca memakai penghitung tunggal tugas 2 —
+  // bendahara berhak tahu sisa PUM berubah jadi berapa sebelum menekan Hapus.
+  var sebelum = hitungNeraca(t, NOTAS, null);
+  var sisaNotas = [];
+  for (var i=0;i<NOTAS.length;i++) if (String(NOTAS[i].urutan)!==String(urutan)) sisaNotas.push(NOTAS[i]);
+  var sesudah = hitungNeraca(t, sisaNotas, null);
+  if (!confirm('Hapus nota ' + urutan + ' — ' + (n.namaPenyedia||'tanpa nama') + ' ' + rp(n.nilai) + '?\n\n'
+    + 'Σ nota  : ' + rp(sebelum.sNota) + '  →  ' + rp(sesudah.sNota) + '\n'
+    + 'Sisa PUM: ' + rp(sebelum.sisaPUM) + '  →  ' + rp(sesudah.sisaPUM))) return;
   loading(true,'Menghapus nota…');
   google.script.run
-    .withSuccessHandler(function(){ toast('Nota dihapus'); ntSelesai(no); })
+    .withSuccessHandler(function(){
+      loading(false);
+      NT.fotoNota = []; NT.fotoBarang = [];
+      _tawarkanPulih(no, urutan, n);
+    })
     .withFailureHandler(gagal)
-    .serverHapusNotaItem(_tok, no, NT.urutan, n.fileId || '');
+    .serverHapusNotaItem(_tok, no, urutan, n.fileId || '');
+}
+/* Salah hapus itu wajar; sediakan jalan pulang selagi orangnya masih di layar. */
+function _tawarkanPulih(no, urutan, n){
+  PULIH = { no:no, urutan:urutan, nama:(n && n.namaPenyedia) || ('Nota ' + urutan) };
+  var el = $('pulihBar');
+  el.innerHTML = '<span>Nota ' + esc(PULIH.nama) + ' dihapus.</span>'
+    + '<button onclick="pulihkanNota()">Pulihkan</button>';
+  el.className = 'pulih';
+  // Hilang sendiri setelah 12 detik supaya tidak menutupi layar terus-menerus.
+  if (PULIH_TIMER) clearTimeout(PULIH_TIMER);
+  PULIH_TIMER = setTimeout(function(){ el.className = 'pulih hide'; }, 12000);
+  ntSelesai(no);
+}
+var PULIH = null, PULIH_TIMER = null;
+function pulihkanNota(){
+  if (!PULIH) return;
+  var no = PULIH.no, urutan = PULIH.urutan;
+  $('pulihBar').className = 'pulih hide';
+  loading(true,'Memulihkan nota…');
+  google.script.run
+    .withSuccessHandler(function(){ loading(false); toast('Nota dipulihkan'); PULIH = null; ntSelesai(no); })
+    .withFailureHandler(gagal)
+    .serverRestoreNota(_tok, no, urutan);
 }
 function ntSelesai(no){
   loading(false); toast('Nota tersimpan');
