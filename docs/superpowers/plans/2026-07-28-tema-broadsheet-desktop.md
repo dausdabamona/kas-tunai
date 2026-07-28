@@ -15,7 +15,10 @@
 - **Dilarang mengubah JS di luar yang disebut eksplisit.** Warna di dalam string markup JS diganti, logikanya tidak.
 - **Dokumen cetak tidak disentuh sama sekali.** Fungsi yang merakit HTML lengkap (`<html>`/`<head>` sendiri, dibuka lewat `_bukaPopup`) — mis. `_renderKuitansiPajakHtml`, `cetakSPJ`, `cetakSSP`, `cetakDana` — beserta blok `<style>` di dalamnya: **jangan diubah satu byte pun.**
 - **Nilai `--c-*` di `:root` tidak diubah sampai Task 8.**
-- **Kelas `saldo-pill` wajib bertahan** pada elemen saldo. `_applyRoleUI()` memakainya untuk menyembunyikan saldo dari peran `viewer` — kontrol akses, bukan hiasan, dan gagalnya senyap.
+- **Empat kait `_applyRoleUI()` wajib bertahan persis namanya** — semuanya kontrol akses yang gagal secara senyap (tidak ada error, fiturnya cuma diam-diam terbuka untuk yang tidak berhak):
+  - kelas `.saldo-pill` dan `.saldo-sum` pada elemen saldo → disembunyikan dari peran `viewer`
+  - `id="btnUsers"` dan `id="btnSettings"` → hanya tampil untuk admin
+  Baca `_applyRoleUI()` di `index.html` sebelum menyentuh markup rail, dan pastikan keempatnya masih ditemukan sesudahnya.
 - **`#mobileTip` wajib tetap `flex:0 0 100%`** dan `body` tetap `flex-wrap:wrap`. Tanpa itu banner meremas konten jadi selebar 0px.
 - **Rail wajib tetap lengket**: `position:sticky; top:0; align-self:flex-start; max-height:100vh; overflow-y:auto`. **Jangan** menjadikan `.app-main` wadah gulir — merusak `window.scrollTo(0,0)`.
 - **Warna di luar tabel pemetaan tidak boleh ditebak.** Bila menemukan hex yang tidak ada di tabel, **hentikan dan laporkan** dengan nomor barisnya. Jangan memilih token yang "kira-kira cocok".
@@ -224,7 +227,7 @@ Ganti tiga tombol "Kelola User", "Pengaturan", "Keluar" di kaki rail menjadi sat
   </button>
   <div class="rail-akun-menu hidden" id="menuAkun">
     <button class="rail-item" id="btnUsers" onclick="openModalUsers()">Kelola User</button>
-    <button class="rail-item" onclick="openModalSettings()">Pengaturan</button>
+    <button class="rail-item" id="btnSettings" onclick="openModalSettings()">Pengaturan</button>
     <button class="rail-item" id="btnLogout" onclick="logout()">Keluar</button>
   </div>
 </div>
@@ -245,7 +248,7 @@ function toggleMenuAkun(){
   .rail-akun-menu.hidden{display:none}
 ```
 
-**`id="btnUsers"` dan `id="btnLogout"` wajib dipertahankan** — `_applyRoleUI()` memakainya. Bila nama fungsi `openModalUsers`/`openModalSettings`/`logout` berbeda di berkas, pakai yang memang ada.
+**`id="btnUsers"`, `id="btnSettings"`, dan `id="btnLogout"` wajib dipertahankan** — `_applyRoleUI()` memakai ketiganya untuk mengunci menu admin. Elemen saldo wajib tetap membawa **kedua** kelas `saldo-pill` dan `saldo-sum` bila keduanya ada sekarang. Bila nama fungsi `openModalUsers`/`openModalSettings`/`logout` berbeda di berkas, pakai yang memang ada.
 
 - [ ] **Step 8: Breakpoint rail**
 
@@ -277,7 +280,10 @@ fs.writeFileSync('/tmp/ih.js', m[1]);
 grep -c "saldo-pill" index.html          # harus >= 2 (CSS + markup)
 grep -c "flex:0 0 100%" index.html       # harus >= 1  (#mobileTip)
 grep -c "position:sticky" index.html     # harus >= 1  (.rail)
-grep -c 'id="btnUsers"\|id="btnLogout"' index.html   # harus 2
+grep -c 'id="btnUsers"' index.html        # harus 1
+grep -c 'id="btnSettings"' index.html     # harus 1
+grep -c 'id="btnLogout"' index.html       # harus 1
+grep -c "saldo-sum" index.html            # harus >= 2 (CSS + markup)
 ```
 
 Expected: `SINTAKS OK`, lalu keempat angka memenuhi syarat di komentarnya.
