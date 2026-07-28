@@ -25,6 +25,7 @@ mencetak bukti-buktinya. Fitur lain (offline, pagu, akun) menyusul setelah inti 
 | 9 | Papan PUM belum dipertanggungjawabkan | `/kt-9-pum` | 🟡 kode selesai → 47d256a |
 | 10 | Worklist pajak lintas transaksi + setor | `/kt-10-setor` | 🟡 kode selesai → 861f750 |
 | 11 | Kartu transaksi interaktif — Fase 1/4 (lihat bagian 9) | *(belum ada perintah)* | 🟡 kode selesai → 3d0d656 (CSS efb2f3d, gestur 1bed226, markup 3d0d656) |
+| 12 | Ubah nota: ganti gambar & keterangan foto barang (Bukti B) tersimpan | *(belum ada perintah)* | 🟡 kode selesai → 70e16cd (verifikasi Playwright 7/7; belum diuji di HP sungguhan — perlu deploy.bat + tes kamera/upload asli sebelum ✅) |
 
 Status: ⬜ belum · 🟡 jalan · ✅ selesai (sudah diuji di HP) · ⛔ terblokir
 
@@ -159,7 +160,7 @@ Lunas  bila ΣNota + ΣKembaliSisa ≥ (nilaiSpby > 0 ? nilaiSpby : UM)
 | Nilai yang boleh diserahkan ke penyedia | Dihitung di `hitungPajakUI()` sebagai `pjNetto`, **tidak disimpan**, tidak muncul di detail transaksi maupun daftar nota |
 | Ringkasan uang satu transaksi | Tidak ada. `detailKepala()` hanya menampilkan nilai transaksi, tanpa Σ nota / Σ pajak / Σ dibayar / sisa |
 | Ubah & hapus nota dari HP | ~~Tidak ada UI~~ → **sudah ada** (`bukaNotaUbah()`, `hapusNota()`, 8f4acf0). `serverRestoreNota` masih belum dipakai |
-| Tambah/hapus foto pada nota yang sudah tersimpan | ~~Tidak ada UI~~ → **sudah ada** (ganti Bukti A, hapus Bukti B lewat `ntHapusFotoServer()`, 8f4acf0) |
+| Tambah/hapus foto pada nota yang sudah tersimpan | ~~Tidak ada UI~~ → **sudah ada** (ganti Bukti A; Bukti B bisa diganti gambar & diberi keterangan lewat `_ntGantiFotoBFile()`/`ntSimpanKeteranganB()`, atau dihapus lewat `ntHapusFotoServer()`, 8f4acf0 & 70e16cd) |
 | Foto barang susulan setelah transaksi tersimpan | Belum ada UI. **JANGAN pakai `serverUploadFotoBarang`** — ia menulis ke sheet `Foto Barang`, sedangkan `getSpjData()` hanya membaca `Foto Nota`, jadi fotonya tidak akan muncul di cetakan SPJ. Pakai `serverUploadFotoNota(no, notaId, arr)` seperti versi desktop |
 | Mode bayar netto/bruto per nota | Belum ada sama sekali (kolom baru) |
 | Koreksi/hapus pengembalian dari HP | Tidak ada UI, padahal `serverHapusPengembalian`, `serverRestorePengembalian` **sudah ada** |
