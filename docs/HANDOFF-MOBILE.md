@@ -19,9 +19,9 @@ mencetak bukti-buktinya. Fitur lain (offline, pagu, akun) menyusul setelah inti 
 | **3** | **Kelola nota lengkap (ubah, hapus, foto susulan)** | `/kt-3-nota` | 🟡 kode selesai → 5cde48e |
 | **4** | **Pajak per nota: mode bayar & bukti potong** | `/kt-4-pajak` | 🟡 kode selesai → 9cf8655 |
 | **5** | **Pengembalian + tanda bukti (kuitansi & BA)** | `/kt-5-kembali` | 🟡 kode selesai → 9d9dd19 |
-| 6 | Antrean unggah offline | `/kt-6-antrean` | ⬜ belum |
+| 6 | Antrean unggah offline | `/kt-6-antrean` | 🟡 kode selesai → ddbc6b1 |
 | 7 | Layar Akun | `/kt-7-akun` | 🟡 kode selesai → e5455ad |
-| 8 | Item POK + cek sisa pagu | `/kt-8-pagu` | ⬜ belum |
+| 8 | Item POK + cek sisa pagu | `/kt-8-pagu` | 🟡 kode selesai → f3a1c88 |
 | 9 | Papan PUM belum dipertanggungjawabkan | `/kt-9-pum` | ⬜ belum |
 | 10 | Worklist pajak lintas transaksi + setor | `/kt-10-setor` | ⬜ belum |
 
@@ -107,7 +107,9 @@ Lunas  bila ΣNota + ΣKembaliSisa ≥ (nilaiSpby > 0 ? nilaiSpby : UM)
 | Tanda bukti pengembalian | **Dua format, dipilih saat cetak** — Kuitansi Pengembalian (harian) dan Berita Acara Pengembalian Sisa Uang Muka (formal, diketahui PPK). |
 | Identitas & pejabat untuk dokumen | Ambil dari `serverGetInstansi(token)` / `CONFIG.INSTANSI`, jangan hardcode. |
 | **Kolom baru (28 Jul 2026)** | `MULTI_NOTA.DIBAYAR_PENYEDIA` — nilai yang diserahkan DISIMPAN, bukan dihitung ulang saat tampil. `MULTI_NOTA.MODE_BAYAR` — kosong = NETTO. `PENGEMBALIAN.JENIS` — kosong = SISA. |
-| **Migrasi header** | Kunci `hdr_fixed_*` di `serverGetDashboard` **wajib dinaikkan setiap ada kolom baru**, kalau tidak migrasi dilewati sampai cache 6 jam habis. Sekarang **v8**. |
+| **Migrasi header** | Kunci `hdr_fixed_*` di `serverGetDashboard` **wajib dinaikkan setiap ada kolom baru**, kalau tidak migrasi dilewati sampai cache 6 jam habis. Sekarang **v9**. |
+| **Kolom baru (28 Jul, lanjutan)** | `KAS_TUNAI.CLIENT_ID` — atas persetujuan pengguna, anti-dobel antrean luring; `tambahTransaksi` mengembalikan `duplikat:true` bila penanda sudah pernah tersimpan. |
+| **Format kode item POK** | Tepat 6 digit angka (`\d{6}`, lihat `_apItemCell` di index.html) — BUKAN format bertitik ala `2360.QDB.001.051.A`. Pemilih HP menyaring karakter sama seperti `_cariItem()` desktop. |
 | Status hijau saat sisa negatif | **Ditahan.** Rumus `lunas` di bagian 2 tetap apa adanya, tetapi panel menampilkan 'Periksa dulu — nota melebihi uang muka'. Lampu hijau di atas keadaan janggal berbahaya. |
 | Pajak setelah nilai nota diubah | **Tidak dihitung ulang otomatis** — tarif dan kategori keputusan bendahara. Aplikasi hanya memberi peringatan tegas untuk meninjau ulang. |
 
