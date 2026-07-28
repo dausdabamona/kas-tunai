@@ -78,9 +78,12 @@ function serverGetDashboard(token) {
   return _run(token, function (auth) {
     // Perbaiki/isi label header kolom yang kosong (sekali per TTL cache; idempotent).
     // Bump kunci ke v3 agar kolom rekonsiliasi (No Kuitansi/DRPP/SPP) ikut ter-migrasi.
-    if (!AppCache.get('hdr_fixed_v5')) {
+    // Naikkan versi kunci ini SETIAP KALI ada kolom baru di CONFIG.HEADERS,
+    // kalau tidak migrasi header dilewati sampai cache 6 jam kedaluwarsa.
+    // v6 = kolom DIBAYAR_PENYEDIA di sheet Multi Nota.
+    if (!AppCache.get('hdr_fixed_v6')) {
       try { SheetRepo.ensureHeaders(); } catch (e) { Logger.log('[ensureHeaders] ' + e.message); }
-      AppCache.put('hdr_fixed_v5', 1);
+      AppCache.put('hdr_fixed_v6', 1);
     }
     var role = auth.role;
     var full = (role === 'admin' || role === 'full');

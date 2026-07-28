@@ -291,9 +291,37 @@ var KasTunai = (function () {
         pajakPph: Util.num(r[n.PAJAK_PPH]),
         pajakPpn: Util.num(r[n.PAJAK_PPN]),
         pajakTermasukPPN: String(r[n.PAJAK_TERMASUK_PPN] || '').toUpperCase() !== 'N',
-        pajakAdaNpwp: String(r[n.PAJAK_ADA_NPWP] || '').toUpperCase() !== 'N'
+        pajakAdaNpwp: String(r[n.PAJAK_ADA_NPWP] || '').toUpperCase() !== 'N',
+        // Baris lama belum punya kolom ini -> hitung dari nilai - pajak (NETTO).
+        dibayarPenyedia: (r[n.DIBAYAR_PENYEDIA] === '' || r[n.DIBAYAR_PENYEDIA] == null)
+          ? hitungDibayarPenyedia(r[n.NOMINAL], r[n.PAJAK_PPH], r[n.PAJAK_PPN], 'NETTO')
+          : Util.num(r[n.DIBAYAR_PENYEDIA]),
+        modeBayar: 'NETTO'   // kolomnya menyusul di tugas 4
       };
     });
+  }
+
+  /* -------------------------------------------------------- *
+   * Nilai yang boleh diserahkan ke penyedia untuk satu nota.
+   * Rumusnya ada di docs/HANDOFF-MOBILE.md bagian 2 — satu-satunya sumber
+   * kebenaran; jangan menuliskan varian lain di tempat lain.
+   *   NETTO : nilai - (pph + ppn)   pajaknya ditarik kembali ke bendahara
+   *   BRUTO : nilai                 pajaknya disetor dari sumber lain
+   * Mode BRUTO baru dipasang di tugas 4; untuk sekarang selalu NETTO.
+   * -------------------------------------------------------- */
+  function hitungDibayarPenyedia(nilai, pph, ppn, modeBayar) {
+    var n = Util.num(nilai), p = Util.num(pph) + Util.num(ppn);
+    return (String(modeBayar || 'NETTO').toUpperCase() === 'BRUTO') ? n : (n - p);
+  }
+  /** Tulis ulang DIBAYAR_PENYEDIA satu nota dari nilai & pajak barisnya. */
+  function _recalcDibayarNota(transactionId, urutan) {
+    var hit = _findNotaRow(transactionId, urutan);
+    if (!hit) return;
+    var n = NC(), r = hit.values;
+    var bayar = hitungDibayarPenyedia(r[n.NOMINAL], r[n.PAJAK_PPH], r[n.PAJAK_PPN], 'NETTO');
+    SheetRepo.ensureMinCols(CONFIG.SHEETS.MULTI_NOTA, CONFIG.HEADERS.MULTI_NOTA.length);
+    SheetRepo.setCells(CONFIG.SHEETS.MULTI_NOTA, hit.rowIndex, Util.set(n.DIBAYAR_PENYEDIA, bayar));
+    DeferredFlush.mark();
   }
 
   function tambahNota(transactionId, notaData) {
@@ -316,6 +344,8 @@ var KasTunai = (function () {
     ]);
     DeferredFlush.mark();
     if (hasDetail) DetailNota.save(transactionId, urutan, notaData.detail);
+    // Nota baru belum berpajak, jadi seluruh nilainya boleh diserahkan.
+    _recalcDibayarNota(transactionId, urutan);
     _recalcNota(transactionId);
     return { success: true, urutan: urutan };
   }
@@ -343,6 +373,8 @@ var KasTunai = (function () {
     SheetRepo.setCells(CONFIG.SHEETS.MULTI_NOTA, hit.rowIndex, upd);
     DeferredFlush.mark();
     if (notaData.detail !== undefined) DetailNota.save(transactionId, urutan, notaData.detail);
+    // Nilai nota berubah -> nilai yang boleh diserahkan ikut berubah.
+    _recalcDibayarNota(transactionId, urutan);
     _recalcNota(transactionId);
     return { success: true };
   }
@@ -579,6 +611,8 @@ var KasTunai = (function () {
       n.PAJAK_TERMASUK_PPN,  (d.termasukPPN === false ? 'N' : 'Y'),
       n.PAJAK_ADA_NPWP,      (d.adaNpwp === false ? 'N' : 'Y')));
     DeferredFlush.mark();
+    // Pajak berubah -> nilai yang boleh diserahkan ke penyedia ikut berubah.
+    _recalcDibayarNota(transactionId, urutan);
     AuditLog.write('SIMPAN_PAJAK_NOTA', CONFIG.SHEETS.MULTI_NOTA, transactionId + '#' + urutan,
       'katIdx=' + d.katIdx + ' pph=' + d.pph + ' ppn=' + d.ppn + ' dpp=' + d.dpp);
     var tot = _recalcPajakTransaksi(transactionId);
@@ -660,6 +694,7 @@ var KasTunai = (function () {
     tambahTransaksi: tambahTransaksi,
     updateTransaksi: updateTransaksi,
     hapusTransaksi: hapusTransaksi,
+    hitungDibayarPenyedia: hitungDibayarPenyedia,
     pindahDana: pindahDana,
     konversiPindahDana: konversiPindahDana,
     findByRef: findByRef,
