@@ -65,6 +65,19 @@
     background:var(--bg);color:var(--n800)}
   .tag.pink{background:var(--a2);color:#fff} .tag.ac{background:var(--ac);color:#fff}
 
+  /* ===== Kartu transaksi geser (tugas 11, Fase 1) ===== */
+  .rowWrap{position:relative;overflow:hidden;border-bottom:1px solid var(--n200);touch-action:pan-y}
+  .rowActions{position:absolute;top:0;right:0;bottom:0;display:flex;align-items:stretch}
+  .ra{width:72px;border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:4px;color:#fff;font-size:10.5px;font-family:var(--fb)}
+  .ra i{font-size:20px}
+  .ra-nota{background:var(--ac)}
+  .ra-tagih{background:var(--a2)}
+  .ra-tt{background:var(--ac7)}
+  .ra-kembali{background:var(--n700)}
+  .rowCard{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;
+    gap:12px;width:100%;padding:14px 0;background:var(--bg);transition:transform .18s ease-out;text-align:left}
+
   /* ===== Pencarian & chip ===== */
   .search{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--n400);padding:8px 0;margin-bottom:14px}
   .search i{font-size:20px;color:var(--n600)}
