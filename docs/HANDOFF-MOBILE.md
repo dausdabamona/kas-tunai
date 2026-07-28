@@ -24,7 +24,7 @@ mencetak bukti-buktinya. Fitur lain (offline, pagu, akun) menyusul setelah inti 
 | 8 | Item POK + cek sisa pagu | `/kt-8-pagu` | 🟡 kode selesai → f3a1c88 |
 | 9 | Papan PUM belum dipertanggungjawabkan | `/kt-9-pum` | 🟡 kode selesai → 47d256a |
 | 10 | Worklist pajak lintas transaksi + setor | `/kt-10-setor` | 🟡 kode selesai → 861f750 |
-| 11 | Kartu transaksi interaktif — Fase 1/4 (lihat bagian 9) | *(belum ada perintah)* | 🟡 kode selesai → *(commit setelah Task 1-3 plan ini)* |
+| 11 | Kartu transaksi interaktif — Fase 1/4 (lihat bagian 9) | *(belum ada perintah)* | 🟡 kode selesai → 3d0d656 (CSS efb2f3d, gestur 1bed226, markup 3d0d656) |
 
 Status: ⬜ belum · 🟡 jalan · ✅ selesai (sudah diuji di HP) · ⛔ terblokir
 
