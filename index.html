@@ -6010,6 +6010,12 @@ function _cekTawaranMobile(){
  * langsung di browser -- lihat docs/HANDOFF-DESKTOP.md bagian 4 dan
  * docs/superpowers/specs/2026-07-28-parser-glp039-design.md untuk aturan
  * bisnis lengkap. Tanpa DOM, tanpa dependency eksternal.
+ *
+ * PERINGATAN: lapisan unzip/XML (_unzipSheet, _parseSheetXml,
+ * _parseSharedStrings) belum pernah diuji dengan berkas GLP039/SAKTI asli --
+ * baru diuji dengan data acuan hasil ekstraksi manual dan ZIP buatan sendiri
+ * (Node, deflate sungguhan). WAJIB dicoba dengan berkas GLP039 asli pertama
+ * kali sebelum dipakai di layar produksi (tugas Unggah GLP039, urutan-8).
  */
 
 /* --- Lapisan 1: baca struktur ZIP standar, bongkar isi berkas terkait --- */
@@ -6101,8 +6107,15 @@ function _parseSheetXml(sheetXml, sharedStringsXml){
           throw new Error('Rujukan teks bersama (sharedStrings) tidak ditemukan untuk sel ' + col + rowNum + '.');
         value = shared[idx];
       } else if (type === 'inlineStr'){
-        var tM = /<t[^>]*>([\s\S]*?)<\/t>/.exec(inner);
-        value = tM ? _decodeXmlEntities(tM[1]) : '';
+        // Sel inlineStr bisa berisi beberapa <r><t>...</t></r> (multi-run,
+        // biasanya teks panjang/diformat campuran) -- loop & gabungkan semua
+        // run, sama pola dengan _parseSharedStrings di bawah. Jangan pakai
+        // .exec() non-global di sini, itu cuma ambil run pertama dan
+        // memotong sisa teks tanpa peringatan (mis. "JUMLAH SELURUHNYA" jadi
+        // "JUMLAH " saja).
+        var tRe2 = /<t[^>]*>([\s\S]*?)<\/t>/g, tm2, text2 = '';
+        while ((tm2 = tRe2.exec(inner))) text2 += tm2[1];
+        value = _decodeXmlEntities(text2);
       } else {
         var vM = /<v>([^<]*)<\/v>/.exec(inner);
         value = vM && vM[1] !== '' ? parseFloat(vM[1]) : null;
@@ -6196,7 +6209,17 @@ function _turunkanHierarki(rawRows){
       pagu: totalPaguBerkas,
       realisasiSd: Math.round(realSdTotal || 0),
       serapan: totalPaguBerkas > 0 ? (realSdTotal / totalPaguBerkas) : 0,
-      sisa: Math.round((ringkasanRow.AD !== undefined ? ringkasanRow.AD : 0) || 0),
+      // sisaBerkas -- nilai mentah kolom AD ("Sisa anggaran") apa adanya dari
+      // berkas, HANYA untuk referensi/pembanding. BUKAN sisaTersedia resmi --
+      // docs/HANDOFF-DESKTOP.md bagian 4 tegas bilang kolom AD/AE diabaikan
+      // dan dihitung ulang, karena rumus resmi butuh realisasiKas (SUM
+      // transaksi kas tunai) yang tidak tersedia di parser murni ini (data
+      // dari sheet lain di aplikasi). Konsumen di masa depan (tugas integrasi
+      // Anggaran) WAJIB menghitung sendiri:
+      //   sisaTersedia = pagu - lock - MAX(realisasiSd, realisasiKas)
+      // dari field pagu/lock/realisasiSd yang sudah disediakan di sini.
+      sisaBerkas: Math.round((ringkasanRow.AD !== undefined ? ringkasanRow.AD : 0) || 0),
+      lock: Math.round(ringkasanRow.S || 0),
       jumlahBaris: out.length,
       jumlahProgram: Object.keys(programSet).length,
       jumlahAkun: Object.keys(akunSet).length
