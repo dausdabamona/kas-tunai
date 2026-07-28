@@ -1030,7 +1030,7 @@ var CHIPS = [
 function renderChips(){
   var h = '';
   for (var i=0;i<CHIPS.length;i++)
-    h += '<button class="chip' + (FILTER===CHIPS[i].k?' on':'') + '" onclick="setFilter(' + JSON.stringify(CHIPS[i].k) + ')">' + esc(CHIPS[i].n) + '</button>';
+    h += '<button class="chip' + (FILTER===CHIPS[i].k?' on':'') + '" onclick="setFilter(' + aq(CHIPS[i].k) + ')">' + esc(CHIPS[i].n) + '</button>';
   $('trChips').innerHTML = h;
 }
 function setFilter(k){ FILTER = k; renderTransaksi(); }
@@ -2845,8 +2845,8 @@ function aqRender(){
                     + (it.pesan ? (': ' + esc(it.pesan)) : '') + '</span>')
                  : ' · menunggu kirim') + '</div></div>'
         + '<div style="text-align:right;white-space:nowrap">'
-        + '<button class="lnk" onclick="aqKirimItem(' + JSON.stringify(it.id) + ')">Kirim</button> '
-        + '<button class="lnk" style="color:var(--a2-700)" onclick="aqHapusItem(' + JSON.stringify(it.id) + ')">Hapus</button>'
+        + '<button class="lnk" onclick="aqKirimItem(' + aq(it.id) + ')">Kirim</button> '
+        + '<button class="lnk" style="color:var(--a2-700)" onclick="aqHapusItem(' + aq(it.id) + ')">Hapus</button>'
         + '</div></div>';
     }
     el.innerHTML = h;
