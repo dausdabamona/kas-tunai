@@ -277,6 +277,31 @@ Target sentuh/klik minimal 40px (tombol pil 40px, baris tabel ≈48px).
   Terbitkan SPBY (accent) · Pecah transaksi · Cetak kuitansi.
 
 ### 3b.3 Pagu & realisasi — tab Pencocokan (menggantikan tabel pohon v1)
+
+> **Acuan tampilan:** pengguna mengirim tangkapan layar prototipe (28 Jul 2026)
+> dan menyatakan "saya mengharapkan tampilan seperti ini". Detail di bawah yang
+> berasal dari tangkapan itu ditandai **[gbr]** — teks salinannya mengikat, bukan
+> perkiraan.
+
+**[gbr] Kepala halaman.** Judul "Pagu & realisasi"; subjudul satu baris
+`GLP039 Ketersediaan Dana Detail · 8 tingkat anggaran · versi 3 (25 Jul 2026)`.
+Aksi kanan atas dua pil: **"Ekspor selisih"** (ghost, berikon unduh) dan
+**"Unggah GLP039"** (accent, berikon unggah). Tombol Ekspor selisih belum
+tercatat di mana pun sebelumnya — ia mengekspor daftar selisih, bukan seluruh
+pagu; perilaku persisnya belum ditetapkan dan **wajib ditanyakan** saat tugas
+Selisih (urutan-7) dikerjakan.
+
+**[gbr] Subteks empat kartu statistik**, kalimatnya mengikat:
+Pagu revisi → `Lock pagu Rp 0` · Realisasi SAKTI → `66,67% dari pagu` ·
+Tercatat kas tunai → `Termasuk yang belum GUP` · Selisih → `4 titik perlu ditinjau`.
+Judul kartu pertama memuat kode simpul aktif (`PAGU REVISI — 521211`).
+
+**[gbr] Baris transaksi di panel kanan** memakai nomor transaksi bergaya
+`KT-2026-0142`, baris kedua `22 Jul · CV Mitra Bahari`, nilai disingkat
+(`Rp 2,5 jt`), dan pil status di kanan (`BELUM DRPP` / `DRPP 06` / `DRAFT HP`).
+Transaksi bermode draft HP boleh bernilai **`—`** (belum ada nominal) — jangan
+dirender `Rp 0`, karena nol dan belum-diisi bukan hal yang sama.
+
 Segmented pil 3 tab (kontainer `--color-neutral-200` padding 4px, opsi aktif
 accent putih): Pencocokan · Selisih & tindakan · Unggah GLP039.
 
