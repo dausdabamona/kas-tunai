@@ -293,10 +293,11 @@ var KasTunai = (function () {
         pajakTermasukPPN: String(r[n.PAJAK_TERMASUK_PPN] || '').toUpperCase() !== 'N',
         pajakAdaNpwp: String(r[n.PAJAK_ADA_NPWP] || '').toUpperCase() !== 'N',
         // Baris lama belum punya kolom ini -> hitung dari nilai - pajak (NETTO).
+        modeBayar: (String(r[n.MODE_BAYAR] || '').toUpperCase() === 'BRUTO') ? 'BRUTO' : 'NETTO',
         dibayarPenyedia: (r[n.DIBAYAR_PENYEDIA] === '' || r[n.DIBAYAR_PENYEDIA] == null)
-          ? hitungDibayarPenyedia(r[n.NOMINAL], r[n.PAJAK_PPH], r[n.PAJAK_PPN], 'NETTO')
-          : Util.num(r[n.DIBAYAR_PENYEDIA]),
-        modeBayar: 'NETTO'   // kolomnya menyusul di tugas 4
+          ? hitungDibayarPenyedia(r[n.NOMINAL], r[n.PAJAK_PPH], r[n.PAJAK_PPN],
+              (String(r[n.MODE_BAYAR] || '').toUpperCase() === 'BRUTO') ? 'BRUTO' : 'NETTO')
+          : Util.num(r[n.DIBAYAR_PENYEDIA])
       };
     });
   }
@@ -318,7 +319,8 @@ var KasTunai = (function () {
     var hit = _findNotaRow(transactionId, urutan);
     if (!hit) return;
     var n = NC(), r = hit.values;
-    var bayar = hitungDibayarPenyedia(r[n.NOMINAL], r[n.PAJAK_PPH], r[n.PAJAK_PPN], 'NETTO');
+    var mode = String(r[n.MODE_BAYAR] || 'NETTO').toUpperCase() === 'BRUTO' ? 'BRUTO' : 'NETTO';
+    var bayar = hitungDibayarPenyedia(r[n.NOMINAL], r[n.PAJAK_PPH], r[n.PAJAK_PPN], mode);
     SheetRepo.ensureMinCols(CONFIG.SHEETS.MULTI_NOTA, CONFIG.HEADERS.MULTI_NOTA.length);
     SheetRepo.setCells(CONFIG.SHEETS.MULTI_NOTA, hit.rowIndex, Util.set(n.DIBAYAR_PENYEDIA, bayar));
     DeferredFlush.mark();
@@ -609,7 +611,8 @@ var KasTunai = (function () {
       n.PAJAK_PPH,           Util.num(d.pph),
       n.PAJAK_PPN,           Util.num(d.ppn),
       n.PAJAK_TERMASUK_PPN,  (d.termasukPPN === false ? 'N' : 'Y'),
-      n.PAJAK_ADA_NPWP,      (d.adaNpwp === false ? 'N' : 'Y')));
+      n.PAJAK_ADA_NPWP,      (d.adaNpwp === false ? 'N' : 'Y'),
+      n.MODE_BAYAR,          (String(d.modeBayar||'NETTO').toUpperCase()==='BRUTO' ? 'BRUTO' : 'NETTO')));
     DeferredFlush.mark();
     // Pajak berubah -> nilai yang boleh diserahkan ke penyedia ikut berubah.
     _recalcDibayarNota(transactionId, urutan);

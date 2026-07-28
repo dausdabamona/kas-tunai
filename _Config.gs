@@ -94,8 +94,12 @@ var CONFIG = {
       // Uang yang benar-benar diserahkan ke penyedia. Disimpan, bukan dihitung
       // ulang saat tampil, supaya angka historisnya tidak ikut berubah bila
       // pajaknya disunting belakangan. Kosong pada baris lama -> dihitung
-      // dari NOMINAL - pajak (mode NETTO). Kolom MODE_BAYAR menyusul di tugas 4.
-      'DIBAYAR_PENYEDIA'
+      // dari NOMINAL - pajak (mode NETTO).
+      'DIBAYAR_PENYEDIA',
+      // NETTO = pajak ditahan bendahara, toko terima nilai - pajak.
+      // BRUTO = toko terima nilai penuh, pajak disetor dari sumber lain.
+      // Kosong pada baris lama dibaca sebagai NETTO.
+      'MODE_BAYAR'
     ],
     FOTO_NOTA: [
       'NO_TRANSAKSI', 'NOTA_ID', 'URUTAN', 'FILE_ID', 'NAMA_FILE', 'URL_FILE',
