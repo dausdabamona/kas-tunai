@@ -1726,11 +1726,16 @@ function _railBadge(idMenu, n){
   if(!b){ b=document.createElement('span'); b.className='rail-badge'; el.appendChild(b); }
   b.textContent=String(+n);
 }
-/* Jumlah transaksi yang muncul di chip "Belum SPJ". Memakai ulang predikat
-   passFilter case 'belum' + _notTransfer — jangan menulis kriteria kedua. */
+/* Jumlah transaksi yang muncul di chip "Belum SPJ" pada layar Transaksi.
+   Predikatnya WAJIB sama persis dengan penyaring renderList: kredit>0,
+   bukan Pindah Dana, dan belum lunas notanya. Bila salah satu syarat
+   hilang, angka di rail akan berbeda dari isi layar. */
 function _jumlahBelumSpj(){
   var n=0, i, L=window.allTransaksi||[];
-  for(i=0;i<L.length;i++) if(_notTransfer(L[i]) && !isNotaLunas(L[i])) n++;
+  for(i=0;i<L.length;i++){
+    var t=L[i];
+    if((+t.kredit||0)>0 && _notTransfer(t) && !isNotaLunas(t)) n++;
+  }
   return n;
 }
 /* Buka/tutup menu akun (Kelola User/Pengaturan/Keluar) di kaki rail. */
