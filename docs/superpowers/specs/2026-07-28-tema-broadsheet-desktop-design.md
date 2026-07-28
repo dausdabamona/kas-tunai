@@ -56,6 +56,25 @@ warna Broadsheet akan menggeser 125 pemakaian sekaligus tetapi meninggalkan 263
 warna hardcoded pada nilai lama — hasilnya latar `#f3f2f2` bertabrakan dengan
 judul `#0f766e`, pada aplikasi yang dipakai harian memegang saldo puluhan juta.
 
+> **Koreksi 28 Jul 2026, ditemukan saat menulis rencana.** Versi pertama bagian
+> ini menjanjikan "sebuah layar selalu utuh-lama atau utuh-baru". **Janji itu
+> tidak bisa ditepati** dan sudah dicabut. Sebabnya terukur: **155 dari 263 warna
+> aplikasi (59%) berada di satu blok CSS bersama** (`index.html:11-272` — `.card`,
+> `.btn`, `.chip`, `.row1`, tabel, tipografi) yang dipakai keenam layar.
+> Mengonversi `.card` mengonversinya di semua layar sekaligus.
+>
+> Satu-satunya cara menepati janji itu adalah menyekat setiap kelas bersama per
+> layar (`#viewTransaksi .card{...}`) — melipatgandakan CSS, memicu perang
+> spesifisitas, dan harus dibongkar lagi kemudian. Ditolak: obatnya lebih buruk
+> daripada penyakitnya.
+>
+> **Yang berlaku sebagai gantinya:** blok CSS bersama dikonversi di langkah 1
+> bersama kerangka. Sesudah itu **dasar semua layar sudah Broadsheet** — latar,
+> kartu, tombol, tabel, tipografi. Yang tersisa hanya chip, pil, dan warna inline
+> khas tiap layar (±108 warna), yang dibereskan pada giliran layarnya. Keadaan
+> antaranya bukan tampilan rusak, melainkan beberapa lencana yang belum ikut
+> berubah.
+
 ### 1b. Token yang perlu ditambahkan
 
 Sudah ada 12: `--bs-bg --bs-ink --bs-paper --bs-ac --bs-ac7 --bs-ac1 --bs-a2
@@ -83,7 +102,8 @@ Tiap langkah satu commit yang bisa dibatalkan sendiri:
 
 ```
 1. Kerangka        token dilengkapi, bar atas, penamaan & urutan menu,
-                   latar body, breakpoint rail <1366px
+                   latar body, breakpoint rail <1366px,
+                   DAN blok CSS bersama index.html:11-272 (lihat koreksi 1a)
 2. Transaksi       layar tersibuk; sekaligus penguji apakah pendekatannya benar
 3. Nota Kena Pajak
 4. Pagu & realisasi (layar "Ketersediaan Dana" yang sudah ada)
