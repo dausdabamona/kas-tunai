@@ -194,6 +194,9 @@
   .grid2.mini{grid-template-columns:repeat(3,1fr);gap:8px}
   .grid2.mini .ph{aspect-ratio:1;border-radius:12px;font-size:12px}
   .grid2.mini .ph .del{width:28px;height:28px;top:5px;right:5px;font-size:13px}
+  .phWrap{display:flex;flex-direction:column}
+  .ketFoto{width:100%;margin-top:4px;border:none;border-bottom:1px solid var(--n400);background:none;
+    font-family:var(--fb);font-size:11px;color:var(--ink);padding:3px 0}
 
   /* Baris antrean dibedakan tegas dari transaksi yang sudah tersimpan. */
   .row.antre{border-left:3px solid var(--a2);padding-left:9px;background:var(--a2-100)}
@@ -3299,11 +3302,19 @@ function ntRenderFoto(){
     a += '<div class="ph">' + _ntImgDrive(NT.lamaA.fileId)
        + '<button class="tukar" onclick="ntAmbil(\'nota\')">&#8646; ganti</button></div>';
   a += _ntPetakBaru(NT.fotoNota, 'nota');
-  // --- Bukti B: foto bertag yang sudah terunggah, bisa dihapus satu per satu ---
+  // --- Bukti B: foto bertag yang sudah terunggah — bisa diganti, diberi
+  // keterangan, atau dihapus. Kotak keterangan HARUS di luar .ph (bukan di
+  // dalamnya): .ph sudah dipenuhi tombol posisi absolut (.tukar di bawah,
+  // .del di pojok), jadi kotak teks butuh .phWrap sebagai elemen normal
+  // terpisah di bawah foto supaya tidak tertindih/terpotong overflow:hidden.
   for (i=0;i<NT.lamaB.length;i++)
-    b += '<div class="ph">' + _ntImgDrive(NT.lamaB[i].fileId)
+    b += '<div class="phWrap"><div class="ph">' + _ntImgDrive(NT.lamaB[i].fileId)
+       + '<button class="tukar" onclick="ntGantiFotoB('+i+')">&#8646; ganti</button>'
        + '<button class="del" onclick="ntHapusFotoServer('+i+')" aria-label="Hapus">'
-       + '<i class="ph-duotone ph-trash"></i></button></div>';
+       + '<i class="ph-duotone ph-trash"></i></button></div>'
+       + '<input class="ketFoto" placeholder="Keterangan foto" '
+       +   'value="' + esc(NT.lamaB[i].keterangan||'') + '" '
+       +   'onblur="ntSimpanKeteranganB('+i+',this.value)"></div>';
   b += _ntPetakBaru(NT.fotoBarang, 'barang');
   $('ntFotoNota').innerHTML = a;
   $('ntFotoBarang').innerHTML = b;
