@@ -182,6 +182,13 @@
   .grid2.mini .ph{aspect-ratio:1;border-radius:12px;font-size:12px}
   .grid2.mini .ph .del{width:28px;height:28px;top:5px;right:5px;font-size:13px}
 
+  /* ===== Akibat uang pada layar pajak ===== */
+  .akibat{margin-top:14px;border:1px solid var(--n300);border-radius:14px;overflow:hidden}
+  .akibat .ar{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:12px 14px;font-size:14.5px}
+  .akibat .ar+.ar{border-top:1px solid var(--n200)}
+  .akibat .ar b{font-family:var(--fh);font-size:18px;font-variant-numeric:tabular-nums}
+
   /* ===== Penampil foto & bilah pulihkan ===== */
   .lf{position:fixed;inset:0;z-index:60;background:rgba(20,19,18,.94);display:flex;
     flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px}
@@ -441,6 +448,14 @@
     <div class="val" id="pjPph">—</div>
   </div>
 
+  <div class="f" style="margin-top:18px"><label>Uang pajaknya bagaimana?</label>
+    <select id="pjMode" onchange="pjPilihMode()">
+      <option value="NETTO">Ditahan bendahara — toko dibayar setelah dipotong</option>
+      <option value="BRUTO">Toko dibayar penuh — pajak disetor dari uang lain</option>
+    </select>
+    <div class="hint" id="pjModeHint">—</div>
+  </div>
+
   <div class="prow">
     <div class="kiri"><div class="nm">Rekanan ber-NPWP</div>
       <div class="sub">Bila tidak, tarif PPh 22/23 dikenakan dua kali lipat</div></div>
@@ -448,9 +463,12 @@
   </div>
 
   <div class="totp"><span class="lb">Total potongan</span><span class="vl" id="pjTotal">—</span></div>
-  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:10px">
-    <span style="font-size:15px;color:var(--n700)">Dibayar ke penyedia</span>
-    <span class="num" style="font-size:20px" id="pjNetto">—</span>
+  <div class="akibat">
+    <div class="ar"><span id="pjLbl1">Serahkan ke toko</span><b id="pjNetto">—</b></div>
+    <div class="ar"><span id="pjLbl2">Tahan untuk disetor</span><b id="pjTahan">—</b></div>
+  </div>
+  <div style="display:none">
+    <span class="num" id="pjNettoDummy">—</span>
   </div>
 
   <div class="strip" style="margin-top:16px">Pajak melekat pada nota ini (penyedianya), bukan pada transaksi.
@@ -1053,7 +1071,36 @@ function detailNeraca(t, notas){
       + (b.lunas ? '&#10003; Dipertanggungjawabkan penuh'
                  : '&#8987; Belum lunas — kurang ' + rp(Math.max(0, b.target - b.sNota - b.sKembaliSisa)))
       + '</div>';
-  return h + '</div>';
+  return h + '</div>' + detailPajak(t, notas);
+}
+/* Ringkasan pajak satu transaksi: mana yang uangnya sudah ditarik dan mana
+   yang harus disetor dari sumber lain — keduanya sama-sama wajib disetor. */
+function detailPajak(t, notas){
+  var b = hitungNeraca(t, notas, null);
+  if (!b.sPajak) return '';
+  var pph = 0, ppn = 0, i, rincian = '';
+  for (i=0;i<notas.length;i++){
+    var n = notas[i], p = (+n.pajakPph||0) + (+n.pajakPpn||0);
+    pph += (+n.pajakPph||0); ppn += (+n.pajakPpn||0);
+    if (!p) continue;
+    var ref = pjRef(n.pajakKatIdx==null ? -1 : +n.pajakKatIdx);
+    var brt = (String(n.modeBayar||'NETTO').toUpperCase()==='BRUTO');
+    rincian += '<div class="prow"><div class="kiri"><div class="nm">' + esc(n.namaPenyedia||('Nota '+n.urutan)) + '</div>'
+      + '<div class="sub">' + esc(ref.jenisPPh || 'Tanpa PPh')
+      + (ref.mapPPh ? (' · MAP ' + esc(ref.mapPPh) + ' / KJS ' + esc(ref.kjsPPh)) : '')
+      + ' · ' + (brt ? 'disetor dari sumber lain' : 'uangnya sudah ditahan') + '</div></div>'
+      + '<div style="text-align:right"><div class="val" style="font-size:15px">' + rp(p) + '</div>'
+      + '<button class="lnk" style="font-size:12.5px" onclick="cetakBuktiPotong('
+      + JSON.stringify(String(t.no)) + ',' + JSON.stringify(String(n.urutan)) + ')">Bukti potong</button></div></div>';
+  }
+  return '<div class="neraca" style="margin-top:14px">'
+    + '<div class="kick" style="margin-bottom:6px">Pajak transaksi ini</div>'
+    + _dtBaris('Total PPh', pph, 'Seluruh nota')
+    + _dtBaris('Total PPN', ppn, 'Seluruh nota')
+    + _dtBaris('Uangnya sudah ditahan', b.sPajakDitarik, 'Ada di bendahara, tinggal disetor', true)
+    + _dtBaris('Harus disetor dari sumber lain', b.sPajakLuarUM,
+        b.sPajakLuarUM ? 'Nota bermode bayar penuh' : 'Tidak ada')
+    + rincian + '</div>';
 }
 /* Penampil foto ukuran penuh. cbHapus opsional -> tombol Hapus ikut muncul. */
 var LIHAT_CB = null;
@@ -1077,11 +1124,16 @@ function detailNota(t, notas){
     + (isKeluar(t) ? ' Catat notanya setelah PUM mengembalikan pertanggungjawaban.' : '') + '</div>';
   for (var i=0;i<notas.length;i++){
     var n = notas[i];
-    var pjk = (n.pajakKatIdx!==null && n.pajakKatIdx!==undefined)
+    var sudahPajak = (n.pajakKatIdx!==null && n.pajakKatIdx!==undefined);
+    var pjk = sudahPajak
       ? (((+n.pajakPph||0)+(+n.pajakPpn||0))>0
-          ? ('Dipotong ' + rp((+n.pajakPph||0)+(+n.pajakPpn||0)))
+          ? ('Dipotong ' + rp((+n.pajakPph||0)+(+n.pajakPpn||0))
+             + (String(n.modeBayar||'NETTO').toUpperCase()==='BRUTO' ? ' · dibayar penuh' : ''))
           : 'Bebas pajak')
       : '<span style="color:var(--a2)">Pajak belum diisi</span>';
+    // Tebak kategorinya; bila objek pajak tapi belum diisi, tandai — jangan blokir.
+    var dugaan = sudahPajak ? null : pjRef(klasifikasiPajak(pjTeksKlasifikasi(t, n)));
+    var perluPajak = !!(dugaan && (dugaan.jenisPPh || dugaan.ppn > 0));
     h += '<div class="notaBlk">'
       + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">'
       +   '<div style="flex:1;min-width:0">'
@@ -1104,7 +1156,12 @@ function detailNota(t, notas){
     for (d=0; d<fpn.length && d<6; d++) if (fpn[d].fileId) fb += _dtTile(fpn[d].fileId, fpn[d].urlFile);
     var jmlA = n.fileId ? 1 : 0, jmlB = det.length + fpn.length;
     // Nota tanpa scan notanya = SPJ pasti ditolak. Tandai keras di kartunya.
-    h += (jmlA ? '' :
+    h += (perluPajak
+        ? ('<div class="banner" style="margin-top:10px"><i class="ph-duotone ph-percent"></i>'
+           + '<span>Sepertinya objek pajak (' + esc(dugaan.label) + ') tetapi belum diisi. '
+           + 'Buka <b>Potongan pajak</b> untuk memastikan.</span></div>')
+        : '')
+      + (jmlA ? '' :
         '<div class="banner" style="margin-top:10px"><i class="ph-duotone ph-warning"></i>'
         + '<span>Belum ada foto nota. SPJ akan ditolak tanpa scan notanya.</span></div>')
       +  '<div class="kick" style="margin-top:10px">Bukti A — nota · ' + jmlA + ' foto</div>'
@@ -1655,10 +1712,89 @@ function _htmlTandaTerima(t){
   +'</div></body></html>';
 }
 
+/* ===================== Bukti potong pajak per nota =====================
+ * Diberikan kepada penyedia sebagai tanda uangnya dipotong dan akan disetor
+ * bendahara ke kas negara. Identitas satker & pejabat dari serverGetInstansi,
+ * bukan ditulis mati.                                                       */
+function cetakBuktiPotong(no, urutan){
+  var t = null, n = null, i;
+  for (i=0;i<TX.length;i++) if (String(TX[i].no)===String(no)) { t = TX[i]; break; }
+  for (i=0;i<NOTAS.length;i++) if (String(NOTAS[i].urutan)===String(urutan)) { n = NOTAS[i]; break; }
+  if (!t || !n){ toast('Nota tidak ditemukan', true); return; }
+  if (((+n.pajakPph||0) + (+n.pajakPpn||0)) <= 0){ toast('Nota ini tidak dipotong pajak', false); return; }
+  muatInstansi(function(){ _bukaCetak(_htmlBuktiPotong(t, n)); });
+}
+function _htmlBuktiPotong(t, n){
+  var I = INSTANSI || {};
+  var ref = pjRef(n.pajakKatIdx==null ? -1 : +n.pajakKatIdx);
+  var pph = +n.pajakPph||0, ppn = +n.pajakPpn||0, dpp = +n.pajakDpp||0;
+  var thn = String(t.tanggal||'').split('-')[0] || '';
+  var noDok = 'KP-' + ('00'+t.no).slice(-3) + '-' + n.urutan + '/' + thn;
+  var bruto = (String(n.modeBayar||'NETTO').toUpperCase()==='BRUTO');
+  function br(l, v, ket){
+    return '<tr><td class="l">'+esc(l)+'</td><td class="c">:</td><td>'+v
+      + (ket?('<div class="ket">'+esc(ket)+'</div>'):'') + '</td></tr>';
+  }
+  return ''
+  +'<html><head><meta charset="utf-8"><title>'+esc('Bukti Potong '+noDok)+'</title><style>'
+  +'@page{size:A4 portrait;margin:0} *{font-family:Arial,sans-serif;box-sizing:border-box}'
+  +'body{font-size:12.5px;color:#000;margin:0} .page{padding:16mm}'
+  +'.kop{text-align:center;line-height:1.3} .kop .k1{font-size:11px} .kop .k2{font-size:11.5px;font-weight:bold}'
+  +'.kop .k3{font-size:15px;font-weight:bold} .kop .ad{font-size:9.5px;margin-top:2px}'
+  +'.hrt{border:0;border-top:2.2px solid #000;margin:5px 0 0}'
+  +'.judul{text-align:center;font-weight:bold;font-size:16px;letter-spacing:2px;margin:16px 0 2px}'
+  +'.nomor{text-align:center;font-size:12px;margin-bottom:14px}'
+  +'.b{border-collapse:collapse;width:100%;margin-bottom:12px} .b td{border:1px solid #000;padding:7px 9px;vertical-align:top}'
+  +'.b .l{width:36%;font-weight:bold} .b .c{width:12px;text-align:center}'
+  +'.b .ket{font-size:10.5px;color:#444;margin-top:2px}'
+  +'.tot{background:#dcdcdc;font-weight:bold;font-size:14px}'
+  +'.cat{font-size:11px;border:1px solid #999;padding:8px 10px;border-radius:4px;margin-bottom:14px}'
+  +'.sig{width:100%;border-collapse:collapse;margin-top:16px;font-size:11.5px;text-align:center}'
+  +'.sig td{width:50%;padding:6px 8px;vertical-align:top} .sig .nm{margin-top:52px;font-weight:bold}'
+  +'.sig .nip{font-size:10.5px}'
+  +'.noprint{padding:10px 16mm 0;text-align:right}@media print{.noprint{display:none}}'
+  +'</style></head><body>'
+  +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button></div>'
+  +'<div class="page">'
+  +'<div class="kop"><div class="k1">'+esc(I.kementerian||'')+'</div>'
+  +'<div class="k2">'+esc(I.eselon1||'')+'</div>'
+  +'<div class="k3">'+esc(I.satker||I.namaWP||'')+'</div>'
+  +'<div class="ad">'+esc(I.kopAlamat||'')+'</div></div><hr class="hrt">'
+  +'<div class="judul">BUKTI PEMOTONGAN PAJAK</div>'
+  +'<div class="nomor">Nomor: '+esc(noDok)+'</div>'
+  +'<table class="b">'
+  + br('Dipotong dari', esc(n.namaPenyedia||'-'), n.alamat||'')
+  + br('NPWP', esc(n.npwp || '—'), n.npwp ? '' : 'Tanpa NPWP — tarif PPh dikenakan dua kali lipat')
+  + br('Atas transaksi', esc(t.kegiatan||'-'), 'Nota ke-' + esc(String(n.urutan)) + ' · No transaksi ' + esc(String(t.no)))
+  + br('Tanggal nota', esc(tglPanjang(n.tglNota || t.tanggal)), '')
+  + br('Nilai nota (bruto)', rp(n.nilai), '')
+  + br('Dasar Pengenaan Pajak', rp(dpp), '')
+  +'</table>'
+  +'<table class="b">'
+  + (pph ? br(esc(ref.jenisPPh||'PPh'), rp(pph),
+      'Kode MAP ' + (ref.mapPPh||'-') + ' / KJS ' + (ref.kjsPPh||'-')) : '')
+  + (ppn ? br('PPN 11%', rp(ppn), 'Kode MAP 411211 / KJS 900') : '')
+  +'<tr><td class="tot" colspan="2">Jumlah dipotong</td><td class="tot">'+rp(pph+ppn)+'</td></tr>'
+  +'</table>'
+  +'<div class="cat">'
+  + (bruto
+      ? 'Penyedia menerima pembayaran <b>penuh</b> sebesar ' + rp(n.nilai)
+        + '. Pajak sebesar ' + rp(pph+ppn) + ' disetor ke kas negara dari sumber dana lain.'
+      : 'Penyedia menerima <b>' + rp(n.dibayarPenyedia) + '</b> (nilai nota dikurangi pajak). '
+        + 'Pajak sebesar ' + rp(pph+ppn) + ' ditahan Bendahara Pengeluaran dan disetor ke kas negara.')
+  +'</div>'
+  +'<table class="sig"><tr>'
+  +'<td>Penyedia / Rekanan,<div class="nm">'+esc(n.namaPenyedia||'(…………………)')+'</div></td>'
+  +'<td>'+esc(I.kota||'Sorong')+', '+esc(tglPanjang(t.tanggal))+'<br>Bendahara Pengeluaran,'
+  +'<div class="nm">'+esc(I.bendahara||'')+'</div><span class="nip">NIP. '+esc(I.nipBendahara||'')+'</span></td>'
+  +'</tr></table>'
+  +'</div></body></html>';
+}
+
 /* ===================== Potongan pajak per nota (Tahap 3) ===================== */
 /* Rumus mengikuti mesin pajak versi desktop supaya kedua tampilan konsisten:
    netto ke rekanan = nilai nota − PPh − PPN (bendahara memungut keduanya).   */
-var PJ = { no:null, urutan:null, nota:null, inc:true, npwp:true, kat:-1 };
+var PJ = { no:null, urutan:null, nota:null, inc:true, npwp:true, kat:-1, mode:'NETTO' };
 /* Tabel kategori dari server (CONFIG.PAJAK_REF) — sama persis dengan desktop.
    Diisi saat muat(); selama kosong, layar pajak menolak dibuka daripada
    menghitung dengan acuan yang salah. */
@@ -1713,6 +1849,8 @@ function bukaPajak(no, urutan){
   PJ.kat = (n.pajakKatIdx===null || n.pajakKatIdx===undefined || n.pajakKatIdx < 0)
     ? klasifikasiPajak(pjTeksKlasifikasi(t, n))
     : +n.pajakKatIdx;
+  PJ.mode = (String(n.modeBayar||'NETTO').toUpperCase()==='BRUTO') ? 'BRUTO' : 'NETTO';
+  $('pjMode').value = PJ.mode;
   $('pjNota').textContent = 'Nota ' + urutan + ' — ' + (n.namaPenyedia||'(tanpa nama)') + (n.npwp?' · PKP':'');
   pjIsiKategori();
   hitungPajakUI();
@@ -1725,6 +1863,7 @@ function pjIsiKategori(){
   var sel = $('pjKat'); sel.innerHTML = h; sel.value = String(PJ.kat);
 }
 function pjPilihKategori(){ PJ.kat = parseInt($('pjKat').value,10); hitungPajakUI(); }
+function pjPilihMode(){ PJ.mode = ($('pjMode').value==='BRUTO') ? 'BRUTO' : 'NETTO'; hitungPajakUI(); }
 function pjToggle(k){ PJ[k] = !PJ[k]; hitungPajakUI(); }
 function hitungPajakUI(){
   var n = PJ.nota; if (!n) return;
@@ -1756,8 +1895,17 @@ function hitungPajakUI(){
           + (!PJ.npwp && r.x2 ? ' · non-NPWP ×2' : '')));
 
   $('pjTotal').textContent = rp(total);
-  $('pjNetto').textContent = rp(netto);
-  PJ._hasil = { dpp:r.dpp, ppn:r.ppn, pph:r.pph };
+  // Konsekuensi uangnya, bukan cuma angka pajak. Rumus mengikuti handoff bagian 2.
+  var bruto = (PJ.mode === 'BRUTO');
+  var diserahkan = bruto ? nilai : (nilai - total);
+  $('pjNetto').textContent = rp(diserahkan);
+  $('pjTahan').textContent = rp(total);
+  $('pjLbl1').textContent = 'Serahkan ke toko';
+  $('pjLbl2').textContent = bruto ? 'Setor dari sumber lain' : 'Tahan untuk disetor';
+  $('pjModeHint').textContent = bruto
+    ? 'Toko menerima nilai nota utuh. Uang pajaknya tidak diambil dari uang muka ini.'
+    : 'Toko menerima nilai nota dikurangi pajak. Uang pajaknya kembali ke bendahara untuk disetor.';
+  PJ._hasil = { dpp:r.dpp, ppn:r.ppn, pph:r.pph, diserahkan:diserahkan };
 }
 function simpanPajak(){
   if (!PJ.no || PJ.urutan===null){ toast('Nota belum dipilih', true); return; }
@@ -1773,7 +1921,8 @@ function simpanPajak(){
     .serverSimpanPajakNota(_tok, PJ.no, PJ.urutan, {
       katIdx: PJ.kat,               // kategori asli — sama dengan yang dipakai desktop
       dpp: h.dpp, pph: h.pph, ppn: h.ppn,
-      termasukPPN: PJ.inc, adaNpwp: PJ.npwp
+      termasukPPN: PJ.inc, adaNpwp: PJ.npwp,
+      modeBayar: PJ.mode
     });
 }
 

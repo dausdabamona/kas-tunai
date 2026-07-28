@@ -80,10 +80,10 @@ function serverGetDashboard(token) {
     // Bump kunci ke v3 agar kolom rekonsiliasi (No Kuitansi/DRPP/SPP) ikut ter-migrasi.
     // Naikkan versi kunci ini SETIAP KALI ada kolom baru di CONFIG.HEADERS,
     // kalau tidak migrasi header dilewati sampai cache 6 jam kedaluwarsa.
-    // v6 = kolom DIBAYAR_PENYEDIA di sheet Multi Nota.
-    if (!AppCache.get('hdr_fixed_v6')) {
+    // v6 = DIBAYAR_PENYEDIA, v7 = MODE_BAYAR di sheet Multi Nota.
+    if (!AppCache.get('hdr_fixed_v7')) {
       try { SheetRepo.ensureHeaders(); } catch (e) { Logger.log('[ensureHeaders] ' + e.message); }
-      AppCache.put('hdr_fixed_v6', 1);
+      AppCache.put('hdr_fixed_v7', 1);
     }
     var role = auth.role;
     var full = (role === 'admin' || role === 'full');
