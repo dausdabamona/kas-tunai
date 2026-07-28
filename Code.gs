@@ -551,6 +551,9 @@ function serverUploadFotoNota(token, noTransaksi, notaId, fotoArr) {
 function serverHapusFotoNota(token, noTransaksi, notaId, urutan) {
   return _run(token, function (auth) { return FotoNota.hapusFotoNota(noTransaksi, notaId, urutan); });
 }
+function serverUpdateFotoNota(token, noTransaksi, notaId, urutan, data) {
+  return _run(token, function (auth) { return FotoNota.updateFotoNota(noTransaksi, notaId, urutan, data); });
+}
 function serverGetNotaDanFoto(token, noTransaksi) {
   return _run(token, function (auth) { return FotoNota.getNotaDanFoto(noTransaksi); });
 }

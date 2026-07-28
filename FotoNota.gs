@@ -98,6 +98,28 @@ var FotoNota = (function () {
     return { success: true };
   }
 
+  /** Ganti gambar dan/atau keterangan satu foto nota yang sudah tersimpan. */
+  function updateFotoNota(noTransaksi, notaId, urutan, data) {
+    var c = FC();
+    var rows = findRows(CONFIG.SHEETS.FOTO_NOTA, function (r) {
+      return String(r[c.NO_TRANSAKSI]) === String(noTransaksi) &&
+             String(r[c.NOTA_ID]) === String(notaId) &&
+             String(r[c.URUTAN]) === String(urutan) && !isDeleted(r[c.IS_DELETED]);
+    });
+    if (!rows.length) throw new Error('Foto nota tidak ditemukan');
+    var hit = rows[0];
+    var upd = Util.set(c.KETERANGAN, (data && data.keterangan) || '');
+    if (data && data.file && data.file.base64) {
+      var oldFileId = hit.values[c.FILE_ID];
+      var up = DriveHelper.upload(data.file, {noTransaksi: noTransaksi});
+      upd[c.FILE_ID] = up.fileId; upd[c.NAMA_FILE] = up.namaFile; upd[c.URL_FILE] = up.url;
+      if (oldFileId) DriveHelper.trash(oldFileId);
+    }
+    SheetRepo.setCells(CONFIG.SHEETS.FOTO_NOTA, hit.rowIndex, upd);
+    DeferredFlush.mark();
+    return { success: true };
+  }
+
   /**
    * Ambil semua nota + foto-nya untuk satu transaksi sekaligus.
    * @return {{notas:Array, fotoPerNota:Object}}
@@ -160,6 +182,7 @@ var FotoNota = (function () {
     getFotoNota: getFotoNota,
     uploadFotoNota: uploadFotoNota,
     hapusFotoNota: hapusFotoNota,
+    updateFotoNota: updateFotoNota,
     getNotaDanFoto: getNotaDanFoto,
     getSpjData: getSpjData
   };
