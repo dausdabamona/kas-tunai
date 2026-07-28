@@ -4,3 +4,10 @@ kuitansi-preview.html
 ui-preview.html
 spj-preview.html
 spd-preview.html
+
+# Alat uji, bukan dependency aplikasi. Playwright dipasang sementara saat
+# verifikasi UI lalu dihapus; aplikasi GAS tidak boleh punya dependency baru
+# (CLAUDE.md). Jangan pernah dikomit.
+node_modules/
+package-lock.json
+package.json
