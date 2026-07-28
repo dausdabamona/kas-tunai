@@ -182,6 +182,21 @@
   .grid2.mini .ph{aspect-ratio:1;border-radius:12px;font-size:12px}
   .grid2.mini .ph .del{width:28px;height:28px;top:5px;right:5px;font-size:13px}
 
+  /* ===== Neraca transaksi ===== */
+  .neraca{margin-top:18px;border:1px solid var(--n300);border-radius:16px;padding:14px 16px}
+  .nrow{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;min-height:44px;padding:6px 0}
+  .nrow .kiri{flex:1;min-width:0}
+  .nrow .nm{font-size:14.5px}
+  .nrow .nm.kuat{font-weight:600}
+  .nrow .sub{font-size:12px;color:var(--n600);margin-top:2px}
+  .nrow .val{font-family:var(--fh);font-size:16px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .nrow .val.kuat{font-weight:600}
+  .nrow .val.negatif{color:var(--a2)}
+  .nrow.akhir{border-top:2px solid var(--ink);margin-top:6px;padding-top:10px}
+  .nstatus{margin-top:12px;border-radius:10px;padding:9px 12px;font-size:13.5px;text-align:center}
+  .nstatus.ok{background:var(--ac1);color:var(--ac7)}
+  .nstatus.belum{background:var(--a2-100);color:var(--a2-700)}
+
   /* ===== Pajak & Pengembalian ===== */
   .prow{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;
     border-top:1px solid var(--n200);padding:8px 0}
@@ -907,7 +922,7 @@ function bukaDetail(no){
   google.script.run
     .withSuccessHandler(function(d){
       NOTAS = (d && d.notas) || []; FOTO_NOTA = (d && d.fotoPerNota) || {};
-      $('dtIsi').innerHTML = detailKepala(t) + detailNota(t, NOTAS);
+      $('dtIsi').innerHTML = detailKepala(t) + detailNeraca(t, NOTAS) + detailNota(t, NOTAS);
     })
     .withFailureHandler(function(e){ $('dtIsi').innerHTML = detailKepala(t) + '<div class="empty">Gagal memuat nota.</div>'; gagal(e); })
     .serverGetNotaDanFoto(_tok, no);
@@ -930,6 +945,90 @@ function detailKepala(t){
     +   '<span class="k">SPBY</span><span>' + spby + '</span>'
     +   '<span class="k">Status rekon</span><span>' + rekonTxt + '</span>'
     + '</div>';
+}
+/* ===================== Neraca transaksi =====================
+ * SATU-SATUNYA penghitung. Rumusnya ada di docs/HANDOFF-MOBILE.md bagian 2;
+ * tugas 3, 4, dan 5 memanggil fungsi ini, tidak menghitung sendiri.
+ *
+ * @param t      transaksi
+ * @param notas  daftar nota (butuh nilai, pajakPph, pajakPpn, dibayarPenyedia, modeBayar)
+ * @param kmb    daftar pengembalian; bila null dipakai t.kembalianTotal
+ *               (kolom JENIS baru lahir di tugas 5 — untuk sekarang semua SISA)
+ */
+function hitungNeraca(t, notas, kmb){
+  t = t || {}; notas = notas || [];
+  var um = (+t.uangDiserahkan > 0) ? (+t.uangDiserahkan) : (+t.kredit || 0);
+  var sNota = 0, sPajak = 0, sDibayar = 0, sDitarik = 0, i;
+  for (i=0;i<notas.length;i++){
+    var n = notas[i];
+    var nilai = +n.nilai || 0;
+    var pajak = (+n.pajakPph || 0) + (+n.pajakPpn || 0);
+    var bruto = (String(n.modeBayar||'NETTO').toUpperCase() === 'BRUTO');
+    // Nilai tersimpan dipakai apa adanya; baris lama yang belum punya kolomnya
+    // dihitung dari nilai - pajak, sama dengan rumus di server.
+    var dibayar = (n.dibayarPenyedia === undefined || n.dibayarPenyedia === null || n.dibayarPenyedia === '')
+      ? (bruto ? nilai : nilai - pajak)
+      : (+n.dibayarPenyedia || 0);
+    sNota += nilai; sPajak += pajak; sDibayar += dibayar;
+    sDitarik += bruto ? 0 : pajak;
+  }
+  var sKembaliSisa = 0;
+  if (kmb){
+    for (i=0;i<kmb.length;i++)
+      if (String(kmb[i].jenis||'SISA').toUpperCase() !== 'TITIPAN_PAJAK') sKembaliSisa += (+kmb[i].nilai||0);
+  } else sKembaliSisa = +t.kembalianTotal || 0;
+
+  // SENGAJA memakai ΣNota (bruto), bukan ΣDibayar. Pada mode NETTO uang pajak
+  // tidak sampai ke toko tetapi kembali ke bendahara sebagai titipan pajak —
+  // itu bukan sisa uang muka. Bila ikut dikurangkan, sisanya berkurang dua kali
+  // dan transaksi terlihat lunas padahal belum.
+  var sisaPUM = um - sNota - sKembaliSisa;
+  var target = (+t.nilaiSpby > 0) ? (+t.nilaiSpby) : um;
+  return {
+    um: um, sNota: sNota, sPajak: sPajak, sDibayar: sDibayar,
+    sPajakDitarik: sDitarik, sPajakLuarUM: sPajak - sDitarik,
+    sKembaliSisa: sKembaliSisa, sisaPUM: sisaPUM,
+    target: target, lunas: (target > 0 && (sNota + sKembaliSisa) >= target)
+  };
+}
+function _dtBaris(label, nilai, ket, tebal){
+  return '<div class="nrow"><div class="kiri"><div class="nm'+(tebal?' kuat':'')+'">'+esc(label)+'</div>'
+    + (ket ? ('<div class="sub">'+esc(ket)+'</div>') : '')
+    + '</div><div class="val'+(tebal?' kuat':'')+'">'+rp(nilai)+'</div></div>';
+}
+/* Panel neraca. Baris bernilai nol TETAP ditampilkan dengan keterangan —
+   angka yang hilang membuat bendahara ragu apakah belum diisi atau memang nol. */
+function detailNeraca(t, notas){
+  var b = hitungNeraca(t, notas, null);
+  var h = '<div class="neraca">'
+    + '<div class="kick" style="margin-bottom:6px">Neraca transaksi</div>'
+    + _dtBaris('Uang muka diserahkan', b.um, 'Yang dipegang PUM', true)
+    + _dtBaris('Σ nilai nota', b.sNota, notas.length + ' nota')
+    + _dtBaris('Σ pajak dipotong', b.sPajak,
+        b.sPajak ? 'PPh + PPN dari seluruh nota' : 'Belum ada nota yang dipotong pajak')
+    + _dtBaris('Nilai diserahkan ke penyedia', b.sDibayar, 'Nota dikurangi pajak', true)
+    + _dtBaris('Pajak ditarik untuk disetor', b.sPajakDitarik,
+        b.sPajakDitarik ? 'Uangnya sudah di bendahara, wajib disetor' : 'Belum ada yang ditarik')
+    + _dtBaris('Σ pengembalian sisa', b.sKembaliSisa,
+        b.sKembaliSisa ? 'Sudah disetor kembali oleh PUM' : 'Belum ada pengembalian');
+  // Sisa negatif = nota melebihi uang muka. Jangan dibulatkan ke nol diam-diam.
+  var negatif = (b.sisaPUM < 0);
+  h += '<div class="nrow akhir"><div class="kiri"><div class="nm kuat">Sisa di tangan PUM</div>'
+    + '<div class="sub">' + (negatif
+        ? 'Nota melebihi uang muka — periksa nilai nota atau tambahkan uang muka'
+        : 'Uang muka − Σ nota − pengembalian') + '</div></div>'
+    + '<div class="val kuat' + (negatif ? ' negatif' : '') + '">' + rp(b.sisaPUM) + '</div></div>';
+  // Rumus lunas di handoff bagian 2 tetap dipakai apa adanya (b.lunas), TETAPI
+  // saat sisa negatif jangan menampilkan lampu hijau: nota melebihi uang muka
+  // adalah keadaan janggal yang harus diperiksa, bukan pertanggungjawaban beres.
+  h += negatif
+    ? '<div class="nstatus belum">&#9888; Periksa dulu — nota melebihi uang muka '
+      + rp(-b.sisaPUM) + '</div>'
+    : '<div class="nstatus ' + (b.lunas ? 'ok' : 'belum') + '">'
+      + (b.lunas ? '&#10003; Dipertanggungjawabkan penuh'
+                 : '&#8987; Belum lunas — kurang ' + rp(Math.max(0, b.target - b.sNota - b.sKembaliSisa)))
+      + '</div>';
+  return h + '</div>';
 }
 function _dtTile(fileId, urlFile){
   return '<a class="tile" href="' + esc(urlFile||('https://drive.google.com/file/d/'+fileId+'/view')) + '" target="_blank">'
@@ -955,7 +1054,11 @@ function detailNota(t, notas){
       +     '<div style="font-size:13px;color:var(--n600);margin-top:3px">'
       +       (n.npwp ? ('NPWP ' + esc(n.npwp)) : 'Non-NPWP') + ' · ' + pjk + '</div>'
       +   '</div>'
-      +   '<div class="num" style="font-size:16px">' + rp(n.nilai) + '</div>'
+      +   '<div style="text-align:right">'
+      +     '<div class="num" style="font-size:16px">' + rp(n.nilai) + '</div>'
+      +     '<div style="font-size:12.5px;color:var(--n600);margin-top:2px">diserahkan '
+      +       rp(hitungNeraca(t, [n], null).sDibayar) + '</div>'
+      +   '</div>'
       + '</div>';
     // Bukti A = berkas yang menempel pada baris nota. Bukti B = foto bertag
     // pada nota ini (barang diterima / halaman lanjutan nota).

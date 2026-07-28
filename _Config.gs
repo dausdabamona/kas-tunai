@@ -90,7 +90,12 @@ var CONFIG = {
       'TGL_NOTA',
       // Pajak per nota (melekat pada penyedia nota, bukan pada pengambilan uang)
       'PAJAK_KATEGORI_IDX', 'PAJAK_DPP', 'PAJAK_PPH', 'PAJAK_PPN',
-      'PAJAK_TERMASUK_PPN', 'PAJAK_ADA_NPWP'
+      'PAJAK_TERMASUK_PPN', 'PAJAK_ADA_NPWP',
+      // Uang yang benar-benar diserahkan ke penyedia. Disimpan, bukan dihitung
+      // ulang saat tampil, supaya angka historisnya tidak ikut berubah bila
+      // pajaknya disunting belakangan. Kosong pada baris lama -> dihitung
+      // dari NOMINAL - pajak (mode NETTO). Kolom MODE_BAYAR menyusul di tugas 4.
+      'DIBAYAR_PENYEDIA'
     ],
     FOTO_NOTA: [
       'NO_TRANSAKSI', 'NOTA_ID', 'URUTAN', 'FILE_ID', 'NAMA_FILE', 'URL_FILE',
