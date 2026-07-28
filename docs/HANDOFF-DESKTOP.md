@@ -19,7 +19,7 @@ untuk setiap tugas non-trivial.
 
 | # | Tugas | Perintah | Status |
 |---|-------|----------|--------|
-| 1 | Kerangka rail-nav (menggantikan tab atas) | *(belum ada perintah)* | ⬜ belum |
+| 1 | Kerangka rail-nav (menggantikan tab atas) | *(belum ada perintah)* | 🟡 kode selesai → f89dd42 (markup+CSS 2476395, perbaikan sticky-nav & banner mobile f89dd42; verifikasi klik nyata 8/8 lolos; belum diuji manual di browser sungguhan) |
 | 2 | Layar Papan kerja (dashboard) | *(belum ada perintah)* | ⬜ belum |
 | 3 | Layar Transaksi + panel detail kanan (redesain) | *(belum ada perintah)* | ⬜ belum |
 | 4 | Layar Perjalanan dinas (redesain) | *(belum ada perintah)* | ⬜ belum |
