@@ -24,6 +24,7 @@ mencetak bukti-buktinya. Fitur lain (offline, pagu, akun) menyusul setelah inti 
 | 8 | Item POK + cek sisa pagu | `/kt-8-pagu` | 🟡 kode selesai → f3a1c88 |
 | 9 | Papan PUM belum dipertanggungjawabkan | `/kt-9-pum` | 🟡 kode selesai → 47d256a |
 | 10 | Worklist pajak lintas transaksi + setor | `/kt-10-setor` | 🟡 kode selesai → 861f750 |
+| 11 | Kartu transaksi interaktif — Fase 1/4 (lihat bagian 9) | *(belum ada perintah)* | ⬜ **brainstorming belum selesai** |
 
 Status: ⬜ belum · 🟡 jalan · ✅ selesai (sudah diuji di HP) · ⛔ terblokir
 
@@ -231,3 +232,89 @@ menghapus batas adalah antrean IndexedDB di tugas 6.
 Rekonsiliasi rekening koran/SAKTI, impor pagu, manajemen user, pemecahan transaksi, dan
 layout SPJ **tetap di desktop**. Memindahkannya ke layar kecil hanya menambah risiko
 salah input.
+
+---
+
+## 9. Kartu transaksi interaktif — Fase 1 dari 4 (⬜ BRAINSTORMING BELUM SELESAI)
+
+Permintaan pengguna 28 Jul 2026: *"aplikasi mobile agar dibuat interaktif bukan hanya
+daftar."* Cakupannya awalnya 4 area × 4 pola interaksi — terlalu besar untuk satu
+putaran desain, jadi dipecah jadi 4 fase independen, masing-masing lewat siklus
+brainstorming → writing-plans sendiri:
+
+1. **Kartu transaksi + aksi geser** ← fase ini, baru sampai draf struktur (Bagian 1/±5).
+2. Beranda — kartu ringkas lebih hidup (animasi angka, susunan menyorot urgensi)
+3. Layar Antrean & status kirim — indikator hidup, animasi saat item terkirim
+4. Alur Catat/Kamera/Pajak — transisi halus antar langkah
+
+**Fase 2–4 belum dibahas sama sekali.** Jangan mulai sebelum Fase 1 disepakati, dikerjakan,
+dan sempat dipakai — supaya polanya (warna, ambang gestur, gaya animasi) sudah teruji
+sebelum ditiru ke fase berikutnya.
+
+### Keputusan Fase 1 yang sudah terkunci (lewat `AskUserQuestion`, jangan tanya ulang)
+
+| Topik | Keputusan |
+|-------|-----------|
+| Cakupan layar | Daftar Transaksi **penuh** saja. Beranda (3 kartu ringkas) TIDAK ikut — ruang kartu di situ sempit, tujuannya sekilas info, bukan bekerja. |
+| Aksi saat kartu digeser (urutan prioritas) | 1. `+ Tambah nota` — selalu berlaku, tidak perlu tahu nota mana. 2. `Tagih` — **hanya bila** `hitungNeraca(t, null, null).sisaPUM > 0` (pakai fungsi & mode ringkas tugas 9 apa adanya, jangan tulis ulang). 3. `Tanda Terima` / `Bukti Transfer` — reuse `cetakTandaTerima()`. 4. `Pengembalian` — reuse `bukaPengembalian()`. |
+| Ketuk kartu (bukan digeser) | **Tidak berubah** — tetap langsung `bukaDetail(no)`, TANPA perluas-di-tempat (accordion ditolak). Geser dan ketuk dua gestur terpisah yang tidak tumpang tindih. |
+| Pendekatan teknis | **Sentuh manual** (`touchstart`/`touchmove`/`touchend`, `transform:translateX()` GPU-accelerated) — BUKAN CSS scroll-snap. Alasan yang disepakati: perilaku lebih bisa diprediksi lintas versi Chrome Android, dan konsisten dengan gaya ES5 murni (`var`, tanpa arrow/const/let) yang sudah dipakai di seluruh `mobile.html` — dicek eksplisit, 0 pemakaian ES6+ di file itu. |
+| Haptic | Ya — `navigator.vibrate(~15ms)` singkat saat kartu terkunci terbuka penuh, dan saat aksi selesai. **Bukan** tiap sentuhan. Wajib dibungkus feature-detect (`if (navigator.vibrate)`), tidak semua browser mendukung. |
+| Kartu terbuka sekaligus | Hanya **satu**. Membuka kartu lain otomatis menutup yang sebelumnya. |
+
+### Draf struktur — Bagian 1/±5 (SUDAH DIPRESENTASIKAN, BELUM DIKONFIRMASI PENGGUNA)
+
+```html
+<div class="rowWrap">
+  <div class="rowActions">
+    <button class="ra ra-nota">+ Nota</button>
+    <button class="ra ra-tagih">Tagih</button>      <!-- kondisional, lihat tabel di atas -->
+    <button class="ra ra-tt">Tanda Terima</button>
+    <button class="ra ra-kembali">Kembali</button>
+  </div>
+  <div class="rowCard">...isi kartu yang sudah ada, TANPA onclick...</div>
+</div>
+```
+
+- `rowCard` digeser lewat `transform:translateX()` (GPU-accelerated), **bukan**
+  `left`/`margin` — supaya tetap mulus di Android murah.
+- `rowCard` **bukan lagi `<button>`**. Navigasi ke Detail ditangani logika sentuh
+  (`bukaDetail(no)` dipanggil langsung dari JS saat terdeteksi ketuk), bukan `onclick` —
+  sekaligus menutup celah bug tanda kutip (lihat peringatan bug kritis di bagian 1) untuk
+  elemen ini secara struktural, bukan cuma ditambal.
+- Ambang ketuk-vs-geser: gerakan horizontal **< 10px** saat `touchend` → dianggap ketuk.
+  **≥ 10px** → geser sungguhan, kartu mengunci ke posisi terbuka/tertutup dengan transisi
+  CSS ~180ms.
+- `touch-action:pan-y` pada `.rowWrap` supaya gulir vertikal daftar Transaksi tidak
+  terganggu saat pengguna sebenarnya cuma ingin scroll, bukan menggeser kartu.
+
+### Yang BELUM dibahas — lanjutkan brainstorming dari sini, JANGAN loncat ke writing-plans
+
+Draf struktur di atas baru **dipresentasikan**, belum dikonfirmasi pengguna (pertanyaan
+"apakah struktur ini sudah sesuai bayangan Anda?" belum terjawab saat sesi dihentikan
+untuk handoff ini). Sebelum menulis kode, sesi berikutnya wajib melanjutkan lewat skill
+`brainstorming` (**bukan** langsung `writing-plans`) untuk:
+
+- **Bagian 2 — perilaku tiap aksi.** Apakah `+ Tambah nota` langsung memanggil
+  `bukaNotaBaru(no)` (pindah layar penuh), atau ada animasi antara? Apakah `Tagih`
+  memakai persis `tagihPum()` yang sudah ada — termasuk alur tanya nomor HP saat
+  pertama kali menagih orang itu?
+- **Bagian 3 — visual.** Warna tiap tombol aksi (draf kasar, belum disepakati: `+ Tambah
+  nota` = teal `--ac`, `Tagih` = magenta `--a2` mengikuti gaya `.pumRow.mendesak`,
+  `Tanda Terima` = teal gelap `--ac7`, `Pengembalian` = netral `--n700`). Ikon per tombol.
+- **Bagian 4 — penanganan galat/kasus tepi.** Kartu transaksi **masuk** (debet, bukan
+  pengeluaran) — geser tetap aktif tapi tanpa `Tagih`/`+ Tambah nota` (keduanya hanya
+  relevan untuk pengeluaran)? Kartu Pindah Dana sudah tersaring dari daftar sejak awal
+  (`bukanPindahDana`), jadi otomatis tidak perlu ditangani di sini.
+- **Bagian 5 — rencana uji, WAJIB dibaca sebelum menulis kode apa pun.** Verifikasi
+  wajib lewat **simulasi sentuh sungguhan** (`touchstart`/`touchmove`/`touchend`
+  berurutan lewat Playwright, atau API drag bawaannya) — bukan `page.evaluate(() =>
+  fn())` (itu hanya membuktikan logika, bukan markup — lihat bug kritis tugas 10 di
+  bagian 1) dan bukan pula `page.click()` polos (klik biasa tidak merepresentasikan
+  gestur geser). Pelajaran sesi ini: verifikasi yang tidak meniru cara pengguna
+  *benar-benar* berinteraksi melewatkan bug nyata **dua kali berturut-turut**.
+
+Setelah Bagian 2–5 disepakati bersama pengguna (lewat `AskUserQuestion`, satu per satu,
+seperti pola yang dipakai untuk mengunci tabel keputusan di atas): tulis spec ke
+`docs/superpowers/specs/YYYY-MM-DD-kartu-interaktif-design.md`, baru panggil skill
+`writing-plans`. Jangan menulis kode sebelum spec itu disetujui pengguna.
