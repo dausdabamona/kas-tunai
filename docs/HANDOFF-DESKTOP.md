@@ -41,17 +41,20 @@ kerangka tab lama — kerjakan 1 dulu kalau sumber daya terbatas.
 
 ---
 
-## 2. Keputusan yang harus diambil sebelum mulai (belum terjawab)
+## 2. Keputusan yang sudah dijawab pengguna (28 Jul 2026)
 
-Jangan menebak salah satu dari ini — tanya pengguna dulu, seperti aturan
-`docs/HANDOFF-MOBILE.md` bagian 8.
-
-| # | Pertanyaan | Kenapa penting |
+| # | Pertanyaan | Keputusan |
 |---|---|---|
-| 1 | **Tab lama** (`Transaksi`/`Perjalanan Dinas`/`Laporan`/`Nota Kena Pajak`/`Ketersediaan Dana`/`Rekonsiliasi` — `index.html:269-274`) **diganti total** oleh rail-nav 6-layar, atau rail-nav **ditambahkan berdampingan**? Desain Bagian II menyiratkan pengganti total, tapi itu perubahan besar untuk pengguna yang sudah terbiasa dengan tab. |
-| 2 | **Sistem pagu yang sudah ada** (`serverImporPagu`/`serverGetPagu`/`serverKetersediaanDana`, tugas 8, kode selesai `f3a1c88`) — apakah **digantikan** oleh sistem `PAGU_POK`/`PAGU_UPLOAD` yang jauh lebih detail (hierarki Program→Kegiatan→KRO→RO→Komponen→SubKomponen→Akun→Item, versi unggahan, pencocokan otomatis SAKTI), atau **berjalan berdampingan** untuk sementara? Keduanya menyentuh konsep "pagu" tapi struktur datanya beda total — lihat bagian 4 di bawah. |
-| 3 | "Item POK" pada layar mobile Catat pengeluaran (sudah ada, tugas 8) — apakah field itu nanti dipetakan ke `KODE_ITEM` versi GLP039 baru ini juga, atau tetap independen? README desain (Bagian III, "Implementasi teknis") menyebut mobile perlu dipanggil `serverGetSisaPagu` — **nama ini sudah dipakai desain lama** (cek bagian 4) sehingga akan tabrakan bila tak diselaraskan. |
-| 4 | Siapa yang mengunggah file GLP039 (xlsx SAKTI) — PPK sendiri via desktop, atau perlu alur approval? Desain hanya menyebut "Panel kanan: hasil pembacaan" tanpa menyebut siapa yang berwenang unggah. |
+| 1 | Tab lama diganti total atau berdampingan dengan rail-nav? | **Diganti total.** Tab atas (`index.html:269-274`, `switchTab`) dibongkar, rail-nav 6-layar jadi satu-satunya kerangka navigasi desktop. |
+| 2 | Sistem pagu lama (`serverImporPagu`/`serverGetPagu`/`serverKetersediaanDana`, tugas 8) digantikan `PAGU_POK`/`PAGU_UPLOAD`, atau berdampingan? | **Digantikan.** Sistem lama tidak dipertahankan berdampingan — `PAGU_POK`/`PAGU_UPLOAD` (hierarki 8 level, versi unggahan, pencocokan SAKTI) jadi satu-satunya sumber kebenaran pagu. Endpoint lama (`serverImporPagu`/`serverGetPagu`/`serverKetersediaanDana`) perlu rencana migrasi/penghapusan saat tugas 7-8 (bagian 4) dikerjakan — jangan biarkan dua sistem pagu hidup berdampingan tanpa batas waktu. |
+| 3 | Field "Item POK" mobile (tugas 8) dipetakan ke sistem GLP039 baru, atau tetap independen? | **Ikuti/dipetakan ke sistem baru** — konsisten dengan keputusan #2 (satu sistem pagu, bukan dua). Saat tugas 7-8 desktop selesai, field "Item POK" di mobile perlu disambungkan ulang ke `KODE_ITEM`/endpoint versi GLP039, menggantikan jalur lama. Ini pekerjaan **lintas mobile-desktop** — dampaknya harus dicatat di `docs/HANDOFF-MOBILE.md` juga saat dikerjakan, bukan cuma di sini. |
+| 4 | Siapa berwenang mengunggah GLP039? | **Ditunda** — diputuskan terpisah setelah alur unggah (tugas 11) sungguhan dicoba, bukan diputuskan di muka. Tugas 11 (layar Unggah GLP039) boleh dikerjakan tanpa jawaban ini dulu; jangan tambah logika approval/pembatasan peran sebelum diminta eksplisit. |
+
+**Konsekuensi dari #2/#3 terhadap urutan pengerjaan** (lihat juga bagian 1, papan
+status): tugas 7-8 (fondasi `PAGU_POK`) sekarang **wajib** disertai rencana migrasi
+dari sistem lama, bukan sekadar fitur tambahan — cakupannya lebih besar dari yang
+tertulis semula di papan status. Bahas ini eksplisit saat brainstorming tugas 7-8,
+jangan dianggap otomatis dari catatan ini saja.
 
 ---
 
