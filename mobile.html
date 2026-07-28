@@ -1000,27 +1000,49 @@ function renderBeranda(){
 /* ringkas=true (Beranda): meta "No · penyedia · akun" + status di kanan.
    ringkas=false (Transaksi): meta "No · n nota · n foto" + deretan tag. */
 function barisTx(t, ringkas){
-  var meta, kanan;
   if (ringkas){
     var st = statusTeks(t);
-    meta = 'No ' + esc(String(t.no))
+    var metaR = 'No ' + esc(String(t.no))
          + (t.penjab ? (' · ' + esc(t.penjab)) : '')
          + (t.akun ? (' · ' + esc(String(t.akun).split(' ')[0])) : '');
-    kanan = '<span class="st' + (st.warn?' warn':'') + '" style="display:block">' + esc(st.txt) + '</span>';
-  } else {
-    meta = 'No ' + esc(String(t.no))
-         + ' · ' + (+t.notaJml||0) + ' nota'
-         + ' · ' + fotoCount(t) + ' foto';
-    kanan = '';
+    var kananR = '<span class="st' + (st.warn?' warn':'') + '" style="display:block">' + esc(st.txt) + '</span>';
+    return '<button class="row" onclick="bukaDetail(' + aq(t.no) + ')">'
+      + '<span style="flex:1;min-width:0">'
+      +   '<span class="ur" style="display:block">' + esc(t.kegiatan||'-') + '</span>'
+      +   '<span class="meta" style="display:block">' + metaR + '</span>'
+      + '</span>'
+      + '<span><span class="amt" style="display:block">' + rp(t.kredit||t.debet) + '</span>' + kananR + '</span>'
+      + '</button>';
   }
-  return '<button class="row" onclick="bukaDetail(' + aq(t.no) + ')">'
-    + '<span style="flex:1;min-width:0">'
+  var meta = 'No ' + esc(String(t.no))
+       + ' · ' + (+t.notaJml||0) + ' nota'
+       + ' · ' + fotoCount(t) + ' foto';
+  var isi = '<span style="flex:1;min-width:0">'
     +   '<span class="ur" style="display:block">' + esc(t.kegiatan||'-') + '</span>'
     +   '<span class="meta" style="display:block">' + meta + '</span>'
-    +   (ringkas ? '' : tagsTx(t))
+    +   tagsTx(t)
     + '</span>'
-    + '<span><span class="amt" style="display:block">' + rp(t.kredit||t.debet) + '</span>' + kanan + '</span>'
-    + '</button>';
+    + '<span><span class="amt" style="display:block">' + rp(t.kredit||t.debet) + '</span></span>';
+  if (!isKeluar(t)){
+    // Tak satu pun dari 4 aksi geser berlaku untuk transaksi masuk — geser
+    // dimatikan total (bukan cuma disembunyikan), lihat docs/HANDOFF-MOBILE.md
+    // bagian 9 (Bagian 4). Markup lama dipertahankan apa adanya.
+    return '<button class="row" onclick="bukaDetail(' + aq(t.no) + ')">' + isi + '</button>';
+  }
+  var aksi = '<button class="ra ra-nota" onclick="rgAksi(this,\'nota\',' + aq(t.no) + ')">'
+    + '<i class="ph-duotone ph-note-pencil"></i>Nota</button>';
+  if (hitungNeraca(t, null, null).sisaPUM > 0){
+    aksi += '<button class="ra ra-tagih" onclick="rgAksi(this,\'tagih\',' + aq(t.no) + ')">'
+      + '<i class="ph-duotone ph-bell-ringing"></i>Tagih</button>';
+  }
+  aksi += '<button class="ra ra-tt" onclick="rgAksi(this,\'tt\',' + aq(t.no) + ')">'
+    + '<i class="ph-duotone ph-printer"></i>Terima</button>'
+    + '<button class="ra ra-kembali" onclick="rgAksi(this,\'kembali\',' + aq(t.no) + ')">'
+    + '<i class="ph-duotone ph-arrow-u-down-left"></i>Kembali</button>';
+  return '<div class="rowWrap">'
+    + '<div class="rowActions">' + aksi + '</div>'
+    + '<div class="rowCard" data-no="' + esc(String(t.no)) + '">' + isi + '</div>'
+    + '</div>';
 }
 function tagsTx(t){
   var h = '<span class="tags">';
