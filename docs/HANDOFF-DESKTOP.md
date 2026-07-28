@@ -79,17 +79,16 @@ semuanya **identik** dengan bagian 4 dokumen ini. Parser GLP039 yang sudah
 diimplementasikan dan direview (papan status urutan-2) **tidak perlu dikerjakan
 ulang** karena paket ini.
 
-### ⚠️ Konflik dengan spec yang sudah ditulis: Papan kerja
+### Spec Papan kerja sudah disesuaikan ke v2
 
-`docs/superpowers/specs/2026-07-28-papan-kerja-desktop-design.md` (ditulis
-sebelum paket v2 diunggah) mendeskripsikan susunan kartu dan panel yang **berbeda**
-dari desain v2 §3.1 (bagian 3b di bawah) — di antaranya 4 kartu statistik yang
-tidak sama persis, dan panel kanan v2 memakai `serverRingkasanRekon` untuk
-"Kartu ketenangan" yang tidak ada di spec lama. Layar ini **belum pernah
-diimplementasikan** (tidak ada kode/plan yang menggantung padanya), jadi
-memperbarui spec sekarang murah. **Belum diputuskan** apakah spec lama ditulis
-ulang mengikuti v2 §3.1 — tanyakan pengguna sebelum tugas urutan-11 (Papan kerja)
-dimulai.
+`docs/superpowers/specs/2026-07-28-papan-kerja-desktop-design.md` ditulis sebelum
+paket v2 diunggah dan susunannya berbeda dari v2 §3.1. Karena layar itu belum
+pernah diimplementasikan, spec **sudah direvisi mengikuti v2** (commit `c466d1e`,
+atas persetujuan pengguna): isi 4 kartu statistik diganti, panel serapan jadi
+"Sisa pagu paling tipis" (ambang magenta 90%), panel kanan memakai ringkasan
+rekonsiliasi. Keputusan arsitektur yang tidak disentuh v2 (satu endpoint agregasi,
+kriteria dihitung di klien, modul `AntreanStatus`) dipertahankan. Bagian 0 spec
+itu mencatat perbedaan v1→v2 baris per baris.
 
 ---
 
