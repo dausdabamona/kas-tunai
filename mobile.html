@@ -182,6 +182,15 @@
   .grid2.mini .ph{aspect-ratio:1;border-radius:12px;font-size:12px}
   .grid2.mini .ph .del{width:28px;height:28px;top:5px;right:5px;font-size:13px}
 
+  /* Baris antrean dibedakan tegas dari transaksi yang sudah tersimpan. */
+  .row.antre{border-left:3px solid var(--a2);padding-left:9px;background:var(--a2-100)}
+
+  /* ===== Badge jumlah antrean di navigasi ===== */
+  #nav button{position:relative}
+  .badge{position:absolute;top:4px;left:50%;margin-left:6px;min-width:18px;height:18px;padding:0 5px;
+    border-radius:9px;background:var(--a2);color:#fff;font-size:11px;line-height:18px;font-weight:600}
+  .badge.hide{display:none}
+
   /* ===== Akibat uang pada layar pajak ===== */
   .akibat{margin-top:14px;border:1px solid var(--n300);border-radius:14px;overflow:hidden}
   .akibat .ar{display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -262,7 +271,7 @@
       <div style="font-size:14px;color:var(--n700);margin-top:2px" id="bdUser"></div>
     </div>
     <button style="min-width:44px;min-height:44px;background:none;border:none;font-size:26px;color:var(--ac7)"
-      onclick="toast('Antrean unggah menyusul di tahap berikutnya')"><i class="ph-duotone ph-cloud-arrow-up"></i></button>
+      onclick="bukaAntrean()"><i class="ph-duotone ph-cloud-arrow-up"></i></button>
   </div>
 
   <div class="saldo" id="bdSaldo" style="margin-bottom:26px">
@@ -276,9 +285,9 @@
     </div>
   </div>
 
-  <button id="bdOffline" class="banner hide" style="margin-bottom:26px" onclick="toast('Antrean unggah menyusul di tahap berikutnya')">
+  <button id="bdOffline" class="banner hide" style="margin-bottom:26px" onclick="bukaAntrean()">
     <i class="ph-duotone ph-wifi-slash"></i>
-    <span><b>Sedang luring.</b> Data ditampilkan dari muatan terakhir.</span>
+    <span><b>Sedang luring.</b> Catatan baru masuk antrean dan terkirim saat sinyal kembali — ketuk untuk melihat.</span>
   </button>
 
   <div class="quick" style="margin-bottom:26px">
@@ -507,6 +516,18 @@
   <div id="pgRiwayat"></div>
 </div>
 
+<!-- ================= ANTREAN UNGGAH ================= -->
+<div id="scAntrean" class="scr">
+  <div class="h1" style="margin-bottom:4px">Antrean unggah</div>
+  <div class="step">Catatan yang dibuat saat tidak ada sinyal menunggu di sini sampai terkirim.</div>
+  <div id="aqRingkas" class="banner hide" style="margin-top:14px"></div>
+  <button class="btn ac full" style="margin-top:14px" onclick="aqKirimSemua()">Kirim sekarang</button>
+  <div class="sec-h" style="margin-top:22px"><div class="t">Menunggu kirim</div></div>
+  <div id="aqList"><div class="empty">Memuat…</div></div>
+  <div class="strip" style="margin-top:18px">Antrean tersimpan di perangkat ini dan bertahan walau
+    aplikasi ditutup. Catatan terkirim otomatis saat aplikasi dibuka dan saat sinyal kembali.</div>
+</div>
+
 <!-- ================= AKUN ================= -->
 <div id="scAkun" class="scr">
   <div class="h1" style="margin-bottom:4px">Akun</div>
@@ -654,7 +675,7 @@
   <button id="nvBeranda" onclick="go('beranda')"><i class="ph-duotone ph-house"></i>Beranda</button>
   <button id="nvTransaksi" onclick="go('transaksi')"><i class="ph-duotone ph-list-bullets"></i>Transaksi</button>
   <button class="mid" onclick="bukaCatat()"><i class="ph-duotone ph-plus-circle"></i>Catat</button>
-  <button id="nvAntrean" onclick="belumSiap('Antrean unggah')"><i class="ph-duotone ph-cloud-arrow-up"></i>Antrean</button>
+  <button id="nvAntrean" onclick="bukaAntrean()"><i class="ph-duotone ph-cloud-arrow-up"></i>Antrean<span id="nvAntreanBadge" class="badge hide">0</span></button>
   <button id="nvAkun" onclick="bukaAkun()"><i class="ph-duotone ph-user"></i>Akun</button>
 </nav>
 
@@ -700,6 +721,7 @@ var _tok = '';
 try { _tok = localStorage.getItem('kt_token') || ''; } catch(e){}
 var TX = [], FOTO = {}, SALDO = null, USER = null, NOTAS = [], SCREEN = 'beranda', FILTER = 'semua', DETAIL_NO = null;
 var CETAK_TT = false;   /* true bila pengguna memilih "Simpan & cetak tanda terima" */
+var ANTREAN = [];       /* isi antrean luring, disegarkan aqRender() */
 var FOTO_NOTA = {};     /* foto bertag per nota (Bukti B) pada transaksi yang dibuka */
 
 /* ===================== Util ===================== */
@@ -733,7 +755,7 @@ var TUGAS = {catat:1, kamera:1, review:1, pajak:1, kembali:1, pindah:1, nota:1, 
 var TASKSCR = {Catat:1, Review:1, Pajak:1, Kembali:1, Pindah:1, Nota:1, Edit:1};
 function go(scr){
   SCREEN = scr;
-  var semua = ['Login','Beranda','Transaksi','Detail','Catat','Review','Pajak','Kembali','Pindah','Nota','Edit','Akun'];
+  var semua = ['Login','Beranda','Transaksi','Detail','Catat','Review','Pajak','Kembali','Pindah','Nota','Edit','Akun','Antrean'];
   for (var i=0;i<semua.length;i++){
     var el = $('sc'+semua[i]);
     if(el) el.className = 'scr' + (TASKSCR[semua[i]] ? ' task' : '')
@@ -751,12 +773,14 @@ function go(scr){
   $('nvBeranda').className   = (scr==='beranda') ? 'on' : '';
   $('nvTransaksi').className = (scr==='transaksi'||scr==='detail') ? 'on' : '';
   $('nvAkun').className      = (scr==='akun') ? 'on' : '';
+  $('nvAntrean').className   = (scr==='antrean') ? 'on' : '';
   window.scrollTo(0,0);
   if (scr==='transaksi') renderTransaksi();
   if (scr==='kamera')    renderKamera();
   if (scr==='review')    renderReview();
   if (scr==='catat')     perbaruiTombolLanjut();
   if (scr==='akun')      renderAkun();
+  if (scr==='antrean')   aqRender();
 }
 function kembaliDetail(){ if (DETAIL_NO) bukaDetail(DETAIL_NO); else go('transaksi'); }
 
@@ -842,7 +866,7 @@ function lolosFilter(t){
   if (FILTER==='semua') return true;
   if (FILTER==='belumspby') return isKeluar(t) && !t.noSpby;
   if (FILTER==='pajakbelum') return pajakBelum(t);
-  if (FILTER==='draft') return false;      // antrean offline — tahap berikutnya
+  if (FILTER==='draft') return false;      // antrean ditangani terpisah di renderTransaksi()
   return true;
 }
 
@@ -931,7 +955,24 @@ function renderTransaksi(){
     list.push(t);
   }
   if (FILTER==='draft'){
-    $('trList').innerHTML = '<div class="empty">Draft offline hadir di tahap berikutnya.</div>';
+    // Isi antrean, BUKAN transaksi server. Dibuat jelas berbeda supaya tidak
+    // ada yang mengira catatan ini sudah tersimpan di pusat.
+    if (!ANTREAN.length){
+      $('trList').innerHTML = '<div class="empty">Antrean kosong — semua catatan sudah terkirim.</div>';
+      aqRender(); return;
+    }
+    var ha = '', a;
+    for (a=0;a<ANTREAN.length;a++){
+      var q = ANTREAN[a], dq = q.data||{}, gg = (q.status==='GAGAL');
+      ha += '<div class="row antre" style="cursor:pointer" onclick="bukaAntrean()">'
+        + '<span style="flex:1"><span class="ur" style="display:block">' + esc(dq.kegiatan||'(tanpa uraian)') + '</span>'
+        + '<span class="meta" style="display:block">' + esc(tglPendek(dq.tanggal)) + ' · '
+        + (q.fotos||[]).length + ' foto · '
+        + (gg ? '<b style="color:var(--a2)">gagal kirim</b>' : 'belum terkirim') + '</span></span>'
+        + '<span class="amt">' + rp(dq.kredit||dq.debet) + '</span></div>';
+    }
+    $('trList').innerHTML = '<div class="strip" style="margin-bottom:10px">Catatan berikut '
+      + '<b>belum tersimpan di server</b> — masih menunggu sinyal.</div>' + ha;
     return;
   }
   if (!list.length){ $('trList').innerHTML = '<div class="empty">Tidak ada transaksi untuk filter ini.</div>'; return; }
@@ -1510,11 +1551,47 @@ function tukarJenisFoto(i){
 function hapusFoto(i){ FOTOS.splice(i,1); simpanDraft(); renderReview(); }
 
 /* ===================== Simpan ke server ===================== */
+/* Bentuk data transaksi yang dikirim ke server — dipakai jalur daring maupun
+   antrean, supaya keduanya tidak pernah berbeda. */
+function _dataTransaksi(d, clientId){
+  var keluar = (d.jenis==='keluar');
+  return {
+    tanggal: d.tanggal, kegiatan: d.uraian,
+    // Penanggung jawab = pemegang uang muka (penerima uang), bukan toko.
+    penjab: (d.pum || '').trim() || (USER && (USER.namaUser||USER.email)) || '',
+    debet: keluar ? 0 : d.nilai, kredit: keluar ? d.nilai : 0,
+    sumber: d.sumber, keterangan: 'Dicatat dari HP', akun: keluar ? d.akun : '',
+    persediaan: false, clientId: clientId || ''
+  };
+}
 function simpanSemua(){
   var d = isiDraft();
   if (d.nilai <= 0 || !d.uraian){ toast('Lengkapi nilai dan uraian dulu', true); go('catat'); return; }
-  if (!navigator.onLine){ toast('Tidak ada koneksi — draft tetap tersimpan di perangkat', true); return; }
   var keluar = (d.jenis==='keluar');
+  // Luring: MASUKKAN KE ANTREAN, jangan ditolak. Bendahara di pasar bisa
+  // mencatat beberapa transaksi berturut-turut sebelum dapat sinyal.
+  if (!navigator.onLine){
+    var p = penyediaTerpilih();
+    var fnota = fotoJenis('nota');
+    var item = {
+      data: null,                       // diisi setelah clientId terbit
+      fotos: FOTOS.slice(),
+      idxFotoNota: (keluar && d.penyedia && fnota.length) ? FOTOS.indexOf(fnota[0]) : -1,
+      nota: (keluar && d.penyedia) ? { namaPenyedia:p.nama, npwp:p.npwp||'', alamat:p.alamat||'',
+              nilai:d.nilai, tglNota:d.tanggal,
+              file: fnota[0] ? _kirimFoto(fnota[0], 'Scan nota (HP)') : null } : null
+    };
+    AQ.simpan(item, function(ok, tersimpan){
+      if (!ok){ toast('Gagal menyimpan ke antrean perangkat', true); return; }
+      tersimpan.data = _dataTransaksi(d, tersimpan.clientId);
+      AQ.simpan(tersimpan, function(){
+        hapusDraft(); FOTOS = []; setFotoJenis('nota');
+        toast('Belum ada sinyal — catatan masuk antrean dan akan terkirim otomatis');
+        aqRender(); go('antrean');
+      });
+    });
+    return;
+  }
   loading(true, 'Menyimpan transaksi…');
   google.script.run
     .withSuccessHandler(function(res){
@@ -1537,13 +1614,7 @@ function simpanSemua(){
           nilai:d.nilai, tglNota:d.tanggal, file: fnota[0] ? _kirimFoto(fnota[0]) : null });
     })
     .withFailureHandler(gagal)
-    .serverTambahTransaksi(_tok, {
-      tanggal: d.tanggal, kegiatan: d.uraian,
-      // Penanggung jawab = pemegang uang muka (penerima uang), bukan toko.
-      penjab: (d.pum || '').trim() || (USER && (USER.namaUser||USER.email)) || '',
-      debet: keluar ? 0 : d.nilai, kredit: keluar ? d.nilai : 0,
-      sumber: d.sumber, keterangan: 'Dicatat dari HP', akun: keluar ? d.akun : '', persediaan: false
-    });
+    .serverTambahTransaksi(_tok, _dataTransaksi(d, ''));
 }
 /* Buang field pratinjau lokal (_prev/jenis) sebelum dikirim ke server. */
 function _kirimFoto(f, keterangan){
@@ -2136,6 +2207,210 @@ function hapusPengembalian(urutan){
     .serverHapusPengembalian(_tok, PG.no, urutan);
 }
 
+/* ===================== Antrean unggah luring =====================
+ * Bendahara belanja di pasar dengan sinyal buruk dan bisa mencatat beberapa
+ * transaksi berturut-turut. Antrean disimpan di IndexedDB, BUKAN localStorage:
+ * satu foto terkompresi saja ~440 KB, sedangkan kuota localStorage hanya 5 MB.
+ *
+ * Halaman GAS berjalan di iframe sandbox, jadi service worker dan Background
+ * Sync API tidak tersedia. Pengiriman karena itu dilakukan saat aplikasi
+ * dibuka, saat event `online`, atau saat ditekan manual — bukan di latar.
+ *
+ * Anti-dobel: tiap item membawa clientId unik yang ikut tersimpan di kolom
+ * CLIENT_ID. Bila jaringan putus sesudah server menyimpan tetapi sebelum
+ * jawabannya sampai, pengiriman ulang dikenali server dan TIDAK membuat
+ * baris kedua.                                                              */
+var AQ = (function(){
+  var DB_NAMA = 'kastunai', TOKO = 'antrean', VERSI = 1, _db = null;
+  function buka(cb){
+    if (_db){ cb(_db); return; }
+    if (!window.indexedDB){ cb(null); return; }
+    var rq = indexedDB.open(DB_NAMA, VERSI);
+    rq.onupgradeneeded = function(e){
+      var db = e.target.result;
+      if (!db.objectStoreNames.contains(TOKO)) db.createObjectStore(TOKO, { keyPath:'id' });
+    };
+    rq.onsuccess = function(e){ _db = e.target.result; cb(_db); };
+    rq.onerror   = function(){ cb(null); };
+  }
+  function _tx(mode, cb){
+    buka(function(db){
+      if (!db){ cb(null); return; }
+      try { cb(db.transaction(TOKO, mode).objectStore(TOKO)); }
+      catch(e){ cb(null); }
+    });
+  }
+  return {
+    /** Simpan satu aksi lengkap. item.id & item.clientId diisi di sini bila kosong. */
+    simpan: function(item, cb){
+      item.id = item.id || ('q' + (new Date()).getTime() + '-' + Math.floor(Math.random()*100000));
+      item.clientId = item.clientId || item.id;
+      item.status = item.status || 'MENUNGGU';
+      item.percobaan = item.percobaan || 0;
+      item.dibuat = item.dibuat || (new Date()).toISOString();
+      _tx('readwrite', function(st){
+        if (!st){ if(cb) cb(false); return; }
+        var r = st.put(item);
+        r.onsuccess = function(){ if(cb) cb(true, item); };
+        r.onerror   = function(){ if(cb) cb(false); };
+      });
+    },
+    semua: function(cb){
+      _tx('readonly', function(st){
+        if (!st){ cb([]); return; }
+        var out = [], c = st.openCursor();
+        c.onsuccess = function(e){
+          var k = e.target.result;
+          if (k){ out.push(k.value); k.continue(); }
+          else { out.sort(function(a,b){ return String(a.dibuat).localeCompare(String(b.dibuat)); }); cb(out); }
+        };
+        c.onerror = function(){ cb([]); };
+      });
+    },
+    hapus: function(id, cb){
+      _tx('readwrite', function(st){
+        if (!st){ if(cb) cb(false); return; }
+        var r = st.delete(id);
+        r.onsuccess = function(){ if(cb) cb(true); };
+        r.onerror   = function(){ if(cb) cb(false); };
+      });
+    },
+    tandaiGagal: function(id, pesan, cb){
+      var self = this;
+      _tx('readonly', function(st){
+        if (!st){ if(cb) cb(false); return; }
+        var g = st.get(id);
+        g.onsuccess = function(){
+          var it = g.result; if (!it){ if(cb) cb(false); return; }
+          it.percobaan = (it.percobaan||0) + 1;
+          it.pesan = pesan || '';
+          // Tiga kali gagal sudah cukup; setelah itu jangan menghabiskan kuota
+          // GAS berulang-ulang, biarkan bendahara memutuskan.
+          it.status = (it.percobaan >= 3) ? 'GAGAL' : 'MENUNGGU';
+          self.simpan(it, cb);
+        };
+        g.onerror = function(){ if(cb) cb(false); };
+      });
+    }
+  };
+})();
+
+var AQ_JALAN = false;      // penjaga: jangan pernah dua pengirim sekaligus
+/* Kirim SERIAL — satu per satu. GAS mudah kena batas kuota bila diberondong. */
+function aqKirimSemua(diam){
+  if (AQ_JALAN) return;
+  if (!navigator.onLine){ if(!diam) toast('Belum ada koneksi', true); return; }
+  if (!_tok) return;
+  AQ.semua(function(list){
+    var antre = [];
+    for (var i=0;i<list.length;i++) if (list[i].status !== 'GAGAL') antre.push(list[i]);
+    if (!antre.length){ if(!diam) toast('Antrean kosong'); aqRender(); return; }
+    AQ_JALAN = true;
+    if (!diam) loading(true, 'Mengirim 1 dari ' + antre.length + '…');
+    var ke = 0;
+    (function berikutnya(){
+      if (ke >= antre.length){
+        AQ_JALAN = false; loading(false);
+        toast(ke + ' catatan terkirim');
+        muat(); aqRender(); return;
+      }
+      var it = antre[ke];
+      if (!diam) loading(true, 'Mengirim ' + (ke+1) + ' dari ' + antre.length + '…');
+      aqKirimSatu(it, function(ok, pesan){
+        ke++;
+        if (ok) AQ.hapus(it.id, berikutnya);
+        else AQ.tandaiGagal(it.id, pesan, berikutnya);
+      });
+    })();
+  });
+}
+/* Kirim satu item. Bentuknya sengaja sama dengan simpanSemua() daring. */
+function aqKirimSatu(it, cb){
+  var d = it.data || {};
+  google.script.run
+    .withSuccessHandler(function(res){
+      var no = res && res.no;
+      if (!no){ cb(false, 'Server tidak mengembalikan nomor transaksi'); return; }
+      // res.duplikat = server mengenali clientId ini sudah pernah tersimpan.
+      // Berarti percobaan sebelumnya BERHASIL walau jawabannya tidak sampai;
+      // jangan kirim ulang lampirannya, cukup anggap selesai.
+      if (res.duplikat){ cb(true); return; }
+      aqKirimLampiran(it, no, cb);
+    })
+    .withFailureHandler(function(e){ cb(false, (e && e.message) ? e.message : 'Gagal mengirim'); })
+    .serverTambahTransaksi(_tok, d);
+}
+function aqKirimLampiran(it, no, cb){
+  var fotos = it.fotos || [], nota = it.nota || null;
+  var lanjutFoto = function(urutan){
+    var arr = [], i;
+    for (i=0;i<fotos.length;i++){
+      if (nota && i === it.idxFotoNota) continue;         // sudah menempel pada notanya
+      arr.push({ base64:fotos[i].base64, mimeType:fotos[i].mimeType, namaFile:fotos[i].namaFile,
+                 keterangan: (fotos[i].jenis==='barang') ? 'Barang diterima (HP)' : 'Nota (lanjutan, HP)' });
+    }
+    if (!arr.length){ cb(true); return; }
+    google.script.run
+      .withSuccessHandler(function(){ cb(true); })
+      // Transaksinya sudah tersimpan; kegagalan lampiran tidak boleh membuat
+      // seluruh item diulang — itu justru berisiko dobel.
+      .withFailureHandler(function(){ cb(true); })
+      .serverUploadFotoNota(_tok, no, urutan || 1, arr);
+  };
+  if (!nota){ lanjutFoto(1); return; }
+  google.script.run
+    .withSuccessHandler(function(r){ lanjutFoto((r && r.urutan) || 1); })
+    .withFailureHandler(function(){ lanjutFoto(1); })
+    .serverTambahNota(_tok, no, nota);
+}
+function aqRender(){
+  AQ.semua(function(list){
+    ANTREAN = list;
+    var badge = $('nvAntreanBadge');
+    if (badge){
+      badge.textContent = list.length;
+      badge.className = list.length ? 'badge' : 'badge hide';
+    }
+    var el = $('aqList'); if (!el) return;
+    if (!list.length){ el.innerHTML = '<div class="empty">Antrean kosong — semua catatan sudah terkirim.</div>'; return; }
+    var h = '', i;
+    for (i=0;i<list.length;i++){
+      var it = list[i], d = it.data||{}, gagal = (it.status==='GAGAL');
+      h += '<div class="prow"><div class="kiri">'
+        + '<div class="nm">' + esc(d.kegiatan||'(tanpa uraian)') + '</div>'
+        + '<div class="sub">' + rp(d.kredit || d.debet) + ' · ' + esc(tglPendek(d.tanggal))
+        + ' · ' + (it.fotos||[]).length + ' foto'
+        + (gagal ? (' · <span style="color:var(--a2)">gagal ' + it.percobaan + '×'
+                    + (it.pesan ? (': ' + esc(it.pesan)) : '') + '</span>')
+                 : ' · menunggu kirim') + '</div></div>'
+        + '<div style="text-align:right;white-space:nowrap">'
+        + '<button class="lnk" onclick="aqKirimItem(' + JSON.stringify(it.id) + ')">Kirim</button> '
+        + '<button class="lnk" style="color:var(--a2-700)" onclick="aqHapusItem(' + JSON.stringify(it.id) + ')">Hapus</button>'
+        + '</div></div>';
+    }
+    el.innerHTML = h;
+  });
+}
+function aqKirimItem(id){
+  if (!navigator.onLine){ toast('Belum ada koneksi', true); return; }
+  AQ.semua(function(list){
+    var it = null;
+    for (var i=0;i<list.length;i++) if (list[i].id===id) { it = list[i]; break; }
+    if (!it) return;
+    loading(true,'Mengirim…');
+    aqKirimSatu(it, function(ok, pesan){
+      loading(false);
+      if (ok){ AQ.hapus(it.id, function(){ toast('Terkirim'); muat(); aqRender(); }); }
+      else { AQ.tandaiGagal(it.id, pesan, function(){ toast(pesan || 'Gagal mengirim', true); aqRender(); }); }
+    });
+  });
+}
+function aqHapusItem(id){
+  if (!confirm('Hapus catatan ini dari antrean?\n\nCatatan ini BELUM tersimpan di server dan akan hilang selamanya.')) return;
+  AQ.hapus(id, function(){ toast('Dihapus dari antrean'); aqRender(); });
+}
+function bukaAntrean(){ go('antrean'); aqRender(); }
+
 /* ===================== Akun =====================
  * Token sesi tersimpan di localStorage HP. Tanpa layar ini, HP yang hilang
  * atau dipinjam hanya bisa dikunci lewat desktop — padahal sesinya berlaku
@@ -2611,8 +2886,15 @@ function simpanPindah(){
   var ld = $('lnkDesktop');
   if (ld && WEBAPP_URL) ld.href = WEBAPP_URL + (WEBAPP_URL.indexOf('?')>=0?'&':'?') + 'm=0';
   renderChips();
-  window.addEventListener('online',  function(){ $('bdOffline').className='banner hide'; });
+  // Sinyal kembali -> kirim diam-diam. Tidak ada Background Sync di iframe GAS,
+  // jadi inilah satu-satunya pemicu otomatis selain saat aplikasi dibuka.
+  window.addEventListener('online',  function(){
+    $('bdOffline').className='banner hide';
+    toast('Sinyal kembali — mengirim antrean…');
+    aqKirimSemua(true);
+  });
   window.addEventListener('offline', function(){ $('bdOffline').className='banner'; });
-  if (_tok) { go('beranda'); muat(); } else { go('login'); }
+  if (_tok) { go('beranda'); muat(); aqRender(); setTimeout(function(){ aqKirimSemua(true); }, 1500); }
+  else { go('login'); }
 })();
 </script>
