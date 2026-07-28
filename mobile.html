@@ -1097,6 +1097,98 @@ function renderTransaksi(){
   $('trList').innerHTML = h;
 }
 
+/* ===================== Geser aksi kartu (tugas 11, Fase 1) =====================
+ * Sentuh manual (touchstart/touchmove/touchend), bukan CSS scroll-snap — lihat
+ * docs/HANDOFF-MOBILE.md bagian 9. Listener didaftarkan SEKALI pada #trList
+ * (delegasi) di init(), supaya renderTransaksi() yang mengganti innerHTML tidak
+ * perlu memasang ulang listener setiap kali.
+ */
+var RG = {wrap:null, card:null, w:0, baseX:0, startX:0, startY:0, nx:0, dragging:false, axis:null, openWrap:null};
+
+function rgAncestor(el, cls){
+  var top = $('trList');
+  while (el && el !== top){
+    if (el.className && (' '+el.className+' ').indexOf(' '+cls+' ') >= 0) return el;
+    el = el.parentNode;
+  }
+  return null;
+}
+function rgGetar(){
+  if (navigator.vibrate) { try { navigator.vibrate(15); } catch(e){} }
+}
+function rgSet(wrap, card, buka){
+  var actions = wrap.querySelector('.rowActions');
+  var w = actions ? actions.offsetWidth : 0;
+  card.style.transition = '';
+  card.style.transform = 'translateX(' + (buka ? -w : 0) + 'px)';
+  wrap.className = 'rowWrap' + (buka ? ' open' : '');
+  if (buka){ RG.openWrap = wrap; rgGetar(); }
+  else if (RG.openWrap === wrap){ RG.openWrap = null; }
+}
+function rgTutupSemua(){
+  if (RG.openWrap){
+    var card = RG.openWrap.querySelector('.rowCard');
+    if (card) rgSet(RG.openWrap, card, false);
+  }
+}
+function rgTouchStart(e){
+  if (rgAncestor(e.target, 'rowActions')) return;   // ketukan tombol aksi tersingkap: biarkan onclick asli jalan
+  var wrap = rgAncestor(e.target, 'rowWrap');
+  if (!wrap) return;
+  var card = wrap.querySelector('.rowCard');
+  var actions = wrap.querySelector('.rowActions');
+  if (!card) return;
+  if (RG.openWrap && RG.openWrap !== wrap) rgTutupSemua();
+  RG.wrap = wrap; RG.card = card;
+  RG.w = actions ? actions.offsetWidth : 0;
+  RG.baseX = (wrap.className.indexOf('open') >= 0) ? -RG.w : 0;
+  RG.startX = e.touches[0].clientX; RG.startY = e.touches[0].clientY;
+  RG.nx = RG.baseX; RG.dragging = false; RG.axis = null;
+}
+function rgTouchMove(e){
+  if (!RG.wrap) return;
+  var t = e.touches[0];
+  var dx = t.clientX - RG.startX, dy = t.clientY - RG.startY;
+  if (!RG.axis){
+    if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+    RG.axis = (Math.abs(dx) > Math.abs(dy)) ? 'x' : 'y';
+    if (RG.axis === 'y'){ RG.wrap = null; return; }   // gulir vertikal: lepas, biarkan halaman menggulir
+  }
+  if (RG.axis !== 'x') return;
+  e.preventDefault();
+  RG.dragging = true;
+  var nx = RG.baseX + dx;
+  if (nx > 0) nx = 0;
+  if (nx < -RG.w) nx = -RG.w;
+  RG.card.style.transition = 'none';
+  RG.card.style.transform = 'translateX(' + nx + 'px)';
+  RG.nx = nx;
+}
+function rgTouchEnd(){
+  if (!RG.wrap) return;
+  var wrap = RG.wrap, card = RG.card;
+  RG.wrap = null;
+  if (!RG.dragging){
+    if (wrap.className.indexOf('open') >= 0){ rgSet(wrap, card, false); return; }
+    var no = card.getAttribute('data-no');
+    if (no != null) bukaDetail(no);
+    return;
+  }
+  var bukaAkhir = RG.nx < -(RG.w/2);
+  rgSet(wrap, card, bukaAkhir);
+  RG.dragging = false; RG.axis = null;
+}
+function rgAksi(el, act, no){
+  var wrap = rgAncestor(el, 'rowWrap');
+  var card = wrap ? wrap.querySelector('.rowCard') : null;
+  if (wrap && card) rgSet(wrap, card, false);
+  rgGetar();
+  if (act === 'nota') bukaNotaBaru(no);
+  else if (act === 'tagih') tagihPum(no);
+  else if (act === 'tt') cetakTandaTerima(no);
+  else if (act === 'kembali') bukaPengembalian(no);
+}
+
 /* ===================== Detail ===================== */
 function bukaDetail(no){
   DETAIL_NO = no;
@@ -3390,6 +3482,11 @@ function simpanPindah(){
     aqKirimSemua(true);
   });
   window.addEventListener('offline', function(){ $('bdOffline').className='banner'; });
+  $('trList').addEventListener('touchstart',  rgTouchStart, {passive:true});
+  $('trList').addEventListener('touchmove',   rgTouchMove,  {passive:false});
+  $('trList').addEventListener('touchend',    rgTouchEnd,   {passive:true});
+  $('trList').addEventListener('touchcancel', rgTouchEnd,   {passive:true});
+  window.addEventListener('scroll', rgTutupSemua, {passive:true});
   if (_tok) { go('beranda'); muat(); aqRender(); setTimeout(function(){ aqKirimSemua(true); }, 1500); }
   else { go('login'); }
 })();
