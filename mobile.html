@@ -334,7 +334,7 @@
 
   <div class="f" style="margin-top:0">
     <label>Nilai</label>
-    <div class="nilai"><span>Rp</span><input id="ctNilai" inputmode="numeric" placeholder="0" oninput="fmtNilai(this);simpanDraft()"></div>
+    <div class="nilai"><span>Rp</span><input id="ctNilai" inputmode="numeric" placeholder="0" oninput="fmtNilai(this);simpanDraft();onPilihItemHp()"></div>
   </div>
 
   <div class="f"><label>Uraian / Kegiatan</label>
@@ -363,6 +363,12 @@
     <div class="f"><label>Sumber dana</label>
       <select id="ctSumber" onchange="simpanDraft()"><option value="TUNAI">Kas Tunai</option><option value="BANK">Kas Bank</option></select>
     </div>
+  </div>
+
+  <div class="f" id="ctItemWrap"><label>Detail kegiatan (item POK)</label>
+    <input id="ctItem" list="ctItemList" placeholder="Ketik kode atau nama kegiatan" oninput="onPilihItemHp()">
+    <datalist id="ctItemList"></datalist>
+    <div class="hint" id="ctItemInfo">Memuat daftar item…</div>
   </div>
 
   <div class="f" id="ctAkunWrap"><label>Akun / MAK</label>
@@ -590,6 +596,10 @@
     <div class="f"><label>Sumber dana</label>
       <select id="edSumber"><option value="TUNAI">Kas Tunai</option><option value="BANK">Kas Bank</option></select>
     </div>
+  </div>
+  <div class="f" id="edItemWrap"><label>Detail kegiatan (item POK)</label>
+    <input id="edItem" list="ctItemList" placeholder="Ketik kode atau nama kegiatan" oninput="onPilihItemEdit()">
+    <div class="hint" id="edItemInfo">Tanpa item, belanja ini tidak mengurangi pagu mana pun.</div>
   </div>
   <div class="f" id="edAkunWrap"><label>Akun / MAK</label>
     <input id="edAkun" list="ctAkunList" placeholder="mis. 521211">
@@ -1241,16 +1251,17 @@ function setJenis(j){
   $('ctSegKeluar').className = (j==='keluar') ? 'on' : '';
   $('ctSegMasuk').className  = (j==='masuk')  ? 'on' : '';
   $('ctAkunWrap').style.display = (j==='keluar') ? '' : 'none';
+  $('ctItemWrap').style.display = (j==='keluar') ? '' : 'none';
   $('ctPumWrap').style.display  = (j==='keluar') ? '' : 'none';
   simpanDraft();
   perbaruiTombolLanjut();
 }
 function bukaCatat(){
-  muatPenyedia(); isiDaftarPum();
+  muatPenyedia(); isiDaftarPum(); muatItemPagu();
   var d = muatDraft();
   if (!d){
     $('ctNilai').value=''; $('ctUraian').value=''; $('ctPum').value=''; $('ctPenyedia').value='';
-    $('ctAkun').value=''; $('ctSumber').value='TUNAI';
+    $('ctAkun').value=''; $('ctItem').value=''; $('ctSumber').value='TUNAI';
     $('ctTanggal').value = new Date().toISOString().slice(0,10);
     FOTOS = []; setFotoJenis('nota'); setJenis('keluar');
   }
@@ -1321,7 +1332,8 @@ function isiDraft(){
   for (var i=0;i<FOTOS.length;i++) fs.push(_draftFoto(FOTOS[i]));
   return { jenis:JENIS, nilai:angka($('ctNilai').value), uraian:$('ctUraian').value||'',
            pum:$('ctPum').value||'', penyedia:$('ctPenyedia').value||'', tanggal:$('ctTanggal').value||'',
-           sumber:$('ctSumber').value||'TUNAI', akun:$('ctAkun').value||'', fotos:fs };
+           sumber:$('ctSumber').value||'TUNAI', akun:$('ctAkun').value||'',
+           item:$('ctItem').value||'', fotos:fs };
 }
 /* @return {boolean} benar bila draft benar-benar tersimpan.
    Kegagalan TIDAK boleh didiamkan: foto terakhir tidak ikut tersimpan, dan
@@ -1352,6 +1364,7 @@ function muatDraft(){
   if (d.penyedia) { var dt=$('ctLangsungWrap'); if(dt) dt.open = true; }
   $('ctTanggal').value = d.tanggal || new Date().toISOString().slice(0,10);
   $('ctSumber').value = d.sumber||'TUNAI'; $('ctAkun').value = d.akun||'';
+  $('ctItem').value = d.item||'';
   FOTOS = d.fotos||[];
   setJenis(JENIS);
   return d;
@@ -1394,12 +1407,14 @@ function aksiUtamaCatat(){
 /* Simpan langsung tanpa melewati kamera — lalu cetak tanda terima. */
 function simpanTanpaFoto(){
   if (!_catatSah()) return;
+  if (!pagoCekLampaui()) return;
   simpanDraft();
   CETAK_TT = (JENIS==='keluar');
   simpanSemua();
 }
 function lanjutKeKamera(){
   if (!_catatSah()) return;
+  if (!pagoCekLampaui()) return;
   simpanDraft();
   CETAK_TT = false;
   go(FOTOS.length ? 'review' : 'kamera');
@@ -1555,13 +1570,18 @@ function hapusFoto(i){ FOTOS.splice(i,1); simpanDraft(); renderReview(); }
    antrean, supaya keduanya tidak pernah berbeda. */
 function _dataTransaksi(d, clientId){
   var keluar = (d.jenis==='keluar');
+  var it = cariItemHp(d.item || '');
   return {
     tanggal: d.tanggal, kegiatan: d.uraian,
     // Penanggung jawab = pemegang uang muka (penerima uang), bukan toko.
     penjab: (d.pum || '').trim() || (USER && (USER.namaUser||USER.email)) || '',
     debet: keluar ? 0 : d.nilai, kredit: keluar ? d.nilai : 0,
     sumber: d.sumber, keterangan: 'Dicatat dari HP', akun: keluar ? d.akun : '',
-    persediaan: false, clientId: clientId || ''
+    persediaan: false, clientId: clientId || '',
+    // Tanpa kodeItem, Anggaran.ketersediaan() melempar belanja ini ke
+    // belanjaTanpaItem dan pagu item mana pun tidak berkurang.
+    kodeItem: keluar ? (it ? it.kodeItem : '') : '',
+    uraianItem: keluar ? (it ? (it.uraianItem||'') : '') : ''
   };
 }
 function simpanSemua(){
@@ -2207,6 +2227,101 @@ function hapusPengembalian(urutan){
     .serverHapusPengembalian(_tok, PG.no, urutan);
 }
 
+/* ===================== Item POK & sisa pagu =====================
+ * Keputusan "boleh belanja atau tidak" terjadi di toko, bukan di meja.
+ *
+ * Sebelum ini form HP hanya punya Akun/MAK teks bebas dan TIDAK pernah
+ * mengirim kodeItem, sehingga seluruh belanja dari HP jatuh ke
+ * belanjaTanpaItem dan tidak mengurangi pagu item mana pun.
+ *
+ * Rumus sisaAman milik Anggaran.gs — di sini hanya dikonsumsi, tidak dihitung
+ * ulang. Yang ditambahkan cuma pengurang lokal: item antrean yang belum
+ * terkirim, karena uangnya sudah dibelanjakan walau server belum tahu.    */
+var ITEMS = null, ITEMS_WAKTU = null, ITEMS_DARI_CACHE = false;
+function muatItemPagu(cb){
+  // Tampilkan cache lebih dulu supaya layar tidak kosong di sinyal buruk.
+  if (!ITEMS){
+    try {
+      var c = JSON.parse(localStorage.getItem('kt_items')||'null');
+      if (c && c.items){ ITEMS = c.items; ITEMS_WAKTU = c.waktu; ITEMS_DARI_CACHE = true; isiDatalistItem(); }
+    } catch(e){}
+  }
+  if (!_tok || !navigator.onLine){ if(cb) cb(); return; }
+  google.script.run
+    .withSuccessHandler(function(d){
+      ITEMS = (d && d.items) || [];
+      ITEMS_WAKTU = (new Date()).toISOString();
+      ITEMS_DARI_CACHE = false;
+      try { localStorage.setItem('kt_items', JSON.stringify({items:ITEMS, waktu:ITEMS_WAKTU})); } catch(e){}
+      isiDatalistItem(); onPilihItemHp(); if(cb) cb();
+    })
+    .withFailureHandler(function(){ if(cb) cb(); })
+    .serverKetersediaanDana(_tok);
+}
+function isiDatalistItem(){
+  var dl = $('ctItemList'); if (!dl) return;
+  var h = '', i, n = Math.min((ITEMS||[]).length, 300);
+  for (i=0;i<n;i++){
+    var it = ITEMS[i];
+    h += '<option value="' + esc(it.kodeItem + ' — ' + (it.uraianItem||'')) + '">'
+       + esc('Akun ' + (it.akun||'') + ' · sisa ' + rp(it.sisaAman)) + '</option>';
+  }
+  dl.innerHTML = h;
+}
+function cariItemHp(teks){
+  var kode = String(teks||'').split('—')[0].replace(/[^0-9.]/g,'').trim();
+  if (!kode) return null;
+  for (var i=0;i<(ITEMS||[]).length;i++)
+    if (String(ITEMS[i].kodeItem).trim() === kode) return ITEMS[i];
+  return null;
+}
+/* Belanja yang sudah dicatat di HP tetapi belum terkirim juga sudah memakai
+   pagu — kalau tidak dikurangkan, sisa aman terlihat lebih besar dari kenyataan. */
+function pakaiAntrean(kodeItem){
+  var n = 0;
+  for (var i=0;i<(ANTREAN||[]).length;i++){
+    var d = ANTREAN[i].data || {};
+    if (String(d.kodeItem||'') === String(kodeItem)) n += (+d.kredit||0);
+  }
+  return n;
+}
+function onPilihItemHp(){
+  var info = $('ctItemInfo'); if (!info) return;
+  var x = cariItemHp($('ctItem').value);
+  var umur = ITEMS_WAKTU ? (' · angka per ' + tglPendek(String(ITEMS_WAKTU).slice(0,10))
+    + (ITEMS_DARI_CACHE ? ', dari simpanan perangkat' : '')) : '';
+  if (!x){
+    info.textContent = (ITEMS && ITEMS.length)
+      ? ('Pilih item agar belanja ini mengurangi pagu yang benar.' + umur)
+      : 'Daftar item belum termuat — belanja tetap bisa dicatat.';
+    info.style.color = ''; simpanDraft(); return;
+  }
+  // Akun terisi otomatis tapi tetap terlihat dan boleh dikoreksi.
+  var ak = $('ctAkun'); if (ak && !ak.value.trim()) ak.value = x.akun || '';
+  var antre = pakaiAntrean(x.kodeItem);
+  var sisa = (+x.sisaAman||0) - antre;
+  var nilai = angka($('ctNilai').value);
+  var sesudah = sisa - nilai;
+  info.innerHTML = 'Sisa aman <b>' + rp(sisa) + '</b>'
+    + (antre ? (' <span style="color:var(--n600)">(sudah dikurangi ' + rp(antre) + ' dari antrean)</span>') : '')
+    + (nilai ? (' &rarr; setelah transaksi ini <b>' + rp(sesudah) + '</b>') : '')
+    + esc(umur);
+  info.style.color = (sesudah < 0) ? 'var(--a2)' : '';
+  if (sesudah < 0) info.innerHTML += '<br><b>&#9888; Melebihi pagu sebesar ' + rp(-sesudah) + '</b>';
+  simpanDraft();
+}
+/* @return {boolean} boleh lanjut. Tidak memblokir, tetapi menuntut kesadaran. */
+function pagoCekLampaui(){
+  var x = cariItemHp($('ctItem').value);
+  if (!x) return true;
+  var sisa = (+x.sisaAman||0) - pakaiAntrean(x.kodeItem);
+  var lebih = angka($('ctNilai').value) - sisa;
+  if (lebih <= 0) return true;
+  return confirm('Belanja ini MELEBIHI pagu item ' + x.kodeItem + ' sebesar ' + rp(lebih) + '.\n\n'
+    + (x.uraianItem||'') + '\nSisa aman: ' + rp(sisa)
+    + '\n\nTetap catat? Transaksi akan tersimpan dan pagu item ini menjadi minus.');
+}
+
 /* ===================== Antrean unggah luring =====================
  * Bendahara belanja di pasar dengan sinyal buruk dan bisa mencatat beberapa
  * transaksi berturut-turut. Antrean disimpan di IndexedDB, BUKAN localStorage:
@@ -2529,9 +2644,13 @@ function bukaEdit(no){
   $('edTanggal').value = t.tanggal || '';
   $('edSumber').value = (t.sumber==='BANK') ? 'BANK' : 'TUNAI';
   $('edAkun').value = t.akun || '';
+  $('edItem').value = t.kodeItem ? (t.kodeItem + ' — ' + (t.uraianItem||'')) : '';
+  ED.item = null;
+  muatItemPagu(function(){ onPilihItemEdit(); });
   $('edKuitansi').value = t.noKuitansi || '';
   $('edKeterangan').value = t.keterangan || '';
   $('edAkunWrap').style.display = keluar ? '' : 'none';
+  $('edItemWrap').style.display = keluar ? '' : 'none';
   $('edPumWrap').style.display  = keluar ? '' : 'none';
   isiDaftarPum();
   // Peringatkan bila mengubah nilai bisa merusak pertanggungjawaban yang sudah jalan.
@@ -2546,6 +2665,20 @@ function bukaEdit(no){
       + '. Mengubah nilainya membuat angka pertanggungjawaban tidak lagi cocok.</span>';
   } else b.className = 'banner hide';
   go('edit');
+}
+function onPilihItemEdit(){
+  var info = $('edItemInfo'); if (!info) return;
+  var x = cariItemHp($('edItem').value);
+  ED.item = x;
+  if (!x){
+    info.textContent = ($('edItem').value||'').trim()
+      ? 'Item tidak dikenali — periksa kodenya.'
+      : 'Tanpa item, belanja ini tidak mengurangi pagu mana pun.';
+    info.style.color = ''; return;
+  }
+  var ak = $('edAkun'); if (ak && !ak.value.trim()) ak.value = x.akun || '';
+  info.innerHTML = esc(x.uraianItem||'') + ' &middot; sisa aman <b>' + rp(x.sisaAman) + '</b>';
+  info.style.color = '';
 }
 function simpanEdit(){
   var nilai = angka($('edNilai').value);
@@ -2577,7 +2710,11 @@ function simpanEdit(){
       keterangan: ($('edKeterangan').value||'').trim(),
       sumber: $('edSumber').value,
       akun: keluar ? ($('edAkun').value||'').trim() : '',
-      noKuitansi: ($('edKuitansi').value||'').trim()
+      noKuitansi: ($('edKuitansi').value||'').trim(),
+      // Bila kolomnya dikosongkan, itemnya memang dilepas; jangan diam-diam
+      // mengembalikan nilai lama.
+      kodeItem: keluar ? (ED.item ? ED.item.kodeItem : '') : '',
+      uraianItem: keluar ? (ED.item ? (ED.item.uraianItem||'') : '') : ''
     });
 }
 
