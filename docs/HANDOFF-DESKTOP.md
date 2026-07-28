@@ -35,7 +35,7 @@ rail-nav) dan Bagian III (Pencocokan Pagu & Realisasi / GLP039)**.
 | D | **Aturan "Realisasi LS = akun 51xxxx" salah sasaran.** Kas tunai hanya menampung UP/GUP; item yang dibayar LS (kontraktual 52xxxx/53xxxx, honor pihak ketiga, belanja modal) **memang tidak pernah** punya transaksi kas tunai. Dengan aturan lama, semua item LS non-51 muncul sebagai temuan palsu. | Aturan diganti: item tanpa transaksi kas tunai sama sekali = **di luar lingkup kas tunai**, netral, tidak masuk daftar temuan. Lihat bagian 4. |
 | E | `index.html` sudah **6.009 baris**. Rencana ini menambah ±3–4k baris di file yang sama tanpa build step. | Disiplin struktur wajib (bagian 7). Parser GLP039 **harus** fungsi murni tanpa DOM supaya bisa diuji. |
 | F | Rail 236px + panel 404px = 640px terpakai. Di 1366×768 (laptop satker umum) sisa 726px untuk tabel pohon 6 kolom berindentasi 8 level. Dokumen asli tidak menyebut perilaku di bawah 1440 sama sekali. | Tentukan breakpoint sekarang, bukan setelah 6 layar jadi. Lihat bagian 3, "Perilaku di bawah 1280px". |
-| G | Tugas 1 masih 🟡 (belum diuji manual), tapi 5 layar akan menumpang di atasnya. | Tugas 2–6 **diblokir** sampai tugas 1 diverifikasi di browser sungguhan. |
+| G | Tugas 1 masih 🟡 (belum diuji manual), tapi 5 layar akan menumpang di atasnya. | Tugas 2–6 **diblokir** sampai tugas 1 diverifikasi di browser sungguhan. → **SUDAH TERPENUHI 28 Jul 2026**: rail-nav diuji manual oleh pengguna di browser sungguhan dan berjalan normal. Blokir dibuka. |
 
 **Perubahan urutan eksekusi** (alasan: nilai terbesar ada di tugas 7 & 9; redesain 6
 layar adalah pekerjaan terbanyak dengan dampak terkecil):
@@ -99,7 +99,7 @@ Yang berubah: kolom **Urutan** dan tambahan tugas 12–14.
 
 | # | Urutan | Tugas | Status |
 |---|---|-------|--------|
-| 1 | **1** | Kerangka rail-nav (menggantikan tab atas) | 🟡 kode selesai → `f89dd42` (markup+CSS `2476395`; verifikasi klik nyata 8/8 lolos; **belum diuji manual di browser sungguhan** — wajib sebelum apa pun lanjut). Breakpoint 1366/1280 **sudah ditetapkan** oleh paket v2 (bagian 3, tabel kerapatan) — belum diimplementasikan di kode, hanya markup+sticky-position dasar yang ada. |
+| 1 | **1** | Kerangka rail-nav (menggantikan tab atas) | ✅ **selesai & diuji manual** (28 Jul 2026, browser sungguhan) → `f89dd42` (markup+CSS `2476395`). Gerbang temuan G **terbuka** — tugas lain boleh lanjut. Sisa pekerjaan terpisah: breakpoint 1366/1280 dari paket v2 (bagian 3, tabel kerapatan) belum diimplementasikan; yang ada baru markup + sticky-position dasar. |
 | 7 | **2** | Parser GLP039 di klien (`FileReader` + unzip xlsx) | 🟡 kode selesai, review akhir bersih → plan `a53db5f`, implementasi `1f77ec0`, fix wave `d4fc6c5` (3 temuan Important dari review whole-branch: `ringkasan.sisa`→`sisaBerkas`+field `lock` baru, `inlineStr` multi-run tak lagi terpotong, catatan wajib "belum diuji file SAKTI asli" dikembalikan). Verifikasi mandiri 12/12 PASS. **Masih 🟡, bukan ✅** — belum pernah dicoba dengan berkas GLP039 asli (baru data acuan teks + ZIP buatan sendiri), wajib sebelum tugas urutan-8 (layar Unggah) memakainya. |
 | 9 | **3** | Layar Pagu & realisasi: tab Pencocokan (tabel pohon) — **baca-saja, berdampingan** | ⬜ belum |
 | — | **4** | *Gerbang:* jalankan paralel 1 siklus GUP, cocokkan hasil lama vs baru | ⬜ belum |
@@ -109,11 +109,11 @@ Yang berubah: kolom **Urutan** dan tambahan tugas 12–14.
 | 11 | **8** | Layar Pagu & realisasi: tab Unggah GLP039 | ⬜ belum |
 | 13 | **9** | Jejak audit "Tandai wajar" (baru, lihat R-4) | ⬜ belum |
 | 14 | **10** | Penanganan item yatim akibat revisi DIPA/POK (baru, lihat R-3) | ⬜ belum |
-| 2 | 11 | Layar Papan kerja (dashboard) | ⬜ belum — **diblokir tugas 1** |
-| 3 | 12 | Layar Transaksi + panel detail kanan (redesain) | ⬜ belum — diblokir tugas 1 |
-| 4 | 13 | Layar Perjalanan dinas (redesain) | ⬜ belum — diblokir tugas 1 |
-| 5 | 14 | Layar Rekonsiliasi (redesain) | ⬜ belum — diblokir tugas 1 |
-| 6 | 15 | Layar Laporan & cetakan (redesain) | ⬜ belum — diblokir tugas 1 |
+| 2 | 11 | Layar Papan kerja (dashboard) | ⬜ belum |
+| 3 | 12 | Layar Transaksi + panel detail kanan (redesain) | ⬜ belum |
+| 4 | 13 | Layar Perjalanan dinas (redesain) | ⬜ belum |
+| 5 | 14 | Layar Rekonsiliasi (redesain) | ⬜ belum |
+| 6 | 15 | Layar Laporan & cetakan (redesain) | ⬜ belum |
 
 Status: ⬜ belum · 🟡 jalan/kode selesai · ✅ selesai (sudah diuji) · ⛔ terblokir
 
