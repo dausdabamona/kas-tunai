@@ -24,7 +24,7 @@ mencetak bukti-buktinya. Fitur lain (offline, pagu, akun) menyusul setelah inti 
 | 8 | Item POK + cek sisa pagu | `/kt-8-pagu` | 🟡 kode selesai → f3a1c88 |
 | 9 | Papan PUM belum dipertanggungjawabkan | `/kt-9-pum` | 🟡 kode selesai → 47d256a |
 | 10 | Worklist pajak lintas transaksi + setor | `/kt-10-setor` | 🟡 kode selesai → 861f750 |
-| 11 | Kartu transaksi interaktif — Fase 1/4 (lihat bagian 9) | *(belum ada perintah)* | 🟡 **desain lengkap, siap writing-plans** |
+| 11 | Kartu transaksi interaktif — Fase 1/4 (lihat bagian 9) | *(belum ada perintah)* | 🟡 kode selesai → *(commit setelah Task 1-3 plan ini)* |
 
 Status: ⬜ belum · 🟡 jalan · ✅ selesai (sudah diuji di HP) · ⛔ terblokir
 
@@ -357,8 +357,9 @@ Skenario wajib dibuktikan sebelum diklaim selesai:
 9. Pemindaian `onclick`/`onchange` menyeluruh (pola tugas 10) — keempat tombol aksi baru
    memakai `aq()`, bukan `JSON.stringify()`
 
-### Status: desain lengkap, siap `writing-plans`
-
-Kelima bagian disetujui bertahap oleh pengguna lewat `AskUserQuestion` (28 Jul 2026).
-Langkah berikutnya: panggil skill `writing-plans` untuk rencana implementasi. Jangan
-menulis kode langsung tanpa rencana itu.
+### Status: kode selesai, siap uji manual di HP
+Kelima bagian disetujui bertahap oleh pengguna lewat `AskUserQuestion` (28 Jul 2026). Rencana implementasi:
+`docs/superpowers/plans/2026-07-28-kartu-transaksi-geser.md` — 5 tugas, semua 9 skenario Bagian 5 lolos verifikasi
+Playwright (event sentuh sintetis). Langkah berikutnya: `clasp push` ke deployment uji + uji manual gestur geser
+di Chrome Android sungguhan sebelum `deploy.bat` ke produksi (event sentuh sintetis Playwright tidak menggantikan
+uji jari sungguhan di perangkat low-end).
