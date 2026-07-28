@@ -235,7 +235,7 @@ salah input.
 
 ---
 
-## 9. Kartu transaksi interaktif — Fase 1 dari 4 (✅ DESAIN LENGKAP — siap `writing-plans`)
+## 9. Kartu transaksi interaktif — Fase 1 dari 4 (🟡 kode selesai — siap uji manual di HP)
 
 Permintaan pengguna 28 Jul 2026: *"aplikasi mobile agar dibuat interaktif bukan hanya
 daftar."* Cakupannya awalnya 4 area × 4 pola interaksi — terlalu besar untuk satu
@@ -363,3 +363,8 @@ Kelima bagian disetujui bertahap oleh pengguna lewat `AskUserQuestion` (28 Jul 2
 Playwright (event sentuh sintetis). Langkah berikutnya: `clasp push` ke deployment uji + uji manual gestur geser
 di Chrome Android sungguhan sebelum `deploy.bat` ke produksi (event sentuh sintetis Playwright tidak menggantikan
 uji jari sungguhan di perangkat low-end).
+
+**Catatan review akhir**: kartu keluar (`.rowCard`) hanya merespons sentuhan (`rgTouchStart`/dst), TIDAK ada
+`onclick` — ini sesuai desain Bagian 1, tapi berarti mengetes lewat mouse click di Chrome desktop (atau
+`page.click()`) akan terlihat "mati". Uji harus lewat jari sungguhan di HP atau emulasi sentuh DevTools, bukan klik
+mouse biasa.
