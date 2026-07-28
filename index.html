@@ -42,9 +42,10 @@
   .tabs button.active{color:#fff;border-bottom-color:#f6c343}
 
   /* ===== Rail-nav desktop (kerangka, gaya Broadsheet) ===== */
-  body{display:flex;min-height:100vh;margin:0}
+  body{display:flex;flex-wrap:wrap;min-height:100vh;margin:0}
   .rail{width:236px;flex:0 0 236px;background:var(--bs-n200);padding:24px 18px;display:flex;
-    flex-direction:column;gap:4px;box-sizing:border-box}
+    flex-direction:column;gap:4px;box-sizing:border-box;position:sticky;top:0;align-self:flex-start;
+    max-height:100vh;overflow-y:auto}
   .rail-brand{font-family:var(--bs-fh);font-size:22px;font-weight:600;color:var(--bs-ink);
     margin-bottom:18px}
   .rail-brand small{display:block;font-size:12px;font-weight:400;color:var(--bs-n700);margin-top:2px}
@@ -52,7 +53,6 @@
     font-family:var(--bs-fh);font-size:14px;font-weight:600;background:none;color:var(--bs-ink);
     cursor:pointer}
   .rail-item.active{background:var(--bs-ac);color:#fff}
-  .rail-item.hidden{display:none}
   .rail-spacer{flex:1}
   .rail-saldo{padding:10px 16px;font-family:var(--bs-fh)}
   .rail-saldo .l{font-size:11px;color:var(--bs-n700)}
@@ -264,7 +264,7 @@
 
   /* Tawaran versi mobile saat dibuka di layar kecil */
   #mobileTip{display:none;background:#0088b0;color:#fff;padding:10px 14px;font-size:13.5px;
-    align-items:center;gap:10px;flex-wrap:wrap;line-height:1.35}
+    align-items:center;gap:10px;flex-wrap:wrap;line-height:1.35;flex:0 0 100%}
   #mobileTip a{background:#fff;color:#006786;border-radius:999px;padding:8px 14px;font-weight:800;
     text-decoration:none;min-height:40px;display:inline-flex;align-items:center;white-space:nowrap}
   #mobileTip button{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6);
