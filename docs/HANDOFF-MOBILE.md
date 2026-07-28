@@ -15,10 +15,10 @@ mencetak bukti-buktinya. Fitur lain (offline, pagu, akun) menyusul setelah inti 
 | # | Tugas | Perintah | Status |
 |---|-------|----------|--------|
 | 1 | Tambal draft foto hilang diam-diam | `/kt-1-draft` | 🟡 kode selesai → c2395b9 |
-| **2** | **Neraca transaksi + nilai yang boleh diserahkan** | `/kt-2-neraca` | ⬜ belum |
-| **3** | **Kelola nota lengkap (ubah, hapus, foto susulan)** | `/kt-3-nota` | 🟡 sebagian → 8f4acf0 |
-| **4** | **Pajak per nota: mode bayar & bukti potong** | `/kt-4-pajak` | ⬜ belum |
-| **5** | **Pengembalian + tanda bukti (kuitansi & BA)** | `/kt-5-kembali` | ⬜ belum |
+| **2** | **Neraca transaksi + nilai yang boleh diserahkan** | `/kt-2-neraca` | 🟡 kode selesai → ed4c2a1 |
+| **3** | **Kelola nota lengkap (ubah, hapus, foto susulan)** | `/kt-3-nota` | 🟡 kode selesai → 5cde48e |
+| **4** | **Pajak per nota: mode bayar & bukti potong** | `/kt-4-pajak` | 🟡 kode selesai → 9cf8655 |
+| **5** | **Pengembalian + tanda bukti (kuitansi & BA)** | `/kt-5-kembali` | 🟡 kode selesai → 9d9dd19 |
 | 6 | Antrean unggah offline | `/kt-6-antrean` | ⬜ belum |
 | 7 | Layar Akun | `/kt-7-akun` | 🟡 kode selesai → e5455ad |
 | 8 | Item POK + cek sisa pagu | `/kt-8-pagu` | ⬜ belum |
@@ -32,9 +32,8 @@ Status: ⬜ belum · 🟡 jalan · ✅ selesai (sudah diuji di HP) · ⛔ terblo
 > - **Tugas 1** selesai: `_prev` tidak lagi disimpan (874→437 KB/foto), `simpanDraft()`
 >   mengembalikan boolean dan melaporkan gagal, penjaga 3,5 MB menolak foto sebelum kuota
 >   jebol. Uji 12 foto: 8 tersimpan, ke-9 ditolak, isi FOTOS selalu sama dengan isi draft.
-> - **Tugas 3 sebagian**: ubah & hapus nota, ganti Bukti A, hapus Bukti B — semua sudah
->   jalan. **Sisa pekerjaan tugas 3: foto barang susulan di tingkat transaksi** (di luar
->   nota) dan pemulihan nota terhapus (`serverRestoreNota`).
+> - **Tugas 3** selesai (5cde48e): termasuk pulihkan nota, alur kamera disatukan,
+>   pratinjau sebelum hapus foto, dan penanda nota tanpa Bukti A.
 > - **Tugas 7** selesai: layar Akun, ganti password, dan Keluar yang benar-benar
 >   menghapus sesi di server (token lama dijawab `SESI_BERAKHIR`).
 
@@ -107,6 +106,10 @@ Lunas  bila ΣNota + ΣKembaliSisa ≥ (nilaiSpby > 0 ? nilaiSpby : UM)
 | Perlakuan uang pajak | **Dipilih per nota** — mode NETTO dan BRUTO keduanya harus ada, default NETTO. Mode disimpan per nota. |
 | Tanda bukti pengembalian | **Dua format, dipilih saat cetak** — Kuitansi Pengembalian (harian) dan Berita Acara Pengembalian Sisa Uang Muka (formal, diketahui PPK). |
 | Identitas & pejabat untuk dokumen | Ambil dari `serverGetInstansi(token)` / `CONFIG.INSTANSI`, jangan hardcode. |
+| **Kolom baru (28 Jul 2026)** | `MULTI_NOTA.DIBAYAR_PENYEDIA` — nilai yang diserahkan DISIMPAN, bukan dihitung ulang saat tampil. `MULTI_NOTA.MODE_BAYAR` — kosong = NETTO. `PENGEMBALIAN.JENIS` — kosong = SISA. |
+| **Migrasi header** | Kunci `hdr_fixed_*` di `serverGetDashboard` **wajib dinaikkan setiap ada kolom baru**, kalau tidak migrasi dilewati sampai cache 6 jam habis. Sekarang **v8**. |
+| Status hijau saat sisa negatif | **Ditahan.** Rumus `lunas` di bagian 2 tetap apa adanya, tetapi panel menampilkan 'Periksa dulu — nota melebihi uang muka'. Lampu hijau di atas keadaan janggal berbahaya. |
+| Pajak setelah nilai nota diubah | **Tidak dihitung ulang otomatis** — tarif dan kategori keputusan bendahara. Aplikasi hanya memberi peringatan tegas untuk meninjau ulang. |
 
 ---
 
