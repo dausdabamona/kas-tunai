@@ -24,7 +24,7 @@ mencetak bukti-buktinya. Fitur lain (offline, pagu, akun) menyusul setelah inti 
 | 8 | Item POK + cek sisa pagu | `/kt-8-pagu` | 🟡 kode selesai → f3a1c88 |
 | 9 | Papan PUM belum dipertanggungjawabkan | `/kt-9-pum` | 🟡 kode selesai → 47d256a |
 | 10 | Worklist pajak lintas transaksi + setor | `/kt-10-setor` | 🟡 kode selesai → 861f750 |
-| 11 | Kartu transaksi interaktif — Fase 1/4 (lihat bagian 9) | *(belum ada perintah)* | ⬜ **brainstorming belum selesai** |
+| 11 | Kartu transaksi interaktif — Fase 1/4 (lihat bagian 9) | *(belum ada perintah)* | 🟡 **desain lengkap, siap writing-plans** |
 
 Status: ⬜ belum · 🟡 jalan · ✅ selesai (sudah diuji di HP) · ⛔ terblokir
 
@@ -235,14 +235,14 @@ salah input.
 
 ---
 
-## 9. Kartu transaksi interaktif — Fase 1 dari 4 (⬜ BRAINSTORMING BELUM SELESAI)
+## 9. Kartu transaksi interaktif — Fase 1 dari 4 (✅ DESAIN LENGKAP — siap `writing-plans`)
 
 Permintaan pengguna 28 Jul 2026: *"aplikasi mobile agar dibuat interaktif bukan hanya
 daftar."* Cakupannya awalnya 4 area × 4 pola interaksi — terlalu besar untuk satu
 putaran desain, jadi dipecah jadi 4 fase independen, masing-masing lewat siklus
 brainstorming → writing-plans sendiri:
 
-1. **Kartu transaksi + aksi geser** ← fase ini, baru sampai draf struktur (Bagian 1/±5).
+1. **Kartu transaksi + aksi geser** ← fase ini, desain LENGKAP (Bagian 1–5/5), siap `writing-plans`.
 2. Beranda — kartu ringkas lebih hidup (animasi angka, susunan menyorot urgensi)
 3. Layar Antrean & status kirim — indikator hidup, animasi saat item terkirim
 4. Alur Catat/Kamera/Pajak — transisi halus antar langkah
@@ -262,7 +262,7 @@ sebelum ditiru ke fase berikutnya.
 | Haptic | Ya — `navigator.vibrate(~15ms)` singkat saat kartu terkunci terbuka penuh, dan saat aksi selesai. **Bukan** tiap sentuhan. Wajib dibungkus feature-detect (`if (navigator.vibrate)`), tidak semua browser mendukung. |
 | Kartu terbuka sekaligus | Hanya **satu**. Membuka kartu lain otomatis menutup yang sebelumnya. |
 
-### Draf struktur — Bagian 1/±5 (SUDAH DIPRESENTASIKAN, BELUM DIKONFIRMASI PENGGUNA)
+### Bagian 1 — Struktur kartu & mekanika geser (✅ dikonfirmasi)
 
 ```html
 <div class="rowWrap">
@@ -288,33 +288,77 @@ sebelum ditiru ke fase berikutnya.
 - `touch-action:pan-y` pada `.rowWrap` supaya gulir vertikal daftar Transaksi tidak
   terganggu saat pengguna sebenarnya cuma ingin scroll, bukan menggeser kartu.
 
-### Yang BELUM dibahas — lanjutkan brainstorming dari sini, JANGAN loncat ke writing-plans
+### Bagian 2 — Perilaku tiap aksi (✅ dikonfirmasi)
 
-Draf struktur di atas baru **dipresentasikan**, belum dikonfirmasi pengguna (pertanyaan
-"apakah struktur ini sudah sesuai bayangan Anda?" belum terjawab saat sesi dihentikan
-untuk handoff ini). Sebelum menulis kode, sesi berikutnya wajib melanjutkan lewat skill
-`brainstorming` (**bukan** langsung `writing-plans`) untuk:
+Keempat aksi langsung memanggil fungsi yang **sudah ada**, tanpa animasi/layar antara —
+sama seperti tombol yang sudah ada di layar Detail sekarang:
 
-- **Bagian 2 — perilaku tiap aksi.** Apakah `+ Tambah nota` langsung memanggil
-  `bukaNotaBaru(no)` (pindah layar penuh), atau ada animasi antara? Apakah `Tagih`
-  memakai persis `tagihPum()` yang sudah ada — termasuk alur tanya nomor HP saat
-  pertama kali menagih orang itu?
-- **Bagian 3 — visual.** Warna tiap tombol aksi (draf kasar, belum disepakati: `+ Tambah
-  nota` = teal `--ac`, `Tagih` = magenta `--a2` mengikuti gaya `.pumRow.mendesak`,
-  `Tanda Terima` = teal gelap `--ac7`, `Pengembalian` = netral `--n700`). Ikon per tombol.
-- **Bagian 4 — penanganan galat/kasus tepi.** Kartu transaksi **masuk** (debet, bukan
-  pengeluaran) — geser tetap aktif tapi tanpa `Tagih`/`+ Tambah nota` (keduanya hanya
-  relevan untuk pengeluaran)? Kartu Pindah Dana sudah tersaring dari daftar sejak awal
-  (`bukanPindahDana`), jadi otomatis tidak perlu ditangani di sini.
-- **Bagian 5 — rencana uji, WAJIB dibaca sebelum menulis kode apa pun.** Verifikasi
-  wajib lewat **simulasi sentuh sungguhan** (`touchstart`/`touchmove`/`touchend`
-  berurutan lewat Playwright, atau API drag bawaannya) — bukan `page.evaluate(() =>
-  fn())` (itu hanya membuktikan logika, bukan markup — lihat bug kritis tugas 10 di
-  bagian 1) dan bukan pula `page.click()` polos (klik biasa tidak merepresentasikan
-  gestur geser). Pelajaran sesi ini: verifikasi yang tidak meniru cara pengguna
-  *benar-benar* berinteraksi melewatkan bug nyata **dua kali berturut-turut**.
+| Aksi | Panggilan | Catatan |
+|---|---|---|
+| `+ Tambah nota` | `bukaNotaBaru(no)` | Pindah layar penuh ke `scNota` |
+| `Tagih` | `tagihPum(no)` | Apa adanya, **termasuk** `prompt()` bawaan browser untuk nomor HP saat pertama kali menagih PUM itu — disetujui eksplisit, bukan dianggap mengganggu |
+| `Tanda Terima` / `Bukti Transfer` | `cetakTandaTerima(no)` | Buka tab cetak baru, tidak pindah layar |
+| `Pengembalian` | `bukaPengembalian(no)` | Pindah layar penuh ke `scKembali` |
 
-Setelah Bagian 2–5 disepakati bersama pengguna (lewat `AskUserQuestion`, satu per satu,
-seperti pola yang dipakai untuk mengunci tabel keputusan di atas): tulis spec ke
-`docs/superpowers/specs/YYYY-MM-DD-kartu-interaktif-design.md`, baru panggil skill
-`writing-plans`. Jangan menulis kode sebelum spec itu disetujui pengguna.
+### Bagian 3 — Visual: warna & ikon (✅ dikonfirmasi)
+
+Dipilih dari token & ikon yang **sudah dipakai** di aplikasi, tidak ada yang baru kecuali
+`ph-printer` (belum pernah dipakai, tapi cocok secara makna):
+
+| Aksi | Warna latar | Ikon | Alasan |
+|---|---|---|---|
+| `+ Tambah nota` | `--ac` (teal utama) | `ph-note-pencil` | Sama dengan tombol "Catat pengeluaran" — aksi paling primer |
+| `Tagih` | `--a2` (magenta) | `ph-bell-ringing` | Magenta = warna urgensi, sudah dipakai di `.pumRow.mendesak` & banner peringatan |
+| `Tanda Terima` / `Bukti Transfer` | `--ac7` (teal gelap) | `ph-printer` | Satu-satunya ikon baru di fase ini |
+| `Pengembalian` | `--n700` (netral) | `ph-arrow-u-down-left` | **Ikon yang sama persis** dengan tombol "Pengembalian" di kartu aksi cepat Beranda |
+
+Teks putih di atas warna latar, ukuran sentuh ≥44px.
+
+### Bagian 4 — Kasus tepi & penanganan galat (✅ dikonfirmasi)
+
+- **Transaksi masuk (debet, `!isKeluar(t)`): geser DIMATIKAN TOTAL, bukan ditampilkan
+  kosong.** Ditelusuri satu per satu: `+ Tambah nota`, `cetakTandaTerima()`, dan
+  `bukaPengembalian()` semuanya menghitung dari `kredit` (uang keluar); `Tagih` sudah
+  pasti hanya untuk pengeluaran. Tidak ada satu pun dari keempat aksi yang relevan untuk
+  transaksi masuk, jadi `rowActions` **tidak dirender sama sekali** untuk kartu jenis ini
+  (bukan cuma disembunyikan sebagian).
+- **Kartu menutup segera setelah tombol aksi diketuk**, tanpa menunggu hasil
+  berhasil/gagal dari aksinya. Mencegah kartu "nyangkut" terbuka saat pengguna kembali
+  dari tab WhatsApp (`Tagih`) atau tab cetak (`Tanda Terima`).
+- **Menggulir daftar menutup kartu yang sedang terbuka.**
+- **Pindah Dana**: sudah tersaring dari `TX` sejak `muat()` (`bukanPindahDana`) — tidak
+  perlu penanganan baru.
+- **Luring**: tidak perlu penanganan baru — layar tujuan (`scNota`, `scKembali`, dst.)
+  sudah menangani kondisi luring sendiri, sama seperti saat dibuka lewat tombol biasa.
+- Aplikasi mobile **tidak** membedakan transaksi Perjalanan Dinas (`suratMap` tidak
+  pernah dikirim/dibaca di `mobile.html`, beda dari desktop) — bukan kasus baru yang
+  perlu ditangani fase ini, perilakunya sama dengan tombol "+ Tambah nota" yang sudah
+  ada sekarang di layar Detail.
+
+### Bagian 5 — Rencana uji (✅ dikonfirmasi, WAJIB dibaca sebelum menulis kode)
+
+Implementasinya memakai `touchstart`/`touchmove`/`touchend`, **bukan** `onclick`/`click`
+untuk gestur geser. Verifikasi karena itu **wajib** mengirim event sentuh sintetis lewat
+`page.evaluate()` (`new Touch()` + `new TouchEvent()` dengan `touches`/`changedTouches`
+berisi `clientX`/`clientY`) — `page.click()` biasa **tidak** memicu handler sentuh sama
+sekali dan akan memberi rasa aman yang palsu.
+
+Skenario wajib dibuktikan sebelum diklaim selesai:
+
+1. Geser ≥10px pada kartu pengeluaran → panel aksi muncul, `bukaDetail()` **tidak** terpanggil
+2. Geser <10px lalu lepas → dihitung ketuk, `bukaDetail(no)` tetap terpanggil (regresi)
+3. Membuka kartu kedua otomatis menutup kartu pertama
+4. Ketuk tiap tombol aksi → fungsi yang benar terpanggil **dan** kartu langsung menutup
+5. Kartu transaksi masuk — tidak ada `rowActions` sama sekali di DOM
+6. `Tagih` hanya muncul saat `hitungNeraca(t,null,null).sisaPUM > 0`
+7. `navigator.vibrate` terpanggil pada dua titik yang benar; tidak error saat API itu
+   tidak tersedia
+8. Menggulir daftar menutup kartu yang sedang terbuka
+9. Pemindaian `onclick`/`onchange` menyeluruh (pola tugas 10) — keempat tombol aksi baru
+   memakai `aq()`, bukan `JSON.stringify()`
+
+### Status: desain lengkap, siap `writing-plans`
+
+Kelima bagian disetujui bertahap oleh pengguna lewat `AskUserQuestion` (28 Jul 2026).
+Langkah berikutnya: panggil skill `writing-plans` untuk rencana implementasi. Jangan
+menulis kode langsung tanpa rencana itu.
