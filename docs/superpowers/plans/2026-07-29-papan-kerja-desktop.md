@@ -382,7 +382,10 @@ function serverGetPapanKerja(token) {
 ```bash
 cd /home/user/kas-tunai
 node --check < Code.gs && echo "SINTAKS OK"   # lewat stdin: node menolak ekstensi .gs
-sed -n "/function serverGetPapanKerja/,/^}/p" Code.gs | grep -c "server[A-Z]" 
+# Kecualikan baris deklarasi dan komentar -- grep polos "server[A-Z]" akan menangkap
+# nama fungsi ini sendiri plus komentar yang justru MELARANG memanggil endpoint lain.
+sed -n "/function serverGetPapanKerja/,/^}/p" Code.gs \
+  | grep -vE "^\s*(//|\*|/\*)" | grep -v "^function" | grep -cE "\bserver[A-Z][A-Za-z]*\(" 
 ```
 Expected: `SINTAKS OK`, lalu angka `0` (nol pemanggilan endpoint lain dari dalam endpoint ini).
 
