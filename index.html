@@ -84,14 +84,14 @@
   .rail-akun-menu{margin-top:6px}
   .rail-akun-menu.hidden{display:none}
 
-  @media (max-width:1365px){
-    .rail{width:76px;flex:0 0 76px;padding:20px 10px}
-    .rail-item{justify-content:center;padding-left:0;padding-right:0}
-    .rail-item .rail-label{display:none}
-    .rail-badge{min-width:8px;width:8px;height:8px;padding:0;margin:0;
-      position:absolute;top:6px;right:6px;font-size:0;line-height:0}
-    .rail-item{position:relative}
-  }
+  /* Mode rail sempit "76px ikon saja" dari paket desain v2 SENGAJA TIDAK dipakai.
+     Prasyaratnya satu set ikon menu, dan aplikasi ini tidak punya ikon rail sama
+     sekali — menunya murni teks. Menyembunyikan label tanpa ikon pengganti
+     membuat lima dari enam menu jadi kotak kosong tak terlihat yang hanya bisa
+     diklik dengan menebak posisinya (terbukti lewat tangkapan layar di 1280px).
+     Rail tetap 236px berlabel sampai <1024px, tempat pengguna diarahkan ke
+     mobile.html. Bila mode ikon diinginkan, buat dulu ikonnya sebagai tugas
+     tersendiri — jangan cukup menghidupkan kembali blok ini. */
 
   .wrap{padding:14px;max-width:1180px;margin:0}
 
