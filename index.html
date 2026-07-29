@@ -131,6 +131,20 @@
   .pk-antre .pk-h{color:var(--bs-paper)}
   .pk-tenang{background:var(--bs-n200);border-radius:16px;padding:16px 18px;
     cursor:pointer}
+  /* Grup dua tingkat di daftar tindakan: bulan lalu DRPP */
+  .pk-grup{margin-bottom:10px}
+  .pk-grup-h{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;
+    padding:6px 8px;border-radius:12px;background:var(--bs-n200)}
+  .pk-grup-h:hover{background:var(--bs-n300)}
+  .pk-kar{font-size:11px;color:var(--bs-n600);width:12px}
+  .pk-grup-n{font-family:var(--bs-fh);font-weight:600;font-size:15px;color:var(--bs-ink)}
+  .pk-grup-x{margin-left:auto;font-size:12px;color:var(--bs-n600);
+    font-variant-numeric:tabular-nums}
+  .pk-drpp{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;
+    color:var(--bs-n600);padding:9px 8px 3px 20px}
+  .pk-drpp-x{background:var(--bs-n200);color:var(--bs-n800);border-radius:999px;
+    padding:1px 7px;font-size:11px}
+  .pk-grup .pk-row{margin-left:20px}
   .pk-kosong{font-size:13px;color:var(--bs-n600);padding:10px 8px}
   @media(max-width:1439px){
     .pk-stats{grid-template-columns:repeat(2,1fr)}
@@ -5969,23 +5983,108 @@ function _pkRenderKartu(res){
     +(lewat?' — sudah lewat':'')+'</div></div>';
 }
 
+/* Kunci bulan 'YYYY-MM' dari tanggal transaksi; '' bila tanggalnya tidak terbaca. */
+function _pkBulanKey(t){
+  var s=String(t.tanggal||'');
+  var m=/^(\d{4})-(\d{2})/.exec(s);
+  if(m) return m[1]+'-'+m[2];
+  var d=new Date(s);
+  if(isNaN(d.getTime())) return '';
+  var mm=d.getMonth()+1;
+  return d.getFullYear()+'-'+(mm<10?'0':'')+mm;
+}
+
+var _PK_BULAN=['Januari','Februari','Maret','April','Mei','Juni',
+               'Juli','Agustus','September','Oktober','November','Desember'];
+function _pkNamaBulan(key){
+  if(!key) return 'Tanpa tanggal';
+  var p=key.split('-');
+  return _PK_BULAN[(+p[1]||1)-1]+' '+p[0];
+}
+
+/* Simpan grup mana yang sedang terbuka supaya tidak tertutup ulang saat data disegarkan. */
+var pkGrupTutup={};
+function _pkToggleGrup(key){
+  // Keadaan bawaan dihitung dari bulan berjalan, BUKAN dari undefined. Menulis
+  // pkGrupTutup[key]=!pkGrupTutup[key] akan salah untuk bulan lama: nilainya masih
+  // undefined, !undefined = true, sehingga klik pertama justru menyetelnya tertutup
+  // lagi padahal ia memang sudah tertutup -- tampak seperti tombol yang mati.
+  var kini=_pkBulanKey({tanggal:todayISO()});
+  var sedangTutup = (pkGrupTutup[key]===undefined) ? (key!==kini) : pkGrupTutup[key];
+  pkGrupTutup[key]=!sedangTutup;
+  _pkRenderTindakan(pkData);
+}
+
+/**
+ * Daftar "menunggu tindakan", dikelompokkan dua tingkat: bulan lalu DRPP.
+ *
+ * Transaksi tanpa DRPP sengaja ditaruh PALING ATAS dalam tiap bulan -- itu yang
+ * belum diproses sama sekali, jadi justru yang paling perlu dikerjakan. Menaruhnya
+ * di bawah (mengikuti urutan abjad nomor DRPP) akan menyembunyikannya di ekor daftar.
+ *
+ * Bulan berjalan terbuka, bulan lama tertutup tapi judul + jumlahnya tetap terlihat.
+ */
 function _pkRenderTindakan(res){
-  var tx=res.transaksi||[], h='', i, n=0;
+  if(!res) return;
+  var tx=res.transaksi||[], i, n=0;
+  var bulan={}, urutBulan=[];
   for(i=0;i<tx.length;i++){
     var t=tx[i], al=_pkKriteriaTindakan(t);
     if(!al.length) continue;
     n++;
-    h+='<div class="pk-row tindakan" onclick="_pkBukaTransaksi('+(+t.no||0)+')">'
-      // Nama field mengikuti kartu Transaksi: kegiatan + penjab. Objek transaksi
-      // TIDAK punya t.uraian maupun t.penyedia -- memakainya membuat tiap baris
-      // tampil "(tanpa uraian)" tanpa penanggung jawab.
-      +'<div><div class="t1">'+esc(t.kegiatan||'-')+'</div>'
-      +'<div class="t2">'+esc(String(t.no||''))+(t.penjab?(' · '+esc(t.penjab)):'')+'</div></div>'
-      +'<div><span class="chip no">'+esc(al[0])+'</span></div>'
-      +'<div class="nom">'+rupiah(+t.kredit||0)+'</div></div>';
+    var bk=_pkBulanKey(t);
+    if(!bulan[bk]){ bulan[bk]={drpp:{}, urutDrpp:[], jml:0, nilai:0}; urutBulan.push(bk); }
+    var g=bulan[bk];
+    var dk=String(t.noDrpp||'').trim();
+    if(!g.drpp[dk]){ g.drpp[dk]=[]; g.urutDrpp.push(dk); }
+    g.drpp[dk].push({t:t, al:al});
+    g.jml++; g.nilai+=(+t.kredit||0);
   }
-  document.getElementById('pkTindakan').innerHTML=
-    n?h:'<div class="pk-kosong">Tidak ada yang menunggu tindakan.</div>';
+  if(!n){
+    document.getElementById('pkTindakan').innerHTML=
+      '<div class="pk-kosong">Tidak ada yang menunggu tindakan.</div>';
+    return;
+  }
+  urutBulan.sort(function(a,b){ return a<b?1:(a>b?-1:0); });   // terbaru dulu
+  var kini=_pkBulanKey({tanggal:todayISO()});
+  var h='', bi, di;
+  for(bi=0;bi<urutBulan.length;bi++){
+    var bk2=urutBulan[bi], g2=bulan[bk2];
+    // Bulan lama tertutup secara bawaan; pilihan pengguna (pkGrupTutup) menang.
+    var tutup = (pkGrupTutup[bk2]===undefined) ? (bk2!==kini) : pkGrupTutup[bk2];
+    h+='<div class="pk-grup">'
+      // Kunci bulan selalu 'YYYY-MM' atau '' -- tapi tetap di-esc dan dikutip
+      // mengikuti pola editTransaksi() di berkas ini, supaya tidak ada jalan
+      // masuk bug kutip bila suatu saat kuncinya berubah bentuk.
+      +'<div class="pk-grup-h" onclick="_pkToggleGrup(\''+esc(bk2)+'\')">'
+      +'<span class="pk-kar">'+(tutup?'&#9656;':'&#9662;')+'</span>'
+      +'<span class="pk-grup-n">'+esc(_pkNamaBulan(bk2))+'</span>'
+      +'<span class="pk-grup-x">'+g2.jml+' transaksi &middot; '+rupiah(g2.nilai)+'</span></div>';
+    if(!tutup){
+      // '' (tanpa DRPP) selalu pertama, sisanya urut nomor DRPP.
+      g2.urutDrpp.sort(function(a,b){
+        if(a==='') return -1; if(b==='') return 1;
+        return a<b?-1:(a>b?1:0);
+      });
+      for(di=0;di<g2.urutDrpp.length;di++){
+        var dk2=g2.urutDrpp[di], baris=g2.drpp[dk2], j;
+        h+='<div class="pk-drpp">'+(dk2?('DRPP '+esc(dk2)):'Belum masuk DRPP')
+          +' <span class="pk-drpp-x">'+baris.length+'</span></div>';
+        for(j=0;j<baris.length;j++){
+          var b=baris[j], t2=b.t;
+          h+='<div class="pk-row tindakan" onclick="_pkBukaTransaksi('+(+t2.no||0)+')">'
+            +'<div><div class="t1">'+esc(t2.kegiatan||'(tanpa keterangan)')+'</div>'
+            +'<div class="t2">No '+esc(String(t2.no||'-'))
+            +(t2.penjab?(' &middot; '+esc(t2.penjab)):'')
+            +(t2.tanggal?(' &middot; '+esc(String(t2.tanggal))):'')+'</div></div>'
+            +'<div><span class="chip no">'+esc(b.al[0])+'</span></div>'
+            +'<div class="nom">'+rupiah(+t2.kredit||0)+'</div></div>';
+        }
+      }
+    }
+    h+='</div>';
+  }
+  document.getElementById('pkTindakan').innerHTML=h;
 }
 
 /**
