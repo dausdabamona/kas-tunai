@@ -63,6 +63,42 @@ Dipakai oleh **semua** task. Ganti nilai hex dengan `var(--token)`.
 
 ---
 
+### Tabel pemetaan token lama — WAJIB ikut dikonversi
+
+Warna hardcoded bukan satu-satunya sisa palet lama. **`var(--c-*)` masih menunjuk
+nilai palet lama**, jadi layar yang masih memakainya belum benar-benar terkonversi
+meski nol hex. Setiap task WAJIB mengganti `var(--c-*)` di wilayahnya juga.
+
+| Token lama | Nilainya | Jadi |
+|---|---|---|
+| `var(--c-muted)` | `#6b7280` | `var(--bs-n600)` |
+| `var(--c-line)` | `#e2e6ec` | `var(--bs-n300)` |
+| `var(--c-ok)` | `#16a34a` | `var(--bs-n700)` — hijau "beres" jadi netral |
+| `var(--c-err)` | `#dc2626` | `var(--bs-a2)` |
+| `var(--c-warn)` | `#ea580c` | `var(--bs-a2)` |
+| `var(--c-teal)` | `#0d9488` | `var(--bs-ac)` |
+| `var(--c-teal-bg)` | `#f0fdfa` | `var(--bs-ac1)` |
+| `var(--c-primary)` | `#1565c0` | `var(--bs-ac)` |
+| `var(--c-head1)` | `#16456e` | `var(--bs-ac7)` |
+| `var(--c-head2)` | `#1d6299` | `var(--bs-ac7)` |
+| `var(--c-text)` | `#1f2937` | `var(--bs-n800)` |
+| `var(--c-bg)` | `#eef1f5` | `var(--bs-bg)` |
+| `var(--c-card)` | `#fff` | `var(--bs-paper)` |
+| `var(--c-purple)` | `#7c3aed` | `var(--bs-n800)` |
+| `var(--c-bad)` | **tidak pernah didefinisikan** | `var(--bs-a2)` — lihat catatan |
+
+**Catatan `--c-bad`:** token ini dipakai di dua tombol hapus (`index.html` sekitar
+baris 2517 dan 4156) tetapi **tidak ada di `:root`**, sehingga selama ini tidak
+menghasilkan warna apa pun dan tombol hapus tampil seperti teks biasa. Ini cacat
+lama, bukan akibat konversi. Dipetakan ke `--bs-a2` sebagai **satu-satunya aksi
+yang boleh magenta**: menghapus baris adalah kehilangan data, dan konsekuensi itu
+harus terlihat. Pengecualian ini sempit dan sengaja ditulis di sini supaya bisa
+dibantah reviewer, bukan diselundupkan.
+
+`--radius` **bukan warna** dan tetap dipakai — jangan diganti, jangan dihapus.
+
+---
+
 ## Struktur berkas
 
 Seluruh pekerjaan di `index.html`. Peta wilayahnya:
@@ -730,11 +766,21 @@ for i,ln in enumerate(L,1):
         if not cetak: sisa.append((i, ln.strip()[:100]))
     if '</style>' in ln: instyle=False
 print("sisa warna UI aplikasi:", len(sisa))
+EOF
+```
+
+Dan pemeriksaan kedua, untuk token lama yang tersisa di seluruh berkas:
+
+```bash
+cd /home/user/kas-tunai
+grep -c "var(--c-" index.html
 for i,t in sisa[:40]: print(f"  {i}: {t}")
 EOF
 ```
 
-Expected: `sisa warna UI aplikasi: 0`. Bila masih ada, konversi baris-baris itu dan ulangi.
+Expected: `sisa warna UI aplikasi: 0` **dan** `grep -c "var(--c-"` = `0`.
+
+Task 7 adalah penyapu terakhir: layar-layar terdahulu dikonversi sebelum tabel token lama di atas ditambahkan ke rencana, jadi sebagian `var(--c-*)` milik layar Transaksi dan Nota Kena Pajak kemungkinan masih tersisa. Bereskan semuanya di sini, apa pun layarnya.
 
 - [ ] **Step 4: Verifikasi klik nyata**
 
