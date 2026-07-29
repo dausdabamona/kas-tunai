@@ -196,6 +196,7 @@
   .tcard.st-belumlunas{border-left:5px solid var(--bs-a2);background:var(--bs-a21);border-radius:14px}
   .tcard.st-belumfoto{border-left:5px solid var(--bs-ac);background:var(--bs-ac1)}
   .tcard.st-belum{border-left:5px solid var(--bs-a2);background:var(--bs-a21);border-radius:14px}
+  .tcard.pk-sorot{outline:3px solid var(--bs-ac);outline-offset:2px}
   .tcard .top{display:flex;justify-content:space-between;gap:8px}
   .tcard .jd{font-weight:700;font-size:14px}
   .srcbadge{font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;vertical-align:middle}
@@ -1487,12 +1488,14 @@ function fail(e){
 
 /* ============== Tab ============== */
 function switchTab(tab){
+  document.getElementById('viewPapan').classList.toggle('hidden',tab!=='papan');
   document.getElementById('viewTransaksi').classList.toggle('hidden',tab!=='transaksi');
   document.getElementById('viewSpd').classList.toggle('hidden',tab!=='spd');
   document.getElementById('viewLaporan').classList.toggle('hidden',tab!=='laporan');
   document.getElementById('viewPajak').classList.toggle('hidden',tab!=='pajak');
   document.getElementById('viewDana').classList.toggle('hidden',tab!=='dana');
   document.getElementById('viewRekon').classList.toggle('hidden',tab!=='rekon');
+  document.getElementById('tabPapan').classList.toggle('active',tab==='papan');
   document.getElementById('tabTransaksi').classList.toggle('active',tab==='transaksi');
   document.getElementById('tabSpd').classList.toggle('active',tab==='spd');
   document.getElementById('tabLaporan').classList.toggle('active',tab==='laporan');
@@ -1500,6 +1503,7 @@ function switchTab(tab){
   document.getElementById('tabDana').classList.toggle('active',tab==='dana');
   document.getElementById('tabRekon').classList.toggle('active',tab==='rekon');
   document.getElementById('tbSlot').classList.toggle('hidden',tab!=='transaksi');
+  if(tab==='papan') muatPapanKerja();
   if(tab==='laporan') loadRekap();
   if(tab==='spd' && !document.getElementById('spdPpk').value) resetSpdForm();
   if(tab==='pajak') muatNotaPajak();
@@ -2139,7 +2143,7 @@ function _cardHtml(t, mode){
     ? '<label class="sg-pick"><input type="checkbox" '+(_spbyPicks[t.no]!=null?'checked':'')
       +' onchange="_togglePick('+t.no+','+(+t.kredit||0)+',this)"> Pilih untuk SPBY</label>'
     : '';
-  var h='<div class="tcard '+st+'">'+pick+head
+  var h='<div class="tcard '+st+'" data-no="'+(+t.no||0)+'">'+pick+head
     +(lunas
        ? '<div class="amt amt-ok">&#10003; Lunas<span class="dt">'+esc(_tglID(t.tanggal))+'</span></div>'
        : '<div class="amt">-'+rupiah(sisa)+'<span class="dt">'+esc(_tglID(t.tanggal))+'</span></div>')
@@ -5544,6 +5548,10 @@ function _checkAuth() {
     // Token tersimpan — muat data. Server memvalidasi token; bila kadaluarsa,
     // serverGetDashboard melempar 'SESI_BERAKHIR' → fail() → _forceLogin().
     loadAll();
+    // Layar pembuka = Papan kerja (bukan Transaksi). switchTab() sendiri yang
+    // menukar kelas hidden/active semua layar & tab rail, jadi tidak perlu
+    // menyentuh markup default viewTransaksi/tabTransaksi.
+    switchTab('papan');
   } else {
     _showLoginModal();
   }
@@ -5585,6 +5593,7 @@ function doLogin() {
         openModal('modalGantiPw');
       } else {
         loadAll();
+        switchTab('papan'); // layar pembuka = Papan kerja setelah login berhasil
       }
     })
     .withFailureHandler(function(e) {
@@ -5891,6 +5900,172 @@ function submitPagu(){
     })
     .withFailureHandler(fail)
     .serverImporPagu(_tok, rows, document.getElementById('apPeriode').value||'');
+}
+
+/* ============== Papan kerja ============== */
+/**
+ * Kriteria "Menunggu tindakan Anda" -- 4 kategori yang disetujui pengguna.
+ * Rumus sisaPUM DISALIN PERSIS dari mode ringkas hitungNeraca di mobile.html,
+ * didokumentasikan docs/HANDOFF-MOBILE.md bagian 2. Bila rumus itu berubah,
+ * fungsi ini HARUS ikut diperbarui manual -- ini dua salinan yang sengaja
+ * dijaga sama, bukan kebetulan.
+ */
+function _pkKriteriaTindakan(t){
+  var alasan=[];
+  if((+t.kredit||0)>0 && !t.noSpby) alasan.push('Belum SPBY');
+  if((+t.kredit||0)>0 && (t.pajakKatIdx===null||t.pajakKatIdx===undefined)) alasan.push('Pajak belum diisi');
+  if((+t.kredit||0)>0 && _notTransfer(t)){
+    var um=(+t.uangDiserahkan>0)?(+t.uangDiserahkan):(+t.kredit||0);
+    var sisaPUM=um-(+t.notaTotal||0)-(+t.kembalianTotal||0);
+    if(sisaPUM>0) alasan.push('PUM belum bernota');
+  }
+  if(String(t.statusRekon||'').toUpperCase()==='NILAI_BEDA') alasan.push('Rekon selisih');
+  return alasan;
+}
+
+var pkData=null;
+
+function muatPapanKerja(){
+  document.getElementById('pkTindakan').innerHTML='<div class="pk-kosong">Memuat…</div>';
+  google.script.run
+    .withSuccessHandler(function(res){
+      pkData=res;
+      _pkRenderKartu(res); _pkRenderTindakan(res); _pkRenderPagu(res);
+      _pkRenderAntrean(res); _pkRenderScan(res); _pkRenderRekon(res);
+    })
+    .withFailureHandler(function(e){
+      document.getElementById('pkTindakan').innerHTML=
+        '<div class="pk-kosong">Gagal memuat: '+esc(e&&e.message?e.message:String(e))+'</div>';
+    })
+    .serverGetPapanKerja(_tok);
+}
+
+function _pkRenderKartu(res){
+  var tx=res.transaksi||[], i, nSpby=0, rpSpby=0;
+  for(i=0;i<tx.length;i++){
+    var t=tx[i];
+    if((+t.kredit||0)>0 && !t.noSpby){ nSpby++; rpSpby+=(+t.kredit||0); }
+  }
+  // Status setor pajak ada di baris NOTA (sheet Multi Nota), bukan di transaksi --
+  // jadi angkanya dihitung di server dan dikirim jadi. Jangan menghitungnya dari
+  // field transaksi: t.pajakTotal TIDAK ADA.
+  var nPajak=+res.pajakBelumSetor||0;
+  var hariIni=new Date().getDate(), batas=+res.batasSetorTanggal||0;
+  var lewat=(batas>0 && hariIni>batas);
+  // Peran viewer: saldo diredaksi jadi null oleh server -- tampilkan placeholder,
+  // BUKAN angka 0 (itu menyesatkan, seolah kasnya kosong).
+  var s=res.saldo, adaSaldo=!!s;
+  document.getElementById('pkKartu').innerHTML=
+     '<div class="pk-card utama"><div class="lbl">Saldo kas tunai</div>'
+    +'<div class="num">'+(adaSaldo?rupiah(s.saldoTunai):'—')+'</div>'
+    +'<div class="sub">'+(adaSaldo?'per '+esc(todayISO()):'Tidak ditampilkan untuk peran ini')+'</div></div>'
+    +'<div class="pk-card"><div class="lbl">Bank / UP</div>'
+    +'<div class="num">'+(adaSaldo?rupiah(s.saldoBank):'—')+'</div></div>'
+    +'<div class="pk-card"><div class="lbl">Belum di-SPBY</div>'
+    +'<div class="num">'+nSpby+'</div><div class="sub">'+rupiah(rpSpby)+'</div></div>'
+    +'<div class="pk-card"><div class="lbl">Pajak belum disetor</div>'
+    +'<div class="num">'+nPajak+'</div>'
+    +'<div class="sub'+(lewat?' lewat':'')+'">batas setor tanggal '+batas
+    +(lewat?' — sudah lewat':'')+'</div></div>';
+}
+
+function _pkRenderTindakan(res){
+  var tx=res.transaksi||[], h='', i, n=0;
+  for(i=0;i<tx.length;i++){
+    var t=tx[i], al=_pkKriteriaTindakan(t);
+    if(!al.length) continue;
+    n++;
+    h+='<div class="pk-row tindakan" onclick="_pkBukaTransaksi('+(+t.no||0)+')">'
+      +'<div><div class="t1">'+esc(t.uraian||'(tanpa uraian)')+'</div>'
+      +'<div class="t2">'+esc(String(t.no||''))+(t.penyedia?(' · '+esc(t.penyedia)):'')+'</div></div>'
+      +'<div><span class="chip no">'+esc(al[0])+'</span></div>'
+      +'<div class="nom">'+rupiah(+t.kredit||0)+'</div></div>';
+  }
+  document.getElementById('pkTindakan').innerHTML=
+    n?h:'<div class="pk-kosong">Tidak ada yang menunggu tindakan.</div>';
+}
+
+/**
+ * Buka layar Transaksi lalu sorot kartunya. TIDAK ada fungsi "buka detail" di
+ * desktop -- layar Transaksi adalah daftar kartu, bukan master-detail. Jadi
+ * penanda data-no ditambahkan ke _cardHtml (Step 3b) supaya kartunya bisa
+ * ditemukan dan digulir ke tengah layar.
+ */
+function _pkBukaTransaksi(no){
+  switchTab('transaksi');
+  setTimeout(function(){
+    var el=document.querySelector('.tcard[data-no="'+no+'"]');
+    if(!el) return;
+    el.scrollIntoView({behavior:'smooth',block:'center'});
+    el.classList.add('pk-sorot');
+    setTimeout(function(){ el.classList.remove('pk-sorot'); }, 2200);
+  }, 60);
+}
+
+function _pkRenderPagu(res){
+  var top=(res.serapan&&res.serapan.top5)||[], h='', i;
+  if(!top.length){
+    document.getElementById('pkPagu').innerHTML='<div class="pk-kosong">Belum ada data pagu.</div>';
+    return;
+  }
+  for(i=0;i<top.length;i++){
+    var a=top[i], pct=Math.round((+a.persen||0)*100);
+    // Ambang '>' bukan '>=': 90% pas TIDAK tersorot.
+    var tipis=((+a.persen||0)>0.9);
+    h+='<div class="pk-row pagu'+(tipis?' tipis':'')+'" onclick="switchTab(\'dana\')">'
+      +'<div><div class="t1">'+esc(a.akun)+(a.uraian?(' · '+esc(a.uraian)):'')+'</div>'
+      +'<div class="t2">sisa '+rupiah(+a.sisa||0)+'</div></div>'
+      +'<div><span class="pk-bar'+(tipis?' tipis':'')+'"><i style="width:'
+      +Math.min(100,Math.max(0,pct))+'%"></i></span>'
+      +'<span class="pk-pct">'+pct+'%</span></div></div>';
+  }
+  document.getElementById('pkPagu').innerHTML=h;
+}
+
+function _pkRenderAntrean(res){
+  var a=res.antreanSemua||[], h='', i;
+  if(!a.length){
+    // BUKAN angka 0 per staf -- itu menyesatkan, seolah semua sudah sinkron
+    // padahal sebenarnya cuma belum melapor.
+    document.getElementById('pkAntrean').innerHTML=
+      '<div class="pk-antre"><div class="pk-h">Antrean HP</div>'
+      +'<div class="pk-kosong" style="color:inherit;opacity:.9">Belum ada laporan terbaru dari HP.</div></div>';
+    return;
+  }
+  for(i=0;i<a.length;i++){
+    h+='<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0">'
+      +'<span>'+esc(a[i].email)+'</span><span><b>'+(+a[i].jumlahDraft||0)+'</b> draft'
+      +((+a[i].jumlahGagal||0)>0?(' · <b>'+(+a[i].jumlahGagal)+'</b> gagal'):'')+'</span></div>';
+  }
+  document.getElementById('pkAntrean').innerHTML=
+    '<div class="pk-antre"><div class="pk-h">Antrean HP</div>'+h+'</div>';
+}
+
+function _pkRenderScan(res){
+  var s=res.scanTerbaru||[], h='', i;
+  if(!s.length){
+    document.getElementById('pkScan').innerHTML='<div class="pk-kosong">Tidak ada berkas scan terbaru.</div>';
+    return;
+  }
+  for(i=0;i<s.length;i++){
+    h+='<div class="pk-row" style="grid-template-columns:1fr auto">'
+      +'<div><div class="t1">'+esc(s[i].nama||s[i].name||'(tanpa nama)')+'</div>'
+      +'<div class="t2">'+esc(String(s[i].tanggal||s[i].updated||''))+'</div></div>'
+      +'<div><span class="chip no">Belum dikaitkan</span></div></div>';
+  }
+  document.getElementById('pkScan').innerHTML=h;
+}
+
+function _pkRenderRekon(res){
+  var r=res.rekon||{}, c=r.counts||{};
+  var beda=+c.nilaiBeda||0;
+  document.getElementById('pkRekon').innerHTML=
+     '<div class="pk-tenang" onclick="switchTab(\'rekon\')"><div class="pk-h">Kartu ketenangan</div>'
+    +'<div class="t2" style="margin-top:6px">'
+    +(+c.cocok||0)+' cocok · '+(+c.belum||0)+' belum · '
+    +'<b'+(beda>0?' style="color:var(--bs-a2)"':'')+'>'+beda+'</b> selisih nilai</div>'
+    +'<div class="t2">'+(r.lastImport?('Impor terakhir: '+esc(String(r.lastImport)))
+                                     :'Belum ada impor rekening koran')+'</div></div>';
 }
 
 /* ============== Ketersediaan Dana ============== */
