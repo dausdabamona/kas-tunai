@@ -149,10 +149,10 @@ menyentuh data produksi. Kalau angka belum cocok, hentikan — jangan lanjut ke 
 | # | Pertanyaan | Kenapa perlu dijawab |
 |---|---|---|
 | 5 | **Irama unggah GLP039**: setiap pengajuan GUP, akhir bulan, atau ad-hoc? | Menentukan seberapa "wajar" selisih yang muncul dan apakah perlu pengingat. Tanpa ini, layar Selisih akan penuh selisih semu. Blokir tugas 10. |
-| 6 | **Perlakuan saat revisi DIPA/POK**: item lama yang hilang di versi baru — disembunyikan, atau tetap tampil sebagai "item yatim" dengan realisasinya? | Menentukan apakah total realisasi bisa "hilang" diam-diam. Blokir tugas 14. Rekomendasi: tetap tampil terpisah. |
+| ~~6~~ | ~~**Perlakuan saat revisi DIPA/POK**~~ | **TERJAWAB 29 Jul 2026: tetap tampil terpisah.** Item yang hilang dari versi POK terbaru muncul sebagai baris **"Item di luar POK versi ini"** di tingkat akar, lengkap dengan nilai realisasinya. Total realisasi tidak boleh berkurang diam-diam. Berlaku untuk tab Pencocokan (urutan-3) maupun tugas item yatim (urutan-10). Risiko R-3 dengan ini punya jawaban. |
 | 7 | **Siapa boleh menekan "Tandai wajar"?** (Bendahara saja, atau PPK juga?) | Tombol ini mematikan peringatan pengendalian. Blokir tugas 13. |
 
-Paket v2 (§9) menegaskan ulang: ketiga pertanyaan ini **masih terbuka** — desain
+Paket v2 (§9) menegaskan ulang: pertanyaan **5 dan 7 masih terbuka** (nomor 6 sudah dijawab, lihat di atas) — desain
 v2 memberi *bentuk* visual (mis. item yatim didesain tampil terpisah, bagian 3b)
 tapi itu bukan jawaban keputusan #6, hanya opsi yang sudah siap dipakai begitu
 pengguna mengonfirmasi.
