@@ -5868,7 +5868,13 @@ function renderDana(){
       +'<div class="amt tnum" style="color:'+(x.sisaAman<0?'var(--bs-a2)':'var(--bs-ac)')+'">'+rupiah(x.sisaAman)+'</div></div>'
       +'<div class="tgl">'+esc(x.kodeItem)+(x.ro?(' &middot; '+esc(x.ro)):'')+(x.uraianRo?(' &middot; '+esc(x.uraianRo).slice(0,40)):'')+'</div>'
       +'<div style="height:6px;background:var(--bs-n300);border-radius:999px;margin:8px 0 6px;overflow:hidden">'
-      +'<div style="height:100%;width:'+pct+'%;background:'+(pct>90?'var(--bs-a2)':'var(--bs-ac)')+'"></div></div>'
+      // Magenta HANYA bila benar-benar melebihi pagu (sisaAman < 0), bukan bila
+      // serapan tinggi. Ambang ">90%" milik panel "Sisa pagu paling tipis" di
+      // Papan kerja, bukan layar ini: di sini pct dibatasi 100, jadi item yang
+      // lewat pagu 200% dan item yang pas 95% akan tampak sama persis. Lagipula
+      // serapan tinggi itu wajar menjelang akhir tahun anggaran — memberinya
+      // magenta mengencerkan arti magenta sebagai "perlu tindakan".
+      +'<div style="height:100%;width:'+pct+'%;background:'+(x.lebihPagu?'var(--bs-a2)':'var(--bs-ac)')+'"></div></div>'
       +'<div class="chips">'
       +'<span class="chip">Pagu '+rupiah(x.pagu)+'</span>'
       +'<span class="chip">SAKTI '+rupiah(x.realisasiSakti)+'</span>'
