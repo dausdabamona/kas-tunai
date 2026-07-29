@@ -550,13 +550,13 @@
 <!-- ================= TAB KETERSEDIAAN DANA ================= -->
 <div id="viewDana" class="wrap hidden">
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-    <div style="font-size:19px;font-weight:800;color:#0f766e;display:flex;align-items:center;gap:8px">&#128200; Ketersediaan Dana</div>
+    <div style="font-size:19px;font-weight:800;color:var(--bs-ac);display:flex;align-items:center;gap:8px">&#128200; Ketersediaan Dana</div>
     <div>
       <button class="btn ghost" style="width:auto;padding:8px 14px;margin:0;min-height:44px" onclick="openModalPagu()">&#128228; Impor / Perbarui Pagu</button>
-      <button class="btn" style="width:auto;padding:8px 14px;margin:0 0 0 6px;min-height:44px;background:var(--c-teal)" onclick="cetakDana()">&#128424; Cetak</button>
+      <button class="btn" style="width:auto;padding:8px 14px;margin:0 0 0 6px;min-height:44px;background:var(--bs-ac)" onclick="cetakDana()">&#128424; Cetak</button>
     </div>
   </div>
-  <div style="font-size:12px;color:var(--c-muted);margin-bottom:10px">
+  <div style="font-size:12px;color:var(--bs-n600);margin-bottom:10px">
     <b>Sisa aman</b> = pagu &minus; realisasi SAKTI &minus; belanja kas yang belum masuk SAKTI.
     Angka inilah yang mencegah pagu minus, karena SAKTI belum mencatat uang yang sudah Anda bayarkan.</div>
   <div class="rk-filters">
@@ -569,9 +569,9 @@
       <option value="sisa">Masih bersisa</option>
     </select>
     <input id="dnCari" placeholder="Cari item…" oninput="renderDana()"
-      style="min-height:44px;border:1px solid var(--c-line);border-radius:9px;padding:0 12px;font-size:13px">
+      style="min-height:44px;border:1px solid var(--bs-n300);border-radius:9px;padding:0 12px;font-size:13px">
   </div>
-  <div id="dnRingkas" class="kk" style="margin-bottom:12px"></div>
+  <div id="dnRingkas" class="kk" style="margin-bottom:12px;background:var(--bs-ac);color:var(--bs-paper)"></div>
   <div id="dnList"></div>
 </div>
 
@@ -581,7 +581,7 @@
 <div class="modal" id="modalPagu">
   <div class="sheet">
     <h2>&#128200; Impor Pagu (Laporan FA Detail 16 Segmen)</h2>
-    <div style="font-size:12px;color:var(--c-muted);margin-bottom:8px">Unggah berkas .xlsx dari SAKTI.
+    <div style="font-size:12px;color:var(--bs-n600);margin-bottom:8px">Unggah berkas .xlsx dari SAKTI.
       Impor ulang akan <b>memperbarui</b> item yang sama, bukan menggandakan.</div>
     <div class="field"><label>Berkas laporan (.xlsx)</label>
       <input type="file" id="apFile" accept=".xlsx,.xls" onchange="apParse()"></div>
@@ -594,8 +594,8 @@
         <div class="field"><label>Kolom Realisasi (s.d. periode)</label><select id="apColReal" onchange="apPreview()"></select></div>
         <div class="field"><label>Kolom Sisa</label><select id="apColSisa" onchange="apPreview()"></select></div>
       </div>
-      <div id="apPreview" style="max-height:220px;overflow:auto;font-size:11px;border:1px solid var(--c-line);border-radius:8px;padding:6px;margin-bottom:8px"></div>
-      <button class="btn" style="background:var(--c-ok)" onclick="submitPagu()">Impor Pagu</button>
+      <div id="apPreview" style="max-height:220px;overflow:auto;font-size:11px;border:1px solid var(--bs-n300);border-radius:8px;padding:6px;margin-bottom:8px"></div>
+      <button class="btn" style="background:var(--bs-n700)" onclick="submitPagu()">Impor Pagu</button>
     </div>
     <div id="apHasil" style="margin-top:8px"></div>
     <button class="btn ghost" onclick="closeModal('modalPagu')">Tutup</button>
@@ -844,9 +844,9 @@
         <div class="field"><label>Kolom Jumlah (opsional)</label><select id="itColJumlah" onchange="itRenderPreview()"></select></div>
       </div>
       <div class="tgl">Jika Harga Satuan kosong tapi Jumlah &amp; Qty ada → harga = Jumlah ÷ Qty. "1 pak" → qty=1, satuan="pak".</div>
-      <div id="itPreview" style="max-height:230px;overflow:auto;font-size:11px;border:1px solid var(--c-line);border-radius:8px;padding:6px;margin:8px 0"></div>
+      <div id="itPreview" style="max-height:230px;overflow:auto;font-size:11px;border:1px solid var(--bs-n300);border-radius:8px;padding:6px;margin:8px 0"></div>
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px"><input type="checkbox" id="itReplace"> Ganti semua item yang ada (bukan menambah)</label>
-      <button class="btn" style="background:var(--c-ok)" onclick="submitImporItem()">Tambah ke Rincian</button>
+      <button class="btn" style="background:var(--bs-n700)" onclick="submitImporItem()">Tambah ke Rincian</button>
     </div>
     <button class="btn ghost" onclick="closeModal('modalImporItem')">Tutup</button>
   </div>
@@ -5778,7 +5778,7 @@ function apPreview(){
     if(cocok===null) cocok=false;
   }
   h+='<div style="padding:8px 10px;border-radius:8px;margin-bottom:8px;'
-    +(cocok===true?'background:#dcfce7;color:#166534':(cocok===false?'background:#fef9c3;color:#854d0e':'background:#eef2f7;color:#475569'))+'">'
+    +(cocok===true?'background:var(--bs-n200);color:var(--bs-n700)':(cocok===false?'background:var(--bs-a21);color:var(--bs-a2)':'background:var(--bs-bg);color:var(--bs-n800)'))+'">'
     +'<b>'+rows.length+' item</b> &middot; Pagu '+rupiah(tp)+' &middot; Realisasi '+rupiah(tr)
     +(cocok===true?' &middot; &#10003; cocok dengan total di berkas'
       :(cocok===false?' &middot; &#9888; TIDAK cocok dengan total di berkas — periksa pemetaan kolom':''))
@@ -5789,7 +5789,7 @@ function apPreview(){
       +'<td style="text-align:right">'+rupiah(d.pagu)+'</td><td style="text-align:right">'+rupiah(d.realisasi)+'</td></tr>';
   }
   h+='</table>';
-  if(rows.length>n) h+='<div style="margin-top:4px;color:var(--c-muted)">(menampilkan '+n+' dari '+rows.length+')</div>';
+  if(rows.length>n) h+='<div style="margin-top:4px;color:var(--bs-n600)">(menampilkan '+n+' dari '+rows.length+')</div>';
   document.getElementById('apPreview').innerHTML=h;
 }
 function submitPagu(){
@@ -5802,7 +5802,7 @@ function submitPagu(){
     .withSuccessHandler(function(res){
       showLoading(false);
       document.getElementById('apHasil').innerHTML=
-        '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px;font-size:12px">'
+        '<div style="background:var(--bs-ac1);border:1px solid var(--bs-ac3);border-radius:8px;padding:8px;font-size:12px">'
         +'<b>Impor selesai:</b> '+(res.ditambah||0)+' item baru, '+(res.diperbarui||0)+' diperbarui.<br>'
         +'Total pagu '+rupiah(res.totalPagu||0)+' &middot; realisasi '+rupiah(res.totalRealisasi||0)+'</div>';
       document.getElementById('apMap').classList.add('hidden');
@@ -5853,22 +5853,22 @@ function renderDana(){
   var rows=_dnTerfilter(), i, tp=0,tr=0,tb=0,ts=0, nLebih=0;
   for(i=0;i<rows.length;i++){ tp+=rows[i].pagu; tr+=rows[i].realisasiSakti; tb+=rows[i].belanjaKas; ts+=rows[i].sisaAman; if(rows[i].lebihPagu) nLebih++; }
   document.getElementById('dnRingkas').innerHTML=
-    '<div class="kk-lbl">SISA AMAN &mdash; '+rows.length+' ITEM'+(_dana.periode?(' &middot; '+esc(_dana.periode)):'')+'</div>'
-    +'<div class="kk-num tnum">'+rupiah(ts)+'</div>'
-    +'<div style="font-size:13px">Pagu <b class="tnum">'+rupiah(tp)+'</b> &middot; Realisasi SAKTI <b class="tnum">'+rupiah(tr)+'</b> &middot; Belanja kas <b class="tnum">'+rupiah(tb)+'</b></div>'
-    +(nLebih?('<div style="margin-top:6px;font-size:13px;color:#991b1b;font-weight:700">&#9888; '+nLebih+' item melebihi pagu</div>'):'')
-    +((_dana.belanjaTanpaItem>0)?('<div style="margin-top:4px;font-size:12px;color:#854d0e">Belanja kas belum bertanda item: '+rupiah(_dana.belanjaTanpaItem)+'</div>'):'');
+    '<div class="kk-lbl" style="color:var(--bs-paper)">SISA AMAN &mdash; '+rows.length+' ITEM'+(_dana.periode?(' &middot; '+esc(_dana.periode)):'')+'</div>'
+    +'<div class="kk-num tnum" style="color:var(--bs-paper)">'+rupiah(ts)+'</div>'
+    +'<div style="font-size:13px;color:var(--bs-paper)">Pagu <b class="tnum">'+rupiah(tp)+'</b> &middot; Realisasi SAKTI <b class="tnum">'+rupiah(tr)+'</b> &middot; Belanja kas <b class="tnum">'+rupiah(tb)+'</b></div>'
+    +(nLebih?('<div style="margin-top:6px;font-size:13px;color:var(--bs-paper);font-weight:700">&#9888; '+nLebih+' item melebihi pagu</div>'):'')
+    +((_dana.belanjaTanpaItem>0)?('<div style="margin-top:4px;font-size:12px;color:var(--bs-paper)">Belanja kas belum bertanda item: '+rupiah(_dana.belanjaTanpaItem)+'</div>'):'');
   if(!rows.length){ box.innerHTML='<div class="empty">Tidak ada item untuk filter ini.</div>'; return; }
   var h='';
   for(i=0;i<rows.length;i++){ var x=rows[i];
     var pct=x.pagu>0?Math.min(100,Math.round((x.realisasiSakti+x.belumMasukSakti)/x.pagu*100)):0;
-    h+='<div class="card" style="margin-bottom:8px'+(x.lebihPagu?';border-color:#fecaca':'')+'">'
+    h+='<div class="card" style="margin-bottom:8px'+(x.lebihPagu?';background:var(--bs-a21);border-radius:14px':'')+'">'
       +'<div class="row1"><div class="keg" style="font-size:14px">'+esc(x.uraianItem||x.kodeItem)
       +' <span class="chip">'+esc(x.akun)+'</span>'+(x.lebihPagu?' <span class="chip no">&#9888; Lebih pagu</span>':'')+'</div>'
-      +'<div class="amt tnum" style="color:'+(x.sisaAman<0?'#991b1b':'#0f766e')+'">'+rupiah(x.sisaAman)+'</div></div>'
+      +'<div class="amt tnum" style="color:'+(x.sisaAman<0?'var(--bs-a2)':'var(--bs-ac)')+'">'+rupiah(x.sisaAman)+'</div></div>'
       +'<div class="tgl">'+esc(x.kodeItem)+(x.ro?(' &middot; '+esc(x.ro)):'')+(x.uraianRo?(' &middot; '+esc(x.uraianRo).slice(0,40)):'')+'</div>'
-      +'<div style="height:6px;background:#e2e8f0;border-radius:999px;margin:8px 0 6px;overflow:hidden">'
-      +'<div style="height:100%;width:'+pct+'%;background:'+(x.lebihPagu?'#dc2626':'#0d9488')+'"></div></div>'
+      +'<div style="height:6px;background:var(--bs-n300);border-radius:999px;margin:8px 0 6px;overflow:hidden">'
+      +'<div style="height:100%;width:'+pct+'%;background:'+(pct>90?'var(--bs-a2)':'var(--bs-ac)')+'"></div></div>'
       +'<div class="chips">'
       +'<span class="chip">Pagu '+rupiah(x.pagu)+'</span>'
       +'<span class="chip">SAKTI '+rupiah(x.realisasiSakti)+'</span>'
