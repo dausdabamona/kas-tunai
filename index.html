@@ -404,13 +404,13 @@
   #viewSpd:not(.jenis-lk) .lk-only{display:none}
   #viewSpd.jenis-lk .dk-only{display:none}
   .jenis-seg{display:flex;gap:8px;margin:10px 0 0}
-  .jenis-seg label{flex:1;text-align:center;border:1px solid var(--c-line);border-radius:8px;padding:9px;font-weight:600;cursor:pointer}
+  .jenis-seg label{flex:1;text-align:center;border:1px solid var(--bs-n300);border-radius:8px;padding:9px;font-weight:600;cursor:pointer}
   .jenis-seg input{margin-right:5px}
-  .peg-sub{border-top:1px dashed var(--c-line);margin-top:8px;padding-top:8px}
-  .peg-sub h5{margin:0 0 6px;font-size:12px;color:var(--c-muted);text-transform:uppercase;letter-spacing:.4px}
+  .peg-sub{border-top:1px dashed var(--bs-n300);margin-top:8px;padding-top:8px}
+  .peg-sub h5{margin:0 0 6px;font-size:12px;color:var(--bs-n600);text-transform:uppercase;letter-spacing:.4px}
   .sub-row{display:flex;gap:6px;margin-bottom:6px}
   .sub-row input.urai{flex:1} .sub-row input.nom{width:30%}
-  .bdhlbl{font-size:11px;display:flex;align-items:center;gap:3px;white-space:nowrap;color:#3730a3;font-weight:600}
+  .bdhlbl{font-size:11px;display:flex;align-items:center;gap:3px;white-space:nowrap;color:var(--bs-n800);font-weight:600}
   .sub-row button{width:auto;padding:4px 10px;margin:0}
 </style>
 <div id="viewSpd" class="wrap hidden">
@@ -419,15 +419,15 @@
     <label><input type="radio" name="spdJenis" value="DALAM_KOTA" checked onchange="setSpdJenis('DALAM_KOTA')">Dalam Kota</label>
     <label><input type="radio" name="spdJenis" value="LUAR_KOTA" onchange="setSpdJenis('LUAR_KOTA')">Luar Kota</label>
   </div>
-  <div class="listbox" style="border-top:1px solid var(--c-line);border-radius:10px;margin-top:10px">
+  <div class="listbox" style="border-top:1px solid var(--bs-n300);border-radius:10px;margin-top:10px">
     <div class="row2">
       <div class="field"><label>Nomor Surat Tugas</label><input type="text" id="spdNomor" placeholder="mis. B.450/BPPSDM.5/KP.440/VI/2026"></div>
       <div class="field"><label>Tanggal Surat Tugas</label><input type="date" id="spdTglSurat"></div>
     </div>
-    <div class="field"><label>Menimbang <span style="color:var(--c-muted);font-weight:400">(opsional — kosong = otomatis dari maksud)</span></label>
-      <textarea id="spdMenimbang" rows="2" style="width:100%;font:inherit;padding:8px;border:1px solid var(--c-line);border-radius:8px;box-sizing:border-box;resize:vertical" placeholder="Bahwa dalam rangka pelaksanaan kegiatan ..., dipandang perlu menugaskan pegawai dengan Surat Tugas."></textarea></div>
-    <div class="field"><label>Dasar <span style="color:var(--c-muted);font-weight:400">(satu rujukan per baris — mis. DIPA; surat undangan)</span></label>
-      <textarea id="spdDasar" rows="3" style="width:100%;font:inherit;padding:8px;border:1px solid var(--c-line);border-radius:8px;box-sizing:border-box;resize:vertical" placeholder="DIPA Politeknik KP Sorong TA 2026 Nomor SP DIPA ...&#10;Surat Undangan ... Nomor ... tanggal ..."></textarea></div>
+    <div class="field"><label>Menimbang <span style="color:var(--bs-n600);font-weight:400">(opsional — kosong = otomatis dari maksud)</span></label>
+      <textarea id="spdMenimbang" rows="2" style="width:100%;font:inherit;padding:8px;border:1px solid var(--bs-n300);border-radius:8px;box-sizing:border-box;resize:vertical" placeholder="Bahwa dalam rangka pelaksanaan kegiatan ..., dipandang perlu menugaskan pegawai dengan Surat Tugas."></textarea></div>
+    <div class="field"><label>Dasar <span style="color:var(--bs-n600);font-weight:400">(satu rujukan per baris — mis. DIPA; surat undangan)</span></label>
+      <textarea id="spdDasar" rows="3" style="width:100%;font:inherit;padding:8px;border:1px solid var(--bs-n300);border-radius:8px;box-sizing:border-box;resize:vertical" placeholder="DIPA Politeknik KP Sorong TA 2026 Nomor SP DIPA ...&#10;Surat Undangan ... Nomor ... tanggal ..."></textarea></div>
     <div class="field"><label>Maksud tujuan perjalanan</label><input type="text" id="spdMaksud"></div>
     <div class="field"><label>Alat angkutan</label><input type="text" id="spdAngkutan"></div>
     <div class="row2">
@@ -442,7 +442,7 @@
       <div class="field"><label>Jumlah hari</label><input type="text" id="spdHari" readonly></div>
       <div class="field dk-only"><label>Uang harian (Rp/hari)</label><input type="text" class="numfmt" id="spdHarian" value="150.000" inputmode="numeric" onchange="hitungSemuaBiaya()"></div>
     </div>
-    <div class="lk-only" style="font-size:11px;color:var(--c-muted);margin:-2px 0 6px">
+    <div class="lk-only" style="font-size:11px;color:var(--bs-n600);margin:-2px 0 6px">
       Tarif mengacu SBM yang berlaku (PMK 32/2025 TA 2026); sesuaikan lampiran provinsi Papua Barat Daya. Semua nilai bisa diubah.
     </div>
     <hr>
@@ -468,21 +468,21 @@
     <div class="field"><label>Pejabat pemberi perintah</label><input type="text" id="spdPpk"></div>
     <div class="field"><label>NIP pemberi perintah</label><input type="text" id="spdNipPpk"></div>
     <div class="lk-only">
-      <div style="font-size:12px;color:var(--c-muted);margin:6px 0">Penanda tangan Surat Tugas (KPA) — opsional, kosong = pakai pejabat pemberi perintah</div>
+      <div style="font-size:12px;color:var(--bs-n600);margin:6px 0">Penanda tangan Surat Tugas (KPA) — opsional, kosong = pakai pejabat pemberi perintah</div>
       <div class="row2">
         <div class="field"><label>KPA: Nama</label><input type="text" id="spdKpaNama"></div>
         <div class="field"><label>KPA: NIP</label><input type="text" id="spdKpaNip"></div>
       </div>
       <div class="field"><label>KPA: Jabatan</label><input type="text" id="spdKpaJab" placeholder="mis. Direktur selaku Kuasa Pengguna Anggaran"></div>
     </div>
-    <div style="font-size:12px;color:var(--c-muted);margin:6px 0">Penanda tangan Surat Tugas (default: Direktur Politeknik KP Sorong)</div>
+    <div style="font-size:12px;color:var(--bs-n600);margin:6px 0">Penanda tangan Surat Tugas (default: Direktur Politeknik KP Sorong)</div>
     <div class="row2">
       <div class="field"><label>Nama penanda tangan</label><input type="text" id="spdTtdNama"></div>
       <div class="field"><label>NIP penanda tangan</label><input type="text" id="spdTtdNip"></div>
     </div>
     <div class="field"><label>Jabatan penanda tangan</label><input type="text" id="spdTtdJab"></div>
     <hr>
-    <div style="font-size:12px;color:var(--c-muted);margin-bottom:6px">Mengetahui (opsional)</div>
+    <div style="font-size:12px;color:var(--bs-n600);margin-bottom:6px">Mengetahui (opsional)</div>
     <div class="row2">
       <div class="field"><label>Lokasi: Nama</label><input type="text" id="spdLokNama"></div>
       <div class="field"><label>Lokasi: Jabatan</label><input type="text" id="spdLokJab"></div>
@@ -491,12 +491,12 @@
       <div class="field"><label>Pekerjaan: Nama</label><input type="text" id="spdKerjaNama"></div>
       <div class="field"><label>Pekerjaan: Jabatan</label><input type="text" id="spdKerjaJab"></div>
     </div>
-    <div id="spdEditNote" style="display:none;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:8px;padding:8px;margin-bottom:8px;font-size:13px"></div>
-    <button class="btn" style="background:#0369a1" onclick="cetakSpdForm()">&#128424; Cetak SPD (pratinjau)</button>
-    <button class="btn" style="background:#1f3a5f;margin-top:8px" onclick="cetakSuratTugas()">&#128221; Cetak Surat Tugas</button>
-    <button class="btn lk-only" style="background:#7c3aed;margin-top:8px" onclick="cetakRincianBiaya()">&#129534; Cetak Rincian Biaya (Kuitansi Rampung)</button>
-    <button class="btn lk-only" style="background:#0d9488;margin-top:8px" onclick="cetakPengeluaranRiil()">&#128203; Cetak Daftar Pengeluaran Riil</button>
-    <button id="btnSimpanSpd" class="btn" style="background:var(--c-ok);margin-top:8px" onclick="simpanPerjalananDinas()">Simpan ke Kas Tunai</button>
+    <div id="spdEditNote" style="display:none;background:var(--bs-a21);border:1px solid var(--bs-a21);color:var(--bs-a2);border-radius:8px;padding:8px;margin-bottom:8px;font-size:13px"></div>
+    <button class="btn" style="background:var(--bs-ac7)" onclick="cetakSpdForm()">&#128424; Cetak SPD (pratinjau)</button>
+    <button class="btn" style="background:var(--bs-ac7);margin-top:8px" onclick="cetakSuratTugas()">&#128221; Cetak Surat Tugas</button>
+    <button class="btn lk-only" style="background:var(--bs-n800);margin-top:8px" onclick="cetakRincianBiaya()">&#129534; Cetak Rincian Biaya (Kuitansi Rampung)</button>
+    <button class="btn lk-only" style="background:var(--bs-ac);margin-top:8px" onclick="cetakPengeluaranRiil()">&#128203; Cetak Daftar Pengeluaran Riil</button>
+    <button id="btnSimpanSpd" class="btn" style="background:var(--bs-n700);margin-top:8px" onclick="simpanPerjalananDinas()">Simpan ke Kas Tunai</button>
     <button class="btn ghost" style="margin-top:8px" onclick="resetSpdForm()">Reset</button>
   </div>
 </div>
@@ -2472,7 +2472,7 @@ function _subListHtml(arr, showBdh){
 }
 function _pegRowHtml(p){
   p=p||{};
-  return '<div class="peg-row" style="border:1px solid var(--c-line);border-radius:8px;padding:8px;margin-bottom:8px">'
+  return '<div class="peg-row" style="border:1px solid var(--bs-n300);border-radius:8px;padding:8px;margin-bottom:8px">'
    +'<div class="row2"><div class="field"><label>Nama Pegawai</label><input type="text" class="pg-nama" value="'+_attr(p.nama)+'"></div>'
    +'<div class="field"><label>NIP</label><input type="text" class="pg-nip" value="'+_attr(p.nip)+'"></div></div>'
    +'<div class="row2"><div class="field"><label>Pangkat / Golongan</label><input type="text" class="pg-pangkat" value="'+_attr(p.pangkat)+'"></div>'
@@ -2484,22 +2484,22 @@ function _pegRowHtml(p){
    +'<div class="peg-sub lk-only">'
    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
    +'<h5 style="margin:0">Uang harian</h5>'
-   +'<div style="font-size:11px;color:#64748b">Hari SPD: <b class="pg-hari-spd">—</b> &nbsp;Terpakai: <b class="pg-hari-used">0</b> &nbsp;Sisa: <b class="pg-hari-sisa">—</b></div>'
+   +'<div style="font-size:11px;color:var(--bs-n600)">Hari SPD: <b class="pg-hari-spd">—</b> &nbsp;Terpakai: <b class="pg-hari-used">0</b> &nbsp;Sisa: <b class="pg-hari-sisa">—</b></div>'
    +'</div>'
-   +'<div style="font-size:12px;font-weight:700;color:#475569;margin-bottom:4px">① Lumpsum</div>'
+   +'<div style="font-size:12px;font-weight:700;color:var(--bs-n800);margin-bottom:4px">① Lumpsum</div>'
    +'<div class="row2"><div class="field"><label>Tarif (Rp/hari)</label><input type="text" inputmode="numeric" class="pg-uhRate numfmt" value="'+_grp(+p.uangHarianRate||0)+'" oninput="hitungSemuaBiaya()"></div>'
    +'<div class="field"><label>Jumlah hari</label><input type="number" min="0" class="pg-uhHari" value="'+(p.uangHarianHari!=null?(+p.uangHarianHari||0):'')+'" oninput="hitungSemuaBiaya()"></div></div>'
    +'<div class="field"><label>Subtotal lumpsum</label><input type="text" class="pg-uhTot" readonly></div>'
-   +'<div style="font-size:12px;font-weight:700;color:#475569;margin:8px 0 4px">② Diklat</div>'
+   +'<div style="font-size:12px;font-weight:700;color:var(--bs-n800);margin:8px 0 4px">② Diklat</div>'
    +'<div class="row2"><div class="field"><label>Tarif (Rp/hari)</label><input type="text" inputmode="numeric" class="pg-uhDiklatRate numfmt" value="'+_grp(+p.uangHarianDiklatRate||0)+'" oninput="hitungSemuaBiaya()"></div>'
    +'<div class="field"><label>Jumlah hari</label><input type="number" min="0" class="pg-uhDiklatHari" value="'+(+(p.uangHarianDiklatHari)||0)+'" oninput="hitungSemuaBiaya()"></div></div>'
    +'<div class="field"><label>Subtotal diklat</label><input type="text" class="pg-uhDiklatTot" readonly></div>'
-   +'<div style="font-size:12px;font-weight:700;color:#475569;margin:8px 0 4px">③ Full Board</div>'
-   +'<div style="font-size:11px;color:#64748b;margin-bottom:4px">Penginapan &amp; makan ditanggung penyelenggara</div>'
+   +'<div style="font-size:12px;font-weight:700;color:var(--bs-n800);margin:8px 0 4px">③ Full Board</div>'
+   +'<div style="font-size:11px;color:var(--bs-n600);margin-bottom:4px">Penginapan &amp; makan ditanggung penyelenggara</div>'
    +'<div class="row2"><div class="field"><label>Tarif (Rp/hari)</label><input type="text" inputmode="numeric" class="pg-uhFbRate numfmt" value="'+_grp(+p.uangHarianFbRate||0)+'" oninput="hitungSemuaBiaya()"></div>'
    +'<div class="field"><label>Jumlah hari</label><input type="number" min="0" class="pg-uhFbHari" value="'+(+(p.uangHarianFbHari)||0)+'" oninput="hitungSemuaBiaya()"></div></div>'
    +'<div class="field"><label>Subtotal full board</label><input type="text" class="pg-uhFbTot" readonly></div>'
-   +'<div class="field" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--c-line)"><label>Total uang harian</label><input type="text" class="pg-uhGrandTot" readonly style="font-weight:700"></div>'
+   +'<div class="field" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bs-n300)"><label>Total uang harian</label><input type="text" class="pg-uhGrandTot" readonly style="font-weight:700"></div>'
    +'</div>'
    +'<div class="peg-sub lk-only"><h5>Penginapan</h5>'
    +'<label style="display:block;margin-bottom:6px"><input type="checkbox" class="pg-menginap" '+(p.penginapanMenginap?'checked':'')+' onchange="hitungSemuaBiaya()"> Menginap di hotel (at-cost). Bila tidak: 30% × tarif × malam</label>'
@@ -2515,7 +2515,7 @@ function _pegRowHtml(p){
    +'<button type="button" class="btn ghost" style="width:auto;padding:4px 10px;margin:0" onclick="addSub(this)">+ pengeluaran riil</button></div>'
    // ---- Total + hapus ----
    +'<div class="row2"><div class="field"><label>Biaya pegawai (Rp)</label><input type="text" class="pg-biaya numfmt" value="'+_grp(+p.biaya||0)+'" readonly></div>'
-   +'<div class="field" style="display:flex;align-items:flex-end"><button type="button" class="btn ghost" style="margin:0;color:var(--c-bad)" onclick="hapusPegawaiRow(this)">Hapus pegawai</button></div></div>'
+   +'<div class="field" style="display:flex;align-items:flex-end"><button type="button" class="btn ghost" style="margin:0;color:var(--bs-a2)" onclick="hapusPegawaiRow(this)">Hapus pegawai</button></div></div>'
    +'</div>';
 }
 function tambahPegawaiRow(p){
@@ -2562,7 +2562,7 @@ function _pegHitungLK(r, hariDefault){
   var spdEl=r.querySelector('.pg-hari-spd'), usedEl=r.querySelector('.pg-hari-used'), sisaEl=r.querySelector('.pg-hari-sisa');
   if(spdEl) spdEl.textContent=hariDefault;
   if(usedEl) usedEl.textContent=hariUsed;
-  if(sisaEl){ sisaEl.textContent=sisa; sisaEl.style.color=sisa<0?'#dc2626':(sisa===0?'#16a34a':'#64748b'); }
+  if(sisaEl){ sisaEl.textContent=sisa; sisaEl.style.color=sisa<0?'var(--bs-a2)':(sisa===0?'var(--bs-n700)':'var(--bs-n600)'); }
   var menginap=r.querySelector('.pg-menginap').checked;
   var malam=_v(r,'.pg-malam'), hotel=_v(r,'.pg-hotel');
   var penginapan=menginap?(malam*hotel):(0.30*hotel*malam);
