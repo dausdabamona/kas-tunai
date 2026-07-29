@@ -639,7 +639,16 @@ git commit -m "feat(desktop): tema Broadsheet layar Pagu dan realisasi"
 - [ ] **Step 1: Konversi warna**
 
 Ganti setiap hex sesuai tabel pemetaan. Aturan khusus:
-- Ikon status rekonsiliasi (`_ikonRekon`) memakai `currentColor`; yang perlu diubah hanya warna induknya. Status cocok → `var(--bs-n700)`; status berselisih → `var(--bs-a2)`; status menunggu → `var(--bs-n600)`.
+- Ikon status rekonsiliasi (`_ikonRekon`) memakai `currentColor`; yang perlu diubah hanya warna induknya. Status cocok → `var(--bs-n700)`; status berselisih **dan** status menunggu → `var(--bs-a2)`.
+
+  > **Koreksi 29 Jul 2026, setelah Task 5 dikerjakan.** Versi pertama aturan ini
+  > menyuruh status menunggu → `var(--bs-n600)` (netral). **Dibatalkan.** Baris
+  > rekonsiliasi yang belum dicocokkan **adalah** pekerjaan yang menunggu, jadi
+  > magenta benar untuknya. Aturan lama juga bertabrakan dengan tabel pemetaan
+  > (`#854d0e` → `--bs-a2`) dan dengan kelas `.rk-badge.y`/`.kk-badge.y` yang
+  > sudah ditetapkan Task 1. Konsekuensi yang disengaja: `.y` (menunggu) dan `.r`
+  > (selisih) kini tampak sama; yang membedakan keduanya adalah teks labelnya,
+  > sesuai kosakata tiga-warna yang disetujui pengguna.
 - Baris berselisih: `background:var(--bs-a21);border-radius:14px`.
 
 - [ ] **Step 2: Pasang lencana Rekonsiliasi**
