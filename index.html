@@ -71,7 +71,9 @@
 
   .topbar-v2{display:flex;align-items:center;gap:12px;padding:14px 24px;
     border-bottom:1px solid var(--bs-n300);background:var(--bs-bg)}
-  .tb-slot{flex:1;min-width:0}
+  .tb-slot{flex:1;min-width:0;display:flex;gap:10px;align-items:center}
+  .tb-slot .search{margin:0;flex:1}
+  .tb-slot .search:last-child{flex:0 0 190px}
   .tb-utama{border:0;border-radius:999px;background:var(--bs-ac);color:var(--bs-paper);
     font-family:var(--bs-fb);font-size:14px;font-weight:600;padding:0 18px;
     min-height:44px;cursor:pointer}
@@ -112,23 +114,11 @@
     border-radius:12px;padding:11px 14px;margin-bottom:12px}
   .search input{flex:1;border:0;outline:0;font-size:14px;background:none}
 
-  /* Filters */
+  /* Filters — semua chip berpenampilan sama kecuali yang aktif (teal solid) */
   .filters{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px}
-  .filters button{flex:1 0 auto;border:1px solid var(--bs-n300);border-left-width:4px;background:var(--bs-paper);
-    border-radius:10px;padding:11px 14px;font-size:13px;color:var(--bs-n800);font-weight:600;white-space:nowrap}
-  .filters button[data-f="all"]{border-left-color:var(--bs-ac7)}
-  .filters button[data-f="belum"]{border-left-color:var(--bs-a2)}
-  .filters button[data-f="sudah"]{border-left-color:var(--bs-n700)}
-  .filters button[data-f="belumlunas"]{border-left-color:var(--bs-a2)}
-  .filters button[data-f="belumfoto"]{border-left-color:var(--bs-ac)}
-  .filters button[data-f="spby"]{border-left-color:var(--bs-n800)}
-  .filters button.active{color:var(--bs-paper)}
-  .filters button.active[data-f="all"]{background:var(--bs-ac7);border-color:var(--bs-ac7)}
-  .filters button.active[data-f="belum"]{background:var(--bs-a2);border-color:var(--bs-a2)}
-  .filters button.active[data-f="sudah"]{background:var(--bs-n700);border-color:var(--bs-n700)}
-  .filters button.active[data-f="belumlunas"]{background:var(--bs-a2);border-color:var(--bs-a2)}
-  .filters button.active[data-f="belumfoto"]{background:var(--bs-ac);border-color:var(--bs-ac)}
-  .filters button.active[data-f="spby"]{background:var(--bs-n800);border-color:var(--bs-n800)}
+  .filters button{flex:1 0 auto;border:1px solid var(--bs-n400);background:transparent;
+    border-radius:10px;padding:11px 14px;font-size:13px;color:var(--bs-ink);font-weight:600;white-space:nowrap}
+  .filters button.active{background:var(--bs-ac);color:var(--bs-paper);border-color:var(--bs-ac)}
 
   /* Daftar transaksi + kolom */
   .daftar-head{background:var(--bs-ac7);color:var(--bs-paper);border-radius:10px 10px 0 0;padding:10px 14px;
@@ -160,16 +150,16 @@
   .tcard{border:1px solid var(--bs-n300);border-radius:12px;padding:11px;margin-bottom:10px;background:var(--bs-paper)}
   .tcard.st-spby{border-left:5px solid var(--bs-n800);background:var(--bs-n200)}
   .tcard.st-sudah{border-left:5px solid var(--bs-n700);background:var(--bs-n200)}
-  .tcard.st-belumlunas{border-left:5px solid var(--bs-a2);background:var(--bs-a21)}
+  .tcard.st-belumlunas{border-left:5px solid var(--bs-a2);background:var(--bs-a21);border-radius:14px}
   .tcard.st-belumfoto{border-left:5px solid var(--bs-ac);background:var(--bs-ac1)}
-  .tcard.st-belum{border-left:5px solid var(--bs-a2);background:var(--bs-a21)}
+  .tcard.st-belum{border-left:5px solid var(--bs-a2);background:var(--bs-a21);border-radius:14px}
   .tcard .top{display:flex;justify-content:space-between;gap:8px}
   .tcard .jd{font-weight:700;font-size:14px}
   .srcbadge{font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;vertical-align:middle}
-  .srcbadge.bank{background:var(--bs-n200);color:var(--bs-n800)} .srcbadge.tunai{background:var(--bs-n200);color:var(--bs-n700)}
+  .srcbadge.bank{background:var(--bs-n800);color:var(--bs-paper)} .srcbadge.tunai{background:var(--bs-n800);color:var(--bs-paper)}
   .tcard .sb{font-size:12px;color:var(--bs-n600);margin-top:2px}
-  .tcard .amt{font-weight:700;color:var(--bs-a2);white-space:nowrap;text-align:right}
-  .tcard .amt.debet{color:var(--bs-n700)} .tcard .amt.amt-ok{color:var(--bs-n700)}
+  .tcard .amt{font-family:var(--bs-fh);font-weight:600;color:var(--bs-ink);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+  .tcard .amt.debet{color:var(--bs-ink)} .tcard .amt.amt-ok{color:var(--bs-ink)}
   .tcard .amt .dt{display:block;font-size:11px;color:var(--bs-n600);font-weight:400;margin-top:3px}
   .lrow{display:flex;justify-content:space-between;align-items:center;gap:8px;border-radius:8px;
     padding:7px 9px;margin-top:8px;font-size:12.5px}
@@ -180,8 +170,8 @@
   .lrow .nota-big{font-size:15px;font-weight:800;color:var(--bs-n700)}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
   .chip{border-radius:8px;padding:3px 9px;font-size:11px;font-weight:700;background:var(--bs-n300);color:var(--bs-n800);border:1px solid var(--bs-n400)}
-  .chip.ok{background:var(--bs-n200);color:var(--bs-n700);border-color:var(--bs-n200)} .chip.no{background:var(--bs-a21);color:var(--bs-a2);border-color:var(--bs-a21)}
-  .chip.warn{background:var(--bs-a21);color:var(--bs-a2);border-color:var(--bs-a21)}
+  .chip.ok{background:var(--bs-n200);color:var(--bs-n700);border-color:var(--bs-n200)} .chip.no{background:var(--bs-a2);color:var(--bs-paper);border-color:var(--bs-a2)}
+  .chip.warn{background:var(--bs-a2);color:var(--bs-paper);border-color:var(--bs-a2)}
   .acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
   .acts button{border:0;border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:700;color:var(--bs-paper);flex:1 0 auto;background:var(--bs-n600)}
   .b-orange{background:var(--bs-a2)} .b-purple{background:var(--bs-n800)} .b-gray{background:var(--bs-n400);color:var(--bs-n800)}
@@ -337,7 +327,16 @@
 <div class="app-main">
 
 <div class="topbar-v2">
-  <div class="tb-slot" id="tbSlot"></div>
+  <div class="tb-slot" id="tbSlot">
+    <div class="search">&#128269;
+      <input type="text" id="searchBox" placeholder="Cari kegiatan atau penjab..." oninput="onSearch()">
+    </div>
+    <div class="search">&#128197;
+      <select id="filterBulan" onchange="onFilterBulan()" style="flex:1;border:none;background:transparent;font:inherit;color:inherit;outline:none">
+        <option value="">Semua Bulan</option>
+      </select>
+    </div>
+  </div>
   <button class="tb-utama" onclick="openModal('modalPilihTx')">Catat transaksi</button>
 </div>
 
@@ -353,7 +352,7 @@
       <div class="gi"><div class="k">Total Keluar</div><div class="v" id="sumKeluar">-</div></div>
     </div>
     <div style="text-align:right;margin-top:8px">
-      <button class="btn" style="width:auto;padding:6px 12px;margin:0;background:#0f766e" onclick="openModalPindah()">&#128181; Pindah Dana (Bank&#8596;Tunai)</button>
+      <button class="btn" style="width:auto;padding:6px 12px;margin:0;background:var(--bs-ac)" onclick="openModalPindah()">&#128181; Pindah Dana (Bank&#8596;Tunai)</button>
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalImporRk()">&#127974; Impor Rekening Koran</button>
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalImporSakti()">&#128203; Impor SAKTI</button>
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalBackfill()">&#128273; Backfill Kuitansi</button>
@@ -366,20 +365,10 @@
 
   <div id="kartuKetenangan" class="kk hidden"></div>
 
-  <div class="search">&#128269;
-    <input type="text" id="searchBox" placeholder="Cari kegiatan atau penjab..." oninput="onSearch()">
-  </div>
-
-  <div class="search" style="margin-top:8px">&#128197;
-    <select id="filterBulan" onchange="onFilterBulan()" style="flex:1;border:none;background:transparent;font:inherit;color:inherit;outline:none">
-      <option value="">Semua Bulan</option>
-    </select>
-  </div>
-
-  <div class="search" style="margin-top:8px">&#128100;
+  <div class="search">&#128100;
     <input id="filterPenjab" list="filterPenjabList" oninput="onFilterPenjab()" autocomplete="off" placeholder="Semua Penanggung Jawab — ketik untuk cari" style="flex:1;border:none;background:transparent;font:inherit;color:inherit;outline:none">
     <datalist id="filterPenjabList"></datalist>
-    <span onclick="_clearPenjab()" title="Hapus filter" style="cursor:pointer;padding:0 4px;color:var(--c-muted)">&times;</span>
+    <span onclick="_clearPenjab()" title="Hapus filter" style="cursor:pointer;padding:0 4px;color:var(--bs-n600)">&times;</span>
   </div>
 
   <div class="search" style="margin-top:8px">&#8597;
@@ -391,13 +380,13 @@
   </div>
 
   <div class="filters" id="filterBar">
-    <button data-f="all">Semua</button>
-    <button data-f="belum">Belum SPJ</button>
-    <button data-f="sudah">Sudah SPJ</button>
-    <button data-f="belumlunas">&#9888; Belum Lunas</button>
-    <button data-f="belumfoto" class="active">&#129534; Belum Foto</button>
-    <button data-f="spby">&#128203; SPBY</button>
-    <button data-f="belumspby">&#128203; Belum SPBY</button>
+    <button class="chip" data-f="all">Semua</button>
+    <button class="chip" data-f="belum">Belum SPJ</button>
+    <button class="chip" data-f="sudah">Sudah SPJ</button>
+    <button class="chip" data-f="belumlunas">&#9888; Belum Lunas</button>
+    <button class="chip active" data-f="belumfoto">&#129534; Belum Foto</button>
+    <button class="chip" data-f="spby">&#128203; SPBY</button>
+    <button class="chip" data-f="belumspby">&#128203; Belum SPBY</button>
   </div>
 
   <div class="daftar-head">
@@ -1979,7 +1968,7 @@ function _populateBulan(){
 function _sum(list,f){var s=0;for(var i=0;i<list.length;i++)s+=(+list[i][f]||0);return s;}
 function _initial(s){s=String(s||'?').trim();return (s.charAt(0)||'?').toUpperCase();}
 function _avatarColor(s){var h=0;s=String(s||'');for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))&0xffffff;
-  return ['#1565c0','#7c3aed','#0891b2','#db2777','#15803d','#b45309','#4f46e5','#be123c'][h%8];}
+  return ['var(--bs-ac)','var(--bs-n800)','var(--bs-ac)','var(--bs-a2)','var(--bs-n700)','var(--bs-a2)','var(--bs-n800)','var(--bs-a2)'][h%8];}
 
 /* Kelompokkan list per penjab lalu render grup + kartu */
 function _renderGroups(list, mode){
@@ -2110,7 +2099,7 @@ function _cardHtml(t, mode){
       +'<button class="mini b-dark" onclick="openModalPajak('+t.no+')">Pajak</button></div>';
   }
   // chips
-  var spjChip=lunas?'<span class="chip ok">&#9989; SPJ Lengkap</span>':'<span class="chip">&#8987; Belum SPJ</span>';
+  var spjChip=lunas?'<span class="chip ok">&#9989; SPJ Lengkap</span>':'<span class="chip warn">&#8987; Belum SPJ</span>';
   var notaChip=lunas
     ?'<span class="chip ok">&#9989; '+(kembali>0?'Nota+Kembali':('Nota '+rupiah(t.notaTotal)))+' (100%)</span>'
     :'<span class="chip warn">&#9888; Nota Belum Lunas</span>';
