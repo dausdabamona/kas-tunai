@@ -146,5 +146,38 @@ var Anggaran = (function () {
              periode: (pagu.length ? pagu[0].periode : '') };
   }
 
-  return { imporPagu: imporPagu, getPagu: getPagu, ketersediaan: ketersediaan };
+  /* ---------------- Ringkas serapan per akun ---------------- */
+  /**
+   * Lima akun dengan serapan tertinggi -- dipakai panel "Sisa pagu paling tipis"
+   * di Papan kerja. Prinsipnya sama dengan sisaAman: MAX(realisasiSakti, belanjaKas),
+   * BUKAN penjumlahan. Belanja kas yang belum masuk SAKTI tetap dihitung mengurangi
+   * pagu, supaya pagu tidak terlihat aman padahal sudah lewat.
+   */
+  function ringkasSerapan() {
+    var data = ketersediaan();
+    var perAkun = {}, i, k;
+    for (i = 0; i < data.items.length; i++) {
+      var it = data.items[i];
+      var a = perAkun[it.akun] || { akun: it.akun, uraian: it.uraianAkun || '',
+                                    pagu: 0, realisasiSakti: 0, belanjaKas: 0 };
+      a.pagu += it.pagu;
+      a.realisasiSakti += it.realisasiSakti;
+      a.belanjaKas += it.belanjaKas;
+      perAkun[it.akun] = a;
+    }
+    var out = [];
+    for (k in perAkun) {
+      if (!perAkun.hasOwnProperty(k)) continue;
+      var b = perAkun[k];
+      var pakai = Math.max(b.realisasiSakti, b.belanjaKas);
+      b.persen = b.pagu > 0 ? (pakai / b.pagu) : 0;
+      b.sisa = b.pagu - pakai;
+      out.push(b);
+    }
+    out.sort(function (x, y) { return y.persen - x.persen; });
+    return { top5: out.slice(0, 5) };
+  }
+
+  return { imporPagu: imporPagu, getPagu: getPagu, ketersediaan: ketersediaan,
+           ringkasSerapan: ringkasSerapan };
 })();
