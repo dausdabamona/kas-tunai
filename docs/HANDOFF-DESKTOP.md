@@ -90,6 +90,63 @@ rekonsiliasi. Keputusan arsitektur yang tidak disentuh v2 (satu endpoint agregas
 kriteria dihitung di klien, modul `AntreanStatus`) dipertahankan. Bagian 0 spec
 itu mencatat perbedaan v1→v2 baris per baris.
 
+
+---
+
+## 0c. Papan kerja — selesai 29 Jul 2026 (kode), belum diuji manual
+
+Rencana: `docs/superpowers/plans/2026-07-29-papan-kerja-desktop.md`. Delapan tugas,
+seluruhnya direview. Commit: `309fb0f` (agregasi serapan), `49d3abd`+`68b5b09` (modul
+antrean HP), `26d46f4` (endpoint agregasi), `0dc9d25` (lapor draft dari HP), `6a5772c`
+(markup+CSS), `765691d`+`5d8e028` (render JS + layar pembuka).
+
+**Statusnya 🟡, bukan ✅, dan itu disengaja.** Verifikasi otomatis lengkap — 12 skenario
+lewat klik sungguhan, 31 asersi terukur, semuanya lolos. Tapi **belum pernah dibuka di
+browser sungguhan oleh pengguna**. Itu baru terjadi setelah `deploy.bat` dijalankan.
+Jangan menaikkannya ke ✅ sebelum pengguna mengonfirmasi.
+
+### Yang berubah untuk pengguna
+
+- **Layar pembuka berubah** dari Transaksi ke Papan kerja. Menu rail kini 8, Papan kerja
+  paling atas.
+- **`mobile.html` ikut berubah**: `aqKirimSemua` melaporkan jumlah draft antrean ke
+  `serverLaporAntrean` tiap kali antrean dikirim. Tanpa tampilan baru; kegagalan lapor
+  sengaja diabaikan agar tidak mengganggu alur kirim. Lihat juga `docs/HANDOFF-MOBILE.md`.
+- **Judul layar `#viewDana` diganti** dari "Ketersediaan Dana" jadi "Pagu & realisasi",
+  menyamakannya dengan label menu. Dokumen cetaknya **tidak** diubah.
+
+### Batas desain yang harus disadari
+
+`AntreanStatus.getSemua()` mengiterasi `Users.list()` karena `CacheService` GAS tidak bisa
+menelusuri kunci. Akibatnya ia **tidak bisa membedakan** "staf itu memang tidak punya draft
+tertunda" dari "laporannya hilang karena alamat emailnya di sheet Pengguna tidak cocok
+dengan yang dipakai login". Tidak ada log maupun indikator di sisi mana pun.
+
+Mitigasi yang sudah terpasang: saat tidak ada laporan sama sekali, kartunya berbunyi
+*"Belum ada laporan terbaru dari HP."* — **bukan** angka 0 untuk tiap staf, sehingga ia
+tidak pernah mengklaim semua sudah sinkron padahal cuma belum melapor. Bila seorang staf
+tidak pernah muncul padahal diketahui sedang mencatat di lapangan, periksa ejaan emailnya
+di sheet Pengguna.
+
+Risiko warisan (sama dengan endpoint lain di aplikasi ini, bukan kemunduran baru): bila
+sheet Pengguna gagal dibaca, **seluruh** Papan kerja gagal muat, bukan hanya kartu antrean.
+
+### Keputusan yang diambil asisten atas mandat pengguna (29 Jul 2026)
+
+Pengguna menyerahkan keputusan berikut; ditulis di sini lengkap dengan alasannya supaya
+bisa dibantah kapan saja.
+
+| Perkara | Keputusan | Alasan |
+|---|---|---|
+| Layar pembuka | Tetap Papan kerja | Itu seluruh gunanya layar ini |
+| Nama layar ganda | "Pagu & realisasi" di menu **dan** judul | Satu layar satu nama |
+| "N item melebihi pagu" | Pil putih bertulisan magenta | Magenta di atas teal kontrasnya 1,26:1 — tak terbaca |
+| "BELUM" vs "BEDA" di Rekonsiliasi | Dibiarkan sewarna | Ikonnya sudah beda (jam vs segitiga); paling tepat dinilai pengguna sambil memakai |
+| Angka rupiah tidak seragam antar layar | Ditunda, satu gelombang tersendiri | Nyata tapi tidak menghalangi pemakaian harian |
+| §2.3 #5 irama unggah GLP039 | Peringatan bila data > 14 hari | Sesuai desain v2; ambang tunggal, tidak perlu jadwal |
+| §2.3 #7 siapa boleh menandai wajar | Semua yang bisa masuk aplikasi, **tapi nama & alasan wajib tercatat** | Larangan mudah ditambahkan nanti, sulit dicabut. Jejak audit yang jujur lebih berguna daripada tombol yang tak bisa dipakai siapa pun saat PPK sedang di luar kantor |
+
+
 ---
 
 ## 1. Papan status
@@ -110,7 +167,7 @@ Yang berubah: kolom **Urutan** dan tambahan tugas 12–14.
 | 11 | **8** | Layar Pagu & realisasi: tab Unggah GLP039 | ⬜ belum |
 | 13 | **9** | Jejak audit "Tandai wajar" (baru, lihat R-4) | ⬜ belum |
 | 14 | **10** | Penanganan item yatim akibat revisi DIPA/POK (baru, lihat R-3) | ⬜ belum |
-| 2 | 11 | Layar Papan kerja (dashboard) | ⬜ belum |
+| 2 | 11 | Layar Papan kerja (dashboard) | 🟡 **kode selesai 29 Jul 2026, belum diuji manual** |
 | 3 | 12 | Layar Transaksi + panel detail kanan (redesain) | ⬜ belum |
 | 4 | 13 | Layar Perjalanan dinas (redesain) | ⬜ belum |
 | 5 | 14 | Layar Rekonsiliasi (redesain) | ⬜ belum |

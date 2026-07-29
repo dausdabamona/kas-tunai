@@ -339,6 +339,24 @@ lewat `page.evaluate`), mengikuti konvensi proyek:
 
 ## Status
 
-Disesuaikan ke desain v2 atas persetujuan pengguna (28 Jul 2026). **Belum boleh
-dieksekusi** — tugas ini urutan-11, diblokir verifikasi manual rail-nav (urutan-1).
-Langkah berikutnya saat gilirannya tiba: `writing-plans`.
+**SELESAI (kode) 29 Jul 2026.** Diimplementasikan lewat rencana
+`docs/superpowers/plans/2026-07-29-papan-kerja-desktop.md`, delapan tugas, seluruhnya
+direview. Commit: `309fb0f`, `49d3abd`, `68b5b09`, `26d46f4`, `0dc9d25`, `6a5772c`,
+`765691d`, `5d8e028`.
+
+Verifikasi otomatis lengkap: 12 skenario lewat klik sungguhan, 31 asersi terukur, semuanya
+lolos; skrip regresi bersama 22 PASS / 0 FAIL.
+
+**Belum diuji manual di browser sungguhan** — itu baru terjadi setelah pengguna
+menjalankan `deploy.bat`. Papan status di `docs/HANDOFF-DESKTOP.md` menandainya 🟡, bukan
+✅, sampai pengguna mengonfirmasi.
+
+Empat hal di spec ini **meleset dari kode nyata** dan sudah dikoreksi di rencana — dicatat
+di sini supaya tidak menyesatkan pembaca spec di kemudian hari:
+
+| Di spec | Kenyataan |
+|---|---|
+| nama token `--color-accent-2-100` dst. | sudah diganti design system Broadsheet: `--bs-a2`, `--bs-a21`, dst. |
+| rail punya 6 menu | 7 sebelum tugas ini, 8 sesudahnya |
+| kartu 4 membaca pajak dari transaksi | status setor tersimpan **per nota**; dihitung di server sebagai `pajakBelumSetor` |
+| klik baris tindakan memakai "buka detail" | tidak ada mekanisme itu; kartu diberi `data-no` lalu digulir & disorot |

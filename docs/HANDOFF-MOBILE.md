@@ -369,3 +369,44 @@ uji jari sungguhan di perangkat low-end).
 `onclick` — ini sesuai desain Bagian 1, tapi berarti mengetes lewat mouse click di Chrome desktop (atau
 `page.click()`) akan terlihat "mati". Uji harus lewat jari sungguhan di HP atau emulasi sentuh DevTools, bukan klik
 mouse biasa.
+
+---
+
+## Perubahan lintas dokumen — Papan kerja desktop (29 Jul 2026)
+
+`aqKirimSemua()` kini melaporkan panjang antrean ke server tiap kali antrean dikirim:
+
+```js
+google.script.run.withFailureHandler(function(){})
+  .serverLaporAntrean(_tok, list.length, _nGagal);
+```
+
+Dipakai kartu "Antrean HP" di layar Papan kerja desktop, supaya bendahara tahu ada berapa
+draft yang masih tertahan di HP tiap staf — sebelumnya tidak ada catatannya di server
+sama sekali sampai draft berhasil terkirim.
+
+**Tiga hal yang sengaja begitu:**
+
+1. **Tidak ada tampilan baru di HP.** Laporan ini diam-diam.
+2. **`withFailureHandler` kosong + dibungkus `try/catch`.** Kegagalan lapor status TIDAK
+   boleh mengganggu alur kirim antrean yang sesungguhnya. Ini jalur pengiriman transaksi
+   dari lapangan; kalau ia rusak, transaksi yang sudah dicatat staf tidak akan pernah
+   sampai ke server.
+3. **Yang dilaporkan `list.length`, bukan jumlah yang berhasil.** Angkanya harus mewakili
+   seluruh antrean; kalau hanya yang berhasil, papan akan menunjukkan antrean lebih pendek
+   dari kenyataan — kebalikan dari guna fitur ini.
+
+Disisipkan sebagai **penambahan murni** — nol baris lama diubah atau dihapus
+(`git diff mobile.html | grep "^-"` = 0). Commit `0dc9d25`.
+
+### Rumus yang disalin ke desktop — WAJIB dijaga sama
+
+`_pkKriteriaTindakan()` di `index.html` menyalin rumus `sisaPUM` dari mode ringkas
+`hitungNeraca` di berkas ini, yang didokumentasikan di **bagian 2** dokumen ini.
+
+**Bagian 2 tetap satu-satunya sumber kebenaran rumus.** Bila rumus di sana berubah,
+`_pkKriteriaTindakan` di `index.html` **HARUS ikut diperbarui manual** — kalau tidak,
+angka di Papan kerja desktop akan bertentangan dengan angka di HP untuk transaksi yang
+sama, dan tidak akan ada yang tahu mana yang benar.
+
+---
