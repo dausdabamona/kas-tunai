@@ -9,7 +9,12 @@
 var AntreanStatus = (function () {
   var TTL = 3600; // 1 jam -- laporan lebih tua dianggap basi, bukan nol
 
-  function _key(email) { return 'antrean_' + String(email || '').toLowerCase(); }
+  // trim() WAJIB, bukan sekadar toLowerCase(): daftar pengguna dibaca dari sheet
+  // yang diisi manusia, jadi spasi di ujung email itu wajar terjadi. Users.gs
+  // menormalkan dengan .trim().toLowerCase() -- kalau modul ini tidak ikut, kunci
+  // dari sesi dan kunci dari Users.list() tidak akan cocok, dan laporan HP staf
+  // itu hilang TANPA galat apa pun.
+  function _key(email) { return 'antrean_' + String(email || '').trim().toLowerCase(); }
 
   function lapor(email, jumlahDraft, jumlahGagal) {
     AppCache.put(_key(email), {
