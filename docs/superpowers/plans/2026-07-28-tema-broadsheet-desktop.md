@@ -577,7 +577,18 @@ git commit -m "feat(desktop): tema Broadsheet layar Nota Kena Pajak"
 Ganti setiap hex sesuai tabel pemetaan pada markup `#viewDana`, blok `<style>` 5245-5278, fungsi `renderDana`, dan kedua modal di atas.
 
 Aturan khusus layar ini:
-- Bar serapan: isi `var(--bs-ac)`; bila persentase > 90 jadi `var(--bs-a2)`; alur `var(--bs-n300)`.
+- Bar serapan: isi `var(--bs-ac)`; **magenta `var(--bs-a2)` HANYA bila `x.lebihPagu`** (sisaAman < 0); alur `var(--bs-n300)`.
+
+  > **Koreksi 29 Jul 2026 (commit `0c14039`).** Versi pertama aturan ini berbunyi
+  > "bila persentase > 90 jadi magenta". **Dibatalkan.** Ambang >90% itu milik
+  > panel "Sisa pagu paling tipis" di layar Papan kerja, bukan layar ini. Dua
+  > sebabnya: `pct` dibatasi `Math.min(100,…)`, sehingga item yang melewati pagu
+  > 200% dan item yang pas 95% menampilkan bar magenta penuh yang identik —
+  > informasi "sudah lewat pagu" hilang dari bar; dan serapan tinggi itu wajar
+  > menjelang akhir tahun anggaran, sehingga memberinya magenta mengencerkan arti
+  > magenta sebagai "perlu tindakan". Mengganti kondisi pewarnaan juga melanggar
+  > Global Constraint "dilarang mengubah logika JS" — yang dilanggar oleh aturan
+  > lama itu sendiri, bukan oleh pelaksananya.
 - Baris item yang melebihi pagu (`lebihPagu`): `background:var(--bs-a21);border-radius:14px`, dan pil "Lebih pagu" `background:var(--bs-a2);color:var(--bs-paper)`.
 - Kartu ringkas "Sisa aman": `background:var(--bs-ac);color:var(--bs-paper)`.
 
