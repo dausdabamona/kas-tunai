@@ -5821,6 +5821,29 @@ function _apAnalisis(){
       break;
     }
   }
+  /* --- Kunci KOLOM akun lebih dulu -------------------------------------
+   * Ini pelajaran dari data sungguhan: pembaca berkas mengubah sel angka jadi
+   * Number, sehingga nilai rupiah bulat seperti 900000 ikut terbaca "900000"
+   * -- enam digit, persis seperti kode akun. Memindai SEMUA kolom mencari pola
+   * enam digit karena itu menangkap rupiah, bukan akun: pada berkas POK nyata
+   * cara itu menghasilkan 56 akun salah dari 237 item.
+   *
+   * Kode akun sesungguhnya selalu berdiri di SATU kolom yang sama sepanjang
+   * berkas. Jadi: cari kolom yang paling banyak memuat pola akun sah di baris
+   * induk, lalu baca akun HANYA dari kolom itu. Tetap tahan perubahan posisi
+   * kolom, karena kolomnya dideteksi, bukan dipatok. */
+  var skorAkun={}, kolAkun=-1, skorTerbaik=0;
+  for(i=0;i<_apRows.length;i++){
+    r=_apRows[i]||[];
+    if(_apItemCell(r)) continue;                 // lewati baris item
+    for(c=0;c<r.length;c++){
+      if(/^5[1-7]\d{4}$/.test(String(r[c]==null?'':r[c]).trim())){
+        skorAkun[c]=(skorAkun[c]||0)+1;
+        if(skorAkun[c]>skorTerbaik){ skorTerbaik=skorAkun[c]; kolAkun=c; }
+      }
+    }
+  }
+
   // --- kumpulkan baris item beserta konteks hierarkinya ---
   _apItems=[];
   var akun='', uAkun='', komp='', ro='', uRo='', keg='', prog='';
@@ -5839,7 +5862,9 @@ function _apAnalisis(){
         // APA PUN di baris induk -- volume, satuan, atau nominal seperti 900000
         // ikut tersimpan sebagai akun, dan pratinjau tidak menunjukkan apa-apa
         // karena uraian akunnya tetap benar. Jangan dilonggarkan lagi.
-        if(/^5[1-7]\d{4}$/.test(s2)){ akun=s2; uAkun=uraian||uAkun; }
+        // Akun hanya diterima dari kolom yang sudah dikunci di atas.
+        if(kolAkun>=0 && teks[t].c===kolAkun && /^5[1-7]\d{4}$/.test(s2)){ akun=s2; uAkun=uraian||uAkun; }
+        else if(kolAkun<0 && /^5[1-7]\d{4}$/.test(s2)){ akun=s2; uAkun=uraian||uAkun; }
         else if(/^\d{3}\.[A-Z0-9]+$/i.test(s2)) komp=s2;
         else if(/^[A-Z]{2,4}\.\d+$/.test(s2)){ if(/^[A-Z]{2}\.\d{4}$/.test(s2)) keg=s2; else { ro=s2; uRo=uraian||uRo; } }
         else if(/^[A-Z]{2,4}$/.test(s2) && s2!=='DL') { /* KRO — tak disimpan terpisah */ }
