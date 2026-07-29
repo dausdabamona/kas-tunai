@@ -132,6 +132,8 @@
   .pk-tenang{background:var(--bs-n200);border-radius:16px;padding:16px 18px;
     cursor:pointer}
   /* Grup dua tingkat di daftar tindakan: bulan lalu DRPP */
+  #txItem{width:100%;min-height:44px;border:1px solid var(--bs-n300);border-radius:10px;
+    padding:0 10px;font:inherit;font-size:13.5px;color:var(--bs-ink);background:var(--bs-paper)}
   .pk-urut{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--bs-n600);
     margin-bottom:10px}
   .pk-urut select{min-height:40px;border:1px solid var(--bs-n300);border-radius:10px;
@@ -718,8 +720,7 @@
     <div class="field"><label>Keterangan</label><textarea id="txKeterangan" rows="2"></textarea></div>
     <div id="txAkunWrap">
       <div class="field"><label>Detail Kegiatan (item POK)</label>
-        <input type="text" id="txItem" list="txItemList" placeholder="ketik kode / uraian item…" autocomplete="off" oninput="onPilihItem()">
-        <datalist id="txItemList"></datalist>
+        <select id="txItem" onchange="onPilihItem()"><option value="">(belum dipilih)</option></select>
         <div class="tgl" id="txItemInfo" style="margin-top:3px">Opsional. Bila dipilih, Akun/MAK terisi otomatis dan sisa pagu ditampilkan.</div>
       </div>
       <div class="field"><label>Akun / Kode Akun (MAK)</label>
@@ -3604,7 +3605,7 @@ function openModalTransaksi(mode){
   document.getElementById('txNoKuitansi').value='';
   document.getElementById('txNoDrpp').value='';
   document.getElementById('txNoSpp').value='';
-  document.getElementById('txItem').value=''; _muatItemPagu(); onPilihItem();
+  document.getElementById('txItem').value=''; _muatItemPagu(function(){ var sl=document.getElementById('txItem'); if(sl) sl.value=''; onPilihItem(); });
   document.getElementById('txAkunWrap').style.display=masuk?'none':'';
   _onTxPersediaan();
   openModal('modalTransaksi');
@@ -3632,8 +3633,26 @@ function editTransaksi(no){
   document.getElementById('txNoKuitansi').value=t.noKuitansi||'';
   document.getElementById('txNoDrpp').value=t.noDrpp||'';
   document.getElementById('txNoSpp').value=t.noSpp||'';
-  document.getElementById('txItem').value = t.kodeItem ? (t.kodeItem+' — '+(t.uraianItem||'')) : '';
-  _muatItemPagu(function(){ onPilihItem(); });
+  // Nilai dipasang DI DALAM callback: <select> tidak bisa disetel sebelum
+  // opsinya ada -- kalau dipasang lebih dulu, pilihannya diam-diam jadi kosong.
+  var _kodeTx = t.kodeItem ? String(t.kodeItem) : '';
+  _muatItemPagu(function(){
+    var sel=document.getElementById('txItem');
+    if(sel){
+      sel.value=_kodeTx;
+      // Item yang dipakai transaksi lama bisa saja sudah hilang dari POK versi
+      // baru (revisi DIPA). Jangan buang diam-diam -- tampilkan sebagai pilihan
+      // tersendiri supaya pembebanannya tidak lenyap tanpa jejak.
+      if(_kodeTx && sel.value!==_kodeTx){
+        var o=document.createElement('option');
+        o.value=_kodeTx;
+        o.textContent=_kodeTx+' — '+(t.uraianItem||'')+'  ·  di luar POK versi ini';
+        sel.insertBefore(o, sel.firstChild.nextSibling);
+        sel.value=_kodeTx;
+      }
+    }
+    onPilihItem();
+  });
   document.getElementById('txAkunWrap').style.display=masuk?'none':'';
   openModal('modalTransaksi');
 }
@@ -5666,22 +5685,60 @@ function _muatItemPagu(cb){
   google.script.run
     .withSuccessHandler(function(res){
       _itemPagu=((res&&res.items)||[]);
-      var dl=document.getElementById('txItemList'); if(dl){
-        var h='';
-        for(var i=0;i<_itemPagu.length;i++){ var x=_itemPagu[i];
-          h+='<option value="'+esc(x.kodeItem+' — '+x.uraianItem)+'">'+esc(x.akun+' · sisa '+rupiah(x.sisaAman))+'</option>';
-        }
-        dl.innerHTML=h;
-      }
+      _isiPilihanItem();
       if(cb) cb();
     })
     .withFailureHandler(function(){ _itemPagu=[]; if(cb) cb(); })
     .serverKetersediaanDana(_tok);
 }
+/**
+ * Isi dropdown item POK, dikelompokkan per akun (optgroup).
+ *
+ * Dulu kolom ini <input list=datalist>. Diganti <select> karena datalist hanya
+ * memunculkan saran SAAT MENGETIK -- daftarnya tidak bisa dibuka dan ditelusuri,
+ * jadi pengguna harus hafal kodenya. Lebih buruk lagi: kode item yang DISIMPAN
+ * diambil dari hasil pencocokan teks (lihat kodeItem di _gatherTx), sehingga
+ * ketikan yang tidak persis cocok tersimpan KOSONG tanpa peringatan apa pun.
+ * Dengan <select> nilainya selalu kode yang sah, atau sengaja kosong.
+ */
+function _isiPilihanItem(){
+  var sel=document.getElementById('txItem'); if(!sel) return;
+  var simpan=sel.value;
+  var perAkun={}, urut=[], i;
+  for(i=0;i<(_itemPagu||[]).length;i++){
+    var x=_itemPagu[i], a=String(x.akun||'(tanpa akun)');
+    if(!perAkun[a]){ perAkun[a]=[]; urut.push(a); }
+    perAkun[a].push(x);
+  }
+  urut.sort();
+  var h='<option value="">(belum dipilih)</option>', g, j;
+  for(g=0;g<urut.length;g++){
+    var ak=urut[g], list=perAkun[ak];
+    var uraianAkun=(list[0]&&list[0].uraianAkun)?(' — '+list[0].uraianAkun):'';
+    h+='<optgroup label="'+esc(ak+uraianAkun)+'">';
+    for(j=0;j<list.length;j++){
+      var it=list[j];
+      // Sisa aman ikut ditulis di label supaya pilihan yang paginya sudah tipis
+      // kelihatan SEBELUM dipilih, bukan sesudahnya.
+      h+='<option value="'+esc(String(it.kodeItem))+'">'
+        +esc(it.kodeItem+' — '+(it.uraianItem||'')+'  ·  sisa '+rupiah(it.sisaAman))+'</option>';
+    }
+    h+='</optgroup>';
+  }
+  sel.innerHTML=h;
+  if(simpan) sel.value=simpan;
+}
+
 function _cariItem(teks){
-  var kode=String(teks||'').split('—')[0].replace(/[^0-9]/g,'').trim();
+  var v=String(teks||'').trim();
+  if(!v) return null;
+  var i;
+  // Nilai <select> = kodeItem apa adanya. Cocokkan persis lebih dulu.
+  for(i=0;i<(_itemPagu||[]).length;i++) if(String(_itemPagu[i].kodeItem)===v) return _itemPagu[i];
+  // Cadangan: bentuk lama "kode — uraian" (transaksi yang tersimpan sebelum ini).
+  var kode=v.split('—')[0].replace(/[^0-9]/g,'').trim();
   if(!kode) return null;
-  for(var i=0;i<(_itemPagu||[]).length;i++) if(String(_itemPagu[i].kodeItem)===kode) return _itemPagu[i];
+  for(i=0;i<(_itemPagu||[]).length;i++) if(String(_itemPagu[i].kodeItem)===kode) return _itemPagu[i];
   return null;
 }
 function onPilihItem(){
