@@ -44,7 +44,7 @@ Dipakai oleh **semua** task. Ganti nilai hex dengan `var(--token)`.
 | `--bs-ac6` | `#0077a0` | *(baru — hover/pressed tombol accent)* |
 | `--bs-ac3` | `#99e0ff` | `#99f6e4` `#bae6fd` |
 | `--bs-ac1` | `#e9f8ff` | `#f0fdfa` `#f0f9ff` `#e6f4f8` `#eff6ff` `#e9f8ff` |
-| `--bs-a2` | `#d6006c` | `#dc2626` `#991b1b` `#9a3412` `#be123c` `#ea580c` `#ea7317` `#b45309` `#854d0e` `#db2777` `#d6006c` |
+| `--bs-a2` | `#d6006c` | `#dc2626` `#991b1b` `#9a3412` `#be123c` `#ea580c` `#ea7317` `#b45309` `#854d0e` `#db2777` `#d6006c` `#c00` |
 | `--bs-a21` | `#fff1f4` | `#fee2e2` `#fff7ed` `#fff0f0` `#ffd1d1` `#fef2f2` `#fecaca` `#ffedd5` `#fed7aa` `#fdecdf` `#fef9c3` `#fffbeb` `#fde68a` `#fdba74` `#fca5a5` `#f6c343` `#fbe0ee` |
 | `--bs-a29` | `#4b1528` | *(baru — teks di atas latar `--bs-a21`)* |
 | `--bs-n200` | `#eae7e7` | `#dcfce7` `#f0fdf4` `#bbf7d0` `#ecfdf3` `#faf5ff` `#ead6ff` `#e0e7ff` `#dcd9d7` `#eae7e7` |
@@ -96,6 +96,14 @@ harus terlihat. Pengecualian ini sempit dan sengaja ditulis di sini supaya bisa
 dibantah reviewer, bukan diselundupkan.
 
 `--radius` **bukan warna** dan tetap dipakai — jangan diganti, jangan dihapus.
+
+> **Tabel ini punya lubang — Task 7 wajib menyapunya.** Saat mengukur 96 warna
+> aplikasi di awal, baris yang memuat `+'` ditandai sebagai string dokumen cetak
+> dan dikeluarkan dari hitungan. Padahal markup aplikasi **juga** dirakit dengan
+> `+'`. Akibatnya sebagian warna di dalam string JS tidak pernah masuk tabel —
+> `#c00` (asterisk field wajib, ditemukan pelaksana Task 6) adalah contoh
+> pertamanya. Task 7 menyisir seluruh berkas, jadi sisanya akan tertangkap di
+> sana; bila menemukan hex yang belum ada di tabel, **laporkan**, jangan tebak.
 
 ---
 
