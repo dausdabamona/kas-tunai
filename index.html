@@ -5768,7 +5768,7 @@ function _cekSisaPagu(x){
  *  3) Hasilnya diverifikasi terhadap baris "JUMLAH SELURUHNYA" milik berkas itu
  *     sendiri, dan tetap bisa dikoreksi manual lewat dropdown.
  * ------------------------------------------------------------------ */
-var _apRows=null, _apItems=[], _apCols=[], _apTotalFile=null;
+var _apRows=null, _apItems=[], _apCols=[], _apTotalFile=null, _apAkunTakDikenal=[];
 
 function openModalPagu(){
   _apRows=null; _apItems=[]; _apTotalFile=null;
@@ -5839,7 +5839,7 @@ function _apAnalisis(){
         // APA PUN di baris induk -- volume, satuan, atau nominal seperti 900000
         // ikut tersimpan sebagai akun, dan pratinjau tidak menunjukkan apa-apa
         // karena uraian akunnya tetap benar. Jangan dilonggarkan lagi.
-        if(/^5\d{5}$/.test(s2)){ akun=s2; uAkun=uraian||uAkun; }
+        if(/^5[1-7]\d{4}$/.test(s2)){ akun=s2; uAkun=uraian||uAkun; }
         else if(/^\d{3}\.[A-Z0-9]+$/i.test(s2)) komp=s2;
         else if(/^[A-Z]{2,4}\.\d+$/.test(s2)){ if(/^[A-Z]{2}\.\d{4}$/.test(s2)) keg=s2; else { ro=s2; uRo=uraian||uRo; } }
         else if(/^[A-Z]{2,4}$/.test(s2) && s2!=='DL') { /* KRO — tak disimpan terpisah */ }
@@ -5852,6 +5852,37 @@ function _apAnalisis(){
     _apItems.push(row);
   }
   if(!_apItems.length){ toast('Tidak ditemukan baris item (pola "000001. ...")','error'); return; }
+
+  /* --- Koreksi akun lewat suara terbanyak per URAIAN akun ---------------
+   * Pola sekaku apa pun tidak cukup: nilai subtotal seperti 531000 dan 532000
+   * berbentuk persis seperti kode belanja modal yang sah, jadi tidak bisa
+   * dibedakan dari angkanya saja. Yang selalu benar di berkas POK adalah
+   * URAIAN akunnya. Jadi: untuk tiap uraian, kode yang paling sering muncul
+   * dianggap benar, lalu dipakaikan ke semua item beruraian sama.
+   *
+   * Bila sebuah uraian sama sekali tidak punya kode yang sah (semua bacaannya
+   * ternyata angka rupiah), akunnya DIKOSONGKAN dan dilaporkan -- menyimpan
+   * tebakan lebih berbahaya daripada mengaku tidak tahu, karena angka salah
+   * akan diam-diam dipakai sebagai pembebanan. */
+  _apAkunTakDikenal=[];
+  var suara={}, ua, kk;
+  for(i=0;i<_apItems.length;i++){
+    ua=String(_apItems[i].uraianAkun||'').trim(); if(!ua) continue;
+    if(!suara[ua]) suara[ua]={};
+    kk=String(_apItems[i].akun||'').trim();
+    if(/^5[1-7]\d{4}$/.test(kk)) suara[ua][kk]=(suara[ua][kk]||0)+1;
+  }
+  var menang={};
+  for(ua in suara){
+    if(!suara.hasOwnProperty(ua)) continue;
+    var best='', bestN=0;
+    for(kk in suara[ua]){ if(suara[ua][kk]>bestN){ best=kk; bestN=suara[ua][kk]; } }
+    if(best) menang[ua]=best; else _apAkunTakDikenal.push(ua);
+  }
+  for(i=0;i<_apItems.length;i++){
+    ua=String(_apItems[i].uraianAkun||'').trim();
+    _apItems[i].akun = (ua && menang[ua]) ? menang[ua] : '';
+  }
 
   // --- kolom angka: cari yang memenuhi pagu - realisasi = sisa ---
   var maxc=0; for(i=0;i<_apItems.length;i++) maxc=Math.max(maxc,_apItems[i]._r.length);
@@ -5958,19 +5989,18 @@ function apPreview(){
   // Penjaga kedua: hitung item yang akunnya kosong atau tidak berpola 5xxxxx.
   // Impor pagu yang salah kolom TIDAK terlihat dari total -- totalnya tetap cocok,
   // yang rusak justru pembebanannya. Jadi harus diperiksa terpisah.
-  var akunSalah=[], akunKosong=0;
-  for(i=0;i<rows.length;i++){
-    var ak=String(rows[i].akun||'').trim();
-    if(!ak){ akunKosong++; continue; }
-    if(!/^5\d{5}$/.test(ak) && akunSalah.indexOf(ak)<0) akunSalah.push(ak);
-  }
-  if(akunSalah.length || akunKosong){
+  var akunKosong=0;
+  for(i=0;i<rows.length;i++) if(!String(rows[i].akun||'').trim()) akunKosong++;
+  if(akunKosong || _apAkunTakDikenal.length){
     h+='<div style="padding:8px 10px;border-radius:8px;margin-bottom:8px;'
-      +'background:var(--bs-a21);color:var(--bs-a2)"><b>&#9888; Periksa kolom akun.</b> '
-      +(akunSalah.length?('Nilai bukan kode akun: <b>'+esc(akunSalah.slice(0,6).join(', '))+'</b>'
-        +(akunSalah.length>6?(' dan '+(akunSalah.length-6)+' lainnya'):'')+'. '):'')
-      +(akunKosong?(akunKosong+' item tanpa akun. '):'')
-      +'Kode akun belanja selalu 6 angka diawali 5.</div>';
+      +'background:var(--bs-a21);color:var(--bs-a2)"><b>&#9888; '+akunKosong
+      +' item tanpa kode akun.</b> Kolom akunnya terbaca sebagai angka rupiah, '
+      +'bukan kode. Item ini tetap tersimpan dengan pagu yang benar, tetapi '
+      +'akunnya kosong sampai diisi manual.'
+      +(_apAkunTakDikenal.length?('<br>Uraian akun yang terdampak: <b>'
+        +esc(_apAkunTakDikenal.slice(0,5).join('; '))+'</b>'
+        +(_apAkunTakDikenal.length>5?(' dan '+(_apAkunTakDikenal.length-5)+' lainnya'):'')):'')
+      +'</div>';
   }
   h+='<table style="width:100%;border-collapse:collapse"><tr><th style="text-align:left">Akun</th><th style="text-align:left">Item</th><th style="text-align:right">Pagu</th><th style="text-align:right">Realisasi</th></tr>';
   for(i=0;i<n;i++){ var d=rows[i];

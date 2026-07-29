@@ -17,8 +17,17 @@ var Anggaran = (function () {
 
   function _norm(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); }
   /** Kunci item: kode item + akun + RO — cukup unik lintas komponen. */
+  /**
+   * Identitas baris pagu untuk pencocokan saat impor ulang.
+   *
+   * AKUN SENGAJA TIDAK IKUT. Akun adalah data turunan yang bisa berubah antar
+   * impor (mis. terbaca salah lalu dikoreksi). Kalau ia ikut jadi identitas,
+   * satu koreksi akun membuat kunci berubah -> baris lama tidak ketemu -> baris
+   * baru ditambahkan, dan seluruh pagu BERLIPAT tanpa peringatan apa pun.
+   * Yang menentukan identitas hanyalah kode item dan RO-nya.
+   */
   function _key(kodeItem, akun, ro) {
-    return _norm(kodeItem).toUpperCase() + '|' + _norm(akun) + '|' + _norm(ro).toUpperCase();
+    return _norm(kodeItem).toUpperCase() + '|' + _norm(ro).toUpperCase();
   }
   function _batchId() {
     return 'P' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmmss');
