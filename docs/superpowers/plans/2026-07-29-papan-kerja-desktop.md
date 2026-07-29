@@ -144,7 +144,7 @@ Ganti baris ekspor menjadi:
 
 ```bash
 cd /home/user/kas-tunai
-node --check Anggaran.gs && echo "SINTAKS OK"
+node --check < Anggaran.gs && echo "SINTAKS OK"   # lewat stdin: node menolak ekstensi .gs
 grep -nE "\b(let|const|=>|class )" Anggaran.gs | grep -v "^\s*//" || echo "ES5 BERSIH"
 ```
 Expected: `SINTAKS OK` lalu `ES5 BERSIH`.
@@ -265,7 +265,7 @@ function serverLaporAntrean(token, jumlahDraft, jumlahGagal) {
 
 ```bash
 cd /home/user/kas-tunai
-node --check AntreanStatus.gs && node --check Code.gs && echo "SINTAKS OK"
+node --check < AntreanStatus.gs && node --check < Code.gs && echo "SINTAKS OK"   # stdin: node menolak ekstensi .gs
 grep -nE "\b(let|const|=>|class )" AntreanStatus.gs | grep -v "^\s*//" || echo "ES5 BERSIH"
 python3 -c "
 import json; o=json.load(open('.clasp.json')); f=o['filePushOrder']
@@ -381,7 +381,7 @@ function serverGetPapanKerja(token) {
 
 ```bash
 cd /home/user/kas-tunai
-node --check Code.gs && echo "SINTAKS OK"
+node --check < Code.gs && echo "SINTAKS OK"   # lewat stdin: node menolak ekstensi .gs
 sed -n "/function serverGetPapanKerja/,/^}/p" Code.gs | grep -c "server[A-Z]" 
 ```
 Expected: `SINTAKS OK`, lalu angka `0` (nol pemanggilan endpoint lain dari dalam endpoint ini).
