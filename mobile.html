@@ -2894,6 +2894,15 @@ function aqKirimSemua(diam){
   if (!navigator.onLine){ if(!diam) toast('Belum ada koneksi', true); return; }
   if (!_tok) return;
   AQ.semua(function(list){
+    // Lapor jumlah draft ke server supaya Papan kerja desktop tahu antrean tiap HP.
+    // withFailureHandler kosong disengaja: kegagalan lapor status TIDAK boleh
+    // mengganggu alur kirim antrean yang sesungguhnya.
+    var _nGagal = 0, _i;
+    for (_i = 0; _i < list.length; _i++) if (list[_i].status === 'GAGAL') _nGagal++;
+    try {
+      google.script.run.withFailureHandler(function(){})
+        .serverLaporAntrean(_tok, list.length, _nGagal);
+    } catch(e) {}
     var antre = [];
     for (var i=0;i<list.length;i++) if (list[i].status !== 'GAGAL') antre.push(list[i]);
     if (!antre.length){ if(!diam) toast('Antrean kosong'); aqRender(); return; }
