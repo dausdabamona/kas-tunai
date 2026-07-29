@@ -350,8 +350,8 @@
 
 <nav class="rail">
   <div class="rail-brand">Kas Tunai<small>Poltek KP Sorong &middot; <span id="userLabel"></span></small></div>
-  <button id="tabPapan" class="rail-item" onclick="switchTab('papan')" title="Papan kerja"><span class="rail-label">Papan kerja</span></button>
-  <button id="tabTransaksi" class="rail-item active" onclick="switchTab('transaksi')" title="Transaksi"><span class="rail-label">Transaksi</span></button>
+  <button id="tabPapan" class="rail-item active" onclick="switchTab('papan')" title="Papan kerja"><span class="rail-label">Papan kerja</span></button>
+  <button id="tabTransaksi" class="rail-item" onclick="switchTab('transaksi')" title="Transaksi"><span class="rail-label">Transaksi</span></button>
   <button id="tabPajak" class="rail-item" onclick="switchTab('pajak')" title="Nota Kena Pajak"><span class="rail-label">Nota Kena Pajak</span></button>
   <button id="tabDana" class="rail-item" onclick="switchTab('dana')" title="Pagu &amp; realisasi"><span class="rail-label">Pagu &amp; realisasi</span></button>
   <button id="tabSpd" class="rail-item" onclick="switchTab('spd')" title="Perjalanan dinas"><span class="rail-label">Perjalanan dinas</span></button>
@@ -5976,8 +5976,11 @@ function _pkRenderTindakan(res){
     if(!al.length) continue;
     n++;
     h+='<div class="pk-row tindakan" onclick="_pkBukaTransaksi('+(+t.no||0)+')">'
-      +'<div><div class="t1">'+esc(t.uraian||'(tanpa uraian)')+'</div>'
-      +'<div class="t2">'+esc(String(t.no||''))+(t.penyedia?(' · '+esc(t.penyedia)):'')+'</div></div>'
+      // Nama field mengikuti kartu Transaksi: kegiatan + penjab. Objek transaksi
+      // TIDAK punya t.uraian maupun t.penyedia -- memakainya membuat tiap baris
+      // tampil "(tanpa uraian)" tanpa penanggung jawab.
+      +'<div><div class="t1">'+esc(t.kegiatan||'-')+'</div>'
+      +'<div class="t2">'+esc(String(t.no||''))+(t.penjab?(' · '+esc(t.penjab)):'')+'</div></div>'
       +'<div><span class="chip no">'+esc(al[0])+'</span></div>'
       +'<div class="nom">'+rupiah(+t.kredit||0)+'</div></div>';
   }
