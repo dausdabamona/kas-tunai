@@ -166,6 +166,8 @@
   .lrow.keluar{background:var(--bs-n200);border:1px solid var(--bs-n200)}
   .lrow.ok{background:var(--bs-n200);border:1px solid var(--bs-n200)}
   .lrow.pajak{background:var(--bs-a21);border:1px solid var(--bs-a21)}
+  /* Pil "perlu tindakan" di dalam baris pajak informasional — hanya teksnya, bukan seluruh baris */
+  .lrow.pajak.perlu .pil-tindakan{background:var(--bs-a2);color:var(--bs-paper);border-radius:8px;padding:3px 9px;font-size:11px;font-weight:700}
   .lrow .mini{border:0;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;color:var(--bs-paper)}
   .lrow .nota-big{font-size:15px;font-weight:800;color:var(--bs-n700)}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
@@ -380,13 +382,13 @@
   </div>
 
   <div class="filters" id="filterBar">
-    <button class="chip" data-f="all">Semua</button>
-    <button class="chip" data-f="belum">Belum SPJ</button>
-    <button class="chip" data-f="sudah">Sudah SPJ</button>
-    <button class="chip" data-f="belumlunas">&#9888; Belum Lunas</button>
-    <button class="chip active" data-f="belumfoto">&#129534; Belum Foto</button>
-    <button class="chip" data-f="spby">&#128203; SPBY</button>
-    <button class="chip" data-f="belumspby">&#128203; Belum SPBY</button>
+    <button data-f="all">Semua</button>
+    <button data-f="belum">Belum SPJ</button>
+    <button data-f="sudah">Sudah SPJ</button>
+    <button data-f="belumlunas">&#9888; Belum Lunas</button>
+    <button data-f="belumfoto" class="active">&#129534; Belum Foto</button>
+    <button data-f="spby">&#128203; SPBY</button>
+    <button data-f="belumspby">&#128203; Belum SPBY</button>
   </div>
 
   <div class="daftar-head">
@@ -1968,7 +1970,10 @@ function _populateBulan(){
 function _sum(list,f){var s=0;for(var i=0;i<list.length;i++)s+=(+list[i][f]||0);return s;}
 function _initial(s){s=String(s||'?').trim();return (s.charAt(0)||'?').toUpperCase();}
 function _avatarColor(s){var h=0;s=String(s||'');for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))&0xffffff;
-  return ['var(--bs-ac)','var(--bs-n800)','var(--bs-ac)','var(--bs-a2)','var(--bs-n700)','var(--bs-a2)','var(--bs-n800)','var(--bs-a2)'][h%8];}
+  // Avatar hanya membedakan identitas orang, bukan status — --bs-a2 (magenta) DILARANG di
+  // sini karena magenta khusus berarti "perlu tindakan Anda"; jika ikut dirotasi di avatar,
+  // sinyalnya jadi tidak eksklusif dan melemahkan seluruh kosakata warna redesain.
+  return ['var(--bs-ac)','var(--bs-n800)','var(--bs-ac7)','var(--bs-n700)','var(--bs-ac)','var(--bs-n600)','var(--bs-n800)','var(--bs-ac7)'][h%8];}
 
 /* Kelompokkan list per penjab lalu render grup + kartu */
 function _renderGroups(list, mode){
@@ -2088,7 +2093,7 @@ function _cardHtml(t, mode){
   // baris pajak
   var savedBadge=pj.isSaved?' <span class="chip ok" style="font-size:10px;padding:1px 5px">&#128190; tersimpan</span>':'';
   if(pj.ref===PAJAK_DEFAULT){
-    h+='<div class="lrow pajak"><span>&#9888; Cek pajak manual'+savedBadge+'</span>'
+    h+='<div class="lrow pajak perlu"><span class="pil-tindakan">&#9888; Cek pajak manual</span>'+savedBadge
       +'<button class="mini b-dark" onclick="openModalPajak('+t.no+')">Pajak</button></div>';
   } else if(pj.totalPajak>0){
     h+='<div class="lrow pajak"><span>'+esc(pj.label)+': PPh = '+rupiah(pj.pph)+' &middot; PPN = '+rupiah(pj.ppn)+savedBadge+'</span>'
