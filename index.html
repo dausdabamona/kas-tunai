@@ -535,9 +535,9 @@
 <div id="viewPajak" class="wrap hidden">
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
     <div style="font-size:19px;font-weight:800;color:var(--bs-ac);display:flex;align-items:center;gap:8px">&#9881; Nota Kena Pajak</div>
-    <button class="btn" style="width:auto;padding:10px 16px;margin:0;min-height:44px;background:var(--c-teal)" onclick="cetakRekapPajak()">&#128424; Cetak Rekap Setoran</button>
+    <button class="btn" style="width:auto;padding:10px 16px;margin:0;min-height:44px;background:var(--bs-ac)" onclick="cetakRekapPajak()">&#128424; Cetak Rekap Setoran</button>
   </div>
-  <div style="font-size:12px;color:var(--c-muted);margin-bottom:10px">Daftar nota yang dipotong pajak, dikelompokkan per penyedia. Dipakai untuk rekap setoran &amp; SPT Masa.</div>
+  <div style="font-size:12px;color:var(--bs-n600);margin-bottom:10px">Daftar nota yang dipotong pajak, dikelompokkan per penyedia. Dipakai untuk rekap setoran &amp; SPT Masa.</div>
   <div class="rk-filters">
     <select id="pjfBulan" onchange="renderNotaPajak()"><option value="">Semua bulan</option></select>
     <select id="pjfJenis" onchange="renderNotaPajak()"><option value="">Semua jenis</option></select>
@@ -608,8 +608,8 @@
 <div class="modal" id="modalPilihTx">
   <div class="sheet">
     <h2>Tambah Transaksi</h2>
-    <button class="btn" style="background:var(--c-ok)" onclick="openModalTransaksi('masuk')">&#11015; Transaksi Masuk (Debet)</button>
-    <button class="btn" style="background:var(--c-err);margin-top:8px" onclick="openModalTransaksi('keluar')">&#11014; Transaksi Keluar (Kredit)</button>
+    <button class="btn" style="background:var(--bs-n700)" onclick="openModalTransaksi('masuk')">&#11015; Transaksi Masuk (Debet)</button>
+    <button class="btn" style="background:var(--bs-a2);margin-top:8px" onclick="openModalTransaksi('keluar')">&#11014; Transaksi Keluar (Kredit)</button>
     <button class="btn ghost" style="margin-top:8px" onclick="closeModal('modalPilihTx')">Batal</button>
   </div>
 </div>
@@ -666,7 +666,7 @@
     <div class="field"><label>Tanggal</label><input type="date" id="pdTanggal"></div>
     <div class="field"><label>Nominal (Rp)</label><input type="text" class="numfmt" id="pdNominal" value="0" inputmode="numeric"></div>
     <div class="field"><label>Keterangan (opsional)</label><input type="text" id="pdKet" placeholder="mis. Tarik tunai untuk operasional"></div>
-    <button class="btn" style="background:#0d9488" onclick="submitPindah()">Simpan Pindah Dana</button>
+    <button class="btn" style="background:var(--bs-ac)" onclick="submitPindah()">Simpan Pindah Dana</button>
     <button class="btn ghost" onclick="closeModal('modalPindah')">Batal</button>
   </div>
 </div>
@@ -742,11 +742,11 @@
 <div class="modal" id="modalBackfill">
   <div class="sheet">
     <h2>&#128273; Backfill Kuitansi (massal)</h2>
-    <div style="font-size:12px;color:var(--c-muted);margin-bottom:6px">Isi No. Kuitansi/DRPP/SPP transaksi lama dari file. Hanya mengisi sel yang <b>kosong</b> — tak pernah menimpa.</div>
+    <div style="font-size:12px;color:var(--bs-n600);margin-bottom:6px">Isi No. Kuitansi/DRPP/SPP transaksi lama dari file. Hanya mengisi sel yang <b>kosong</b> — tak pernah menimpa.</div>
     <div class="field"><label>File (.xlsx / .csv)</label>
       <input type="file" id="bfFile" accept=".xlsx,.xls,.csv" onchange="bfParse()"></div>
     <div id="bfMap" class="hidden">
-      <div style="font-size:12px;color:var(--c-muted);margin-bottom:6px">Cocokkan kolom (otomatis ditebak). Kolom bertanda * wajib.</div>
+      <div style="font-size:12px;color:var(--bs-n600);margin-bottom:6px">Cocokkan kolom (otomatis ditebak). Kolom bertanda * wajib.</div>
       <div class="row2">
         <div class="field"><label>Baris header</label><select id="bfHeader" onchange="_bfPopulateCols();bfRenderPreview()"></select></div>
         <div class="field"><label>No Transaksi *</label><select id="bfColNo" onchange="bfRenderPreview()"></select></div>
@@ -759,8 +759,8 @@
         <div class="field"><label>No SPP/SSP</label><select id="bfColSpp" onchange="bfRenderPreview()"></select></div>
         <div class="field"></div>
       </div>
-      <div id="bfPreview" style="max-height:200px;overflow:auto;font-size:11px;border:1px solid var(--c-line);border-radius:8px;padding:6px;margin-bottom:8px"></div>
-      <button class="btn" style="background:var(--c-ok)" onclick="submitBackfill()">Isi Kuitansi</button>
+      <div id="bfPreview" style="max-height:200px;overflow:auto;font-size:11px;border:1px solid var(--bs-n300);border-radius:8px;padding:6px;margin-bottom:8px"></div>
+      <button class="btn" style="background:var(--bs-n700)" onclick="submitBackfill()">Isi Kuitansi</button>
     </div>
     <div id="bfHasil" style="margin-top:8px"></div>
     <button class="btn ghost" onclick="closeModal('modalBackfill')">Tutup</button>
@@ -786,7 +786,7 @@
       <div class="field"><label>Tanggal Nota</label><input type="date" id="ntTgl"></div>
       <div class="field"><label>Alamat Penyedia</label><input type="text" id="ntAlamat"></div>
     </div>
-    <div id="ntDetailWrap" style="display:none;border:1px solid var(--c-line);border-radius:8px;padding:8px;margin-bottom:10px;background:#fafbfc">
+    <div id="ntDetailWrap" style="display:none;border:1px solid var(--bs-n300);border-radius:8px;padding:8px;margin-bottom:10px;background:var(--bs-paper)">
       <div style="font-weight:600;font-size:13px;margin-bottom:6px">&#128230; Rincian Barang (Persediaan)</div>
       <div id="ntItemList"></div>
       <button type="button" class="btn ghost" style="width:auto;padding:4px 10px;margin:0" onclick="ntAddItem()">+ Tambah item</button>
@@ -800,7 +800,7 @@
       <div class="bukti-ket">Berkas nota asli dari penyedia. Cukup satu per nota.</div>
       <input type="file" id="ntFile" accept="image/*" capture="environment" onchange="_showPastePreview(this)">
       <button class="btn ghost scan-imp" style="display:none;margin:6px 0 0" onclick="importScanNota()">&#128247; Impor dari Folder Scan</button>
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-top:8px;color:var(--c-muted)">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-top:8px;color:var(--bs-n600)">
         <input type="checkbox" id="ntAsFotoBarang"> Salin juga foto nota ini ke Bukti B (biasanya <b>tidak perlu</b>)
       </label>
     </div>
@@ -884,7 +884,7 @@
       <div class="tgl" style="margin-top:2px">DPP = 100/111 &times; nilai ini (bila termasuk PPN). Isi sesuai nilai kontrak/nota bruto, bukan nilai bersih transfer.</div>
     </div>
     <details style="margin-bottom:12px;border:1px solid var(--bs-n300);border-radius:8px;padding:8px 12px">
-      <summary style="cursor:pointer;font-size:13px;color:var(--c-primary);font-weight:600">&#8645; Gross-up &mdash; hitung nilai kontrak dari netto yang diterima rekanan</summary>
+      <summary style="cursor:pointer;font-size:13px;color:var(--bs-ac);font-weight:600">&#8645; Gross-up &mdash; hitung nilai kontrak dari netto yang diterima rekanan</summary>
       <div class="field" style="margin-top:10px"><label>Jumlah yang ingin diterima rekanan (netto, Rp)</label>
         <input type="text" class="numfmt" id="pjNettoTarget" inputmode="numeric" value="0" oninput="recalcPajak()">
       </div>
@@ -952,12 +952,12 @@
     <hr>
     <h2 style="font-size:14px">Tambah Foto (dengan lokasi GPS)</h2>
     <div class="field"><label>Keterangan (opsional, isi sebelum ambil foto)</label><input type="text" id="ftKet"></div>
-    <div id="ftGps" class="tgl" style="font-size:12px;color:var(--c-muted);margin-bottom:8px"></div>
+    <div id="ftGps" class="tgl" style="font-size:12px;color:var(--bs-n600);margin-bottom:8px"></div>
     <div class="row2">
-      <button class="btn" style="background:var(--c-primary)" onclick="document.getElementById('ftCam').click()">&#128247; Kamera</button>
-      <button class="btn" style="background:var(--c-ok)" onclick="document.getElementById('ftFile').click()">&#128247; Galeri</button>
+      <button class="btn" style="background:var(--bs-ac)" onclick="document.getElementById('ftCam').click()">&#128247; Kamera</button>
+      <button class="btn" style="background:var(--bs-n700)" onclick="document.getElementById('ftFile').click()">&#128247; Galeri</button>
     </div>
-    <div class="tgl" style="font-size:11px;color:var(--c-muted);margin:6px 0">Boleh beberapa foto sekaligus &middot; atau tempel screenshot dengan Ctrl+V</div>
+    <div class="tgl" style="font-size:11px;color:var(--bs-n600);margin:6px 0">Boleh beberapa foto sekaligus &middot; atau tempel screenshot dengan Ctrl+V</div>
     <input type="file" id="ftCam" accept="image/*" capture="environment" style="display:none" onchange="_uploadFotoFiles(this.files)">
     <input type="file" id="ftFile" accept="image/*" multiple style="display:none" onchange="_uploadFotoFiles(this.files)">
     <button class="btn ghost" onclick="closeModal('modalFoto')">Tutup</button>
@@ -1010,7 +1010,7 @@
       <div class="field"><label>Tanggal SPBY</label><input type="date" id="sgTgl"></div>
     </div>
     <div class="field"><label>Pilih transaksi pengeluaran untuk digabung:</label></div>
-    <div id="sgList" style="max-height:300px;overflow:auto;border:1px solid var(--c-line);border-radius:8px;padding:6px"></div>
+    <div id="sgList" style="max-height:300px;overflow:auto;border:1px solid var(--bs-n300);border-radius:8px;padding:6px"></div>
     <div id="sgSum" class="tgl" style="margin:8px 0;font-weight:600"></div>
     <button class="btn" onclick="submitSpbyGab()">Simpan SPBY ke transaksi terpilih</button>
     <button class="btn b-dark" onclick="cetakSpbyGab()">&#128424; Cetak SPBY Gabungan</button>
@@ -1036,13 +1036,13 @@
     <div style="font-weight:600;font-size:13px;margin-bottom:4px">&#128193; Rapikan Penyimpanan Drive</div>
     <div class="tgl" style="margin-bottom:6px">Memindahkan file lama (yang tercatat di sheet) <b>dan menyapu file "liar" di root My Drive</b> ber-nama <code>fn_txn…/bukti_txn…/item_t…</code> ke struktur rapi <code>Bukti Transaksi/Tahun/Bulan/Txn-No/</code>. Tautan/preview tetap valid (File ID tidak berubah). File pribadi lain tidak disentuh.</div>
     <button class="btn ghost" onclick="rapikanDrive(true)">&#128065; Pratinjau (dry run)</button>
-    <button class="btn" style="background:#7c3aed" onclick="rapikanDrive(false)">&#128736; Jalankan Rapikan</button>
+    <button class="btn" style="background:var(--bs-n800)" onclick="rapikanDrive(false)">&#128736; Jalankan Rapikan</button>
     <div id="stMigInfo" class="tgl" style="margin-top:6px"></div>
     <hr>
     <div style="font-weight:600;font-size:13px;margin-bottom:4px">&#128444; Logo Kop Surat Tugas</div>
     <div class="tgl" style="margin-bottom:6px">Logo tampil di kiri kop <em>Surat Tugas</em> resmi. Disimpan di browser ini — ulangi jika ganti perangkat. Dianjurkan PNG transparan.</div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <img id="stLogoPreview" src="" style="display:none;width:60px;height:60px;object-fit:contain;border:1px solid #ddd;border-radius:4px">
+      <img id="stLogoPreview" src="" style="display:none;width:60px;height:60px;object-fit:contain;border:1px solid var(--bs-n300);border-radius:4px">
       <div>
         <input type="file" id="stLogoFile" accept="image/*" onchange="onLogoFileChange(event)" style="font-size:12px">
         <div id="stLogoInfo" class="tgl" style="margin-top:2px"></div>
@@ -1087,7 +1087,7 @@
     <div id="kwStatus"></div>
     <div class="field"><label>Upload kuitansi ber-TTD (mis. cetakan SAKTI, dilampiri SPBY) — atau <b>Ctrl+V</b> tempel screenshot</label>
       <input type="file" id="kwFile" accept="image/*" capture="environment" onchange="_showPastePreview(this)"></div>
-    <button class="btn" style="background:var(--c-ok)" onclick="submitUploadKuitansi()">Upload Kuitansi TTD</button>
+    <button class="btn" style="background:var(--bs-n700)" onclick="submitUploadKuitansi()">Upload Kuitansi TTD</button>
     <button class="btn ghost scan-imp" style="display:none" onclick="importScanKuitansi()">&#128247; Impor dari Folder Scan</button>
     <button class="btn ghost" onclick="closeModal('modalKuitansi')">Tutup</button>
   </div>
@@ -1100,10 +1100,10 @@
     <div class="field"><label>Nomor SPBY</label><input type="text" id="spNo" placeholder="mis. 045/SPBY/2026"></div>
     <div class="field"><label>Tanggal SPBY</label><input type="date" id="spTgl"></div>
     <div class="field"><label>Nilai SPBY (Rp)</label><input type="text" class="numfmt" id="spNilai" inputmode="numeric" value="0" oninput="_spbyRecon()"></div>
-    <div id="spRecon" style="font-size:12px;line-height:1.5;background:#f8fafc;border:1px solid var(--c-line);border-radius:8px;padding:8px;margin-bottom:10px"></div>
+    <div id="spRecon" style="font-size:12px;line-height:1.5;background:var(--bs-paper);border:1px solid var(--bs-n300);border-radius:8px;padding:8px;margin-bottom:10px"></div>
     <button class="btn" onclick="submitSpby()">Simpan SPBY</button>
     <button class="btn b-dark" onclick="cetakSpbySingle()">&#128424; Cetak SPBY</button>
-    <button class="btn ghost" id="spHapusBtn" onclick="hapusSpbyTx()" style="background:#fee2e2;color:#991b1b">Hapus SPBY</button>
+    <button class="btn ghost" id="spHapusBtn" onclick="hapusSpbyTx()" style="background:var(--bs-a21);color:var(--bs-a2)">Hapus SPBY</button>
     <button class="btn ghost" onclick="closeModal('modalSpby')">Tutup</button>
   </div>
 </div>
@@ -1113,7 +1113,7 @@
   <div class="sheet" style="max-width:380px;width:100%;padding-bottom:28px">
     <div style="text-align:center;margin-bottom:6px;font-size:28px">&#128176;</div>
     <h2 style="text-align:center;margin-bottom:4px">Kas Tunai</h2>
-    <div style="text-align:center;color:var(--c-muted);font-size:13px;margin-bottom:20px">
+    <div style="text-align:center;color:var(--bs-n600);font-size:13px;margin-bottom:20px">
       Politeknik Kelautan dan Perikanan Sorong
     </div>
     <div class="field"><label>Email</label>
@@ -1124,8 +1124,8 @@
       <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password"
         onkeydown="if(event.key==='Enter')doLogin()">
     </div>
-    <div id="loginError" style="color:var(--c-err);font-size:13px;margin-bottom:10px;display:none;
-      background:#fff0f0;border:1px solid #fca5a5;border-radius:8px;padding:8px 10px"></div>
+    <div id="loginError" style="color:var(--bs-a2);font-size:13px;margin-bottom:10px;display:none;
+      background:var(--bs-a21);border:1px solid var(--bs-a21);border-radius:8px;padding:8px 10px"></div>
     <button class="btn" id="loginBtn" onclick="doLogin()">&#128274; Masuk</button>
   </div>
 </div>
@@ -1134,21 +1134,21 @@
 <div class="modal" id="modalGantiPw">
   <div class="sheet">
     <h2>&#128273; Ganti Password</h2>
-    <div class="tgl" style="margin-bottom:14px;color:var(--c-warn)">
+    <div class="tgl" style="margin-bottom:14px;color:var(--bs-a2)">
       &#9888; Kata sandi harus diganti sebelum melanjutkan.
     </div>
     <div class="field"><label>Password Lama</label>
       <input type="password" id="gpwLama" placeholder="Password saat ini" autocomplete="current-password">
     </div>
-    <div class="field"><label>Password Baru <span style="color:var(--c-muted)">(min. 8 karakter)</span></label>
+    <div class="field"><label>Password Baru <span style="color:var(--bs-n600)">(min. 8 karakter)</span></label>
       <input type="password" id="gpwBaru" placeholder="Password baru" autocomplete="new-password">
     </div>
     <div class="field"><label>Ulangi Password Baru</label>
       <input type="password" id="gpwBaru2" placeholder="Ulangi password baru" autocomplete="new-password"
         onkeydown="if(event.key==='Enter')doGantiPassword()">
     </div>
-    <div id="gpwError" style="color:var(--c-err);font-size:13px;margin-bottom:10px;display:none;
-      background:#fff0f0;border:1px solid #fca5a5;border-radius:8px;padding:8px 10px"></div>
+    <div id="gpwError" style="color:var(--bs-a2);font-size:13px;margin-bottom:10px;display:none;
+      background:var(--bs-a21);border:1px solid var(--bs-a21);border-radius:8px;padding:8px 10px"></div>
     <button class="btn" onclick="doGantiPassword()">Simpan Password Baru</button>
   </div>
 </div>
@@ -2214,11 +2214,11 @@ function _spbyRecon(){
   var selisih=nilai-nota-kembali;
   var s='<div>Nilai SPBY (bruto): <b>'+rupiah(nilai)+'</b></div>'
     +'<div>Dibayar via rekening: <b>'+rupiah(kredit)+'</b></div>';
-  if(nilai>kredit) s+='<div style="color:#1d4ed8;margin-top:2px">&#128181; Selisih = pajak dipotong/disetor (SSP): <b>'+rupiah(nilai-kredit)+'</b></div>';
+  if(nilai>kredit) s+='<div style="color:var(--bs-ac);margin-top:2px">&#128181; Selisih = pajak dipotong/disetor (SSP): <b>'+rupiah(nilai-kredit)+'</b></div>';
   s+='<div style="margin-top:4px">Nilai SPJ (total nota): <b>'+rupiah(nota)+'</b>'+(kembali>0?(' + dikembalikan '+rupiah(kembali)):'')+'</div>';
-  if(selisih>0) s+='<div style="color:#991b1b;margin-top:4px">&#9888; Selisih kurang <b>'+rupiah(selisih)+'</b> → harus <b>disetor/dikembalikan</b> sebesar itu (catat lewat "Catat Kembali"), atau lengkapi nota.</div>';
-  else if(selisih<0) s+='<div style="color:#92400e;margin-top:4px">&#9888; Nota melebihi SPBY sebesar <b>'+rupiah(-selisih)+'</b> — periksa kembali nilai SPBY/nota.</div>';
-  else s+='<div style="color:#166534;margin-top:4px">&#10003; Sesuai — SPJ + pengembalian = Nilai SPBY (lunas).</div>';
+  if(selisih>0) s+='<div style="color:var(--bs-a2);margin-top:4px">&#9888; Selisih kurang <b>'+rupiah(selisih)+'</b> → harus <b>disetor/dikembalikan</b> sebesar itu (catat lewat "Catat Kembali"), atau lengkapi nota.</div>';
+  else if(selisih<0) s+='<div style="color:var(--bs-a2);margin-top:4px">&#9888; Nota melebihi SPBY sebesar <b>'+rupiah(-selisih)+'</b> — periksa kembali nilai SPBY/nota.</div>';
+  else s+='<div style="color:var(--bs-n700);margin-top:4px">&#10003; Sesuai — SPJ + pengembalian = Nilai SPBY (lunas).</div>';
   el.innerHTML=s;
 }
 function submitSpby(){
@@ -2792,7 +2792,7 @@ function pcRecalc(){
   for(var i=0;i<rows.length;i++) sum+=unfmt(rows[i].querySelector('.pc-nom').value);
   var sisa=_pcTotal-sum;
   document.getElementById('pcSum').innerHTML='Jumlah bagian: '+rupiah(sum)+' / '+rupiah(_pcTotal)
-    +(sisa===0?' <span style="color:var(--c-ok)">&#10003; pas</span>':(' <span style="color:#991b1b">selisih '+rupiah(Math.abs(sisa))+(sisa>0?' (kurang)':' (lebih)')+'</span>'));
+    +(sisa===0?' <span style="color:var(--bs-n700)">&#10003; pas</span>':(' <span style="color:var(--bs-a2)">selisih '+rupiah(Math.abs(sisa))+(sisa>0?' (kurang)':' (lebih)')+'</span>'));
 }
 function submitPecah(){
   var rows=document.querySelectorAll('#pcRows .pc-row'), parts=[], sum=0;
@@ -2820,7 +2820,7 @@ function openModalSpbyGab(preselect){
             .sort(function(a,b){return (+b.no||0)-(+a.no||0);});
   var h='';
   for(var i=0;i<list.length;i++){ var t=list[i];
-    h+='<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 2px;border-bottom:1px solid var(--c-line);font-size:13px">'
+    h+='<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 2px;border-bottom:1px solid var(--bs-n300);font-size:13px">'
       +'<input type="checkbox" class="sg-cb" value="'+t.no+'" data-nom="'+(+t.kredit||0)+'" '+(pre[String(t.no)]?'checked':'')+' onchange="_sgRecalc()">'
       +'<span><b>#'+t.no+'</b> '+esc(t.kegiatan||'-')+' &middot; '+rupiah(t.kredit)
       +(t.noSpby?(' <span class="chip ok">SPBY '+esc(t.noSpby)+'</span>'):'')+'<br><span class="tgl">'+esc(_tglID(t.tanggal))+' &middot; '+esc(t.penjab||'-')+'</span></span></label>';
@@ -2944,8 +2944,8 @@ function importScanNota(){
     var box=document.getElementById('ntFile_pp');
     if(!box){ box=document.createElement('div'); box.id='ntFile_pp'; box.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-top:6px'; document.getElementById('ntFile').parentNode.appendChild(box); }
     box.innerHTML='';
-    if(/^image\//.test(file.mimeType)){ var img=document.createElement('img'); img.src='data:'+file.mimeType+';base64,'+file.base64; img.style.cssText='width:56px;height:56px;object-fit:cover;border:1px solid #ccc;border-radius:6px'; box.appendChild(img); }
-    else { var s=document.createElement('span'); s.textContent='📄 '+file.namaFile; s.style.cssText='font-size:11px;color:#555'; box.appendChild(s); }
+    if(/^image\//.test(file.mimeType)){ var img=document.createElement('img'); img.src='data:'+file.mimeType+';base64,'+file.base64; img.style.cssText='width:56px;height:56px;object-fit:cover;border:1px solid var(--bs-n300);border-radius:6px'; box.appendChild(img); }
+    else { var s=document.createElement('span'); s.textContent='📄 '+file.namaFile; s.style.cssText='font-size:11px;color:var(--bs-n700)'; box.appendChild(s); }
     toast('Scan dipilih. Lengkapi data nota lalu Tambah Nota','success');
   });
 }
@@ -3380,7 +3380,7 @@ function renderFotoGaleri(res){
       +'<div class="ftmeta">'+esc(f.waktu||'')
       +(f.mapsUrl?(' &middot; <a href="'+esc(f.mapsUrl)+'" target="_blank">&#128205; lokasi</a>'):'')
       +(f.keterangan?('<br>'+esc(f.keterangan)):'')+'</div>'
-      +'<button class="mini b-gray" style="color:#374151" onclick="hapusFoto('+f.urutan+')">Hapus</button>'
+      +'<button class="mini b-gray" style="color:var(--bs-n800)" onclick="hapusFoto('+f.urutan+')">Hapus</button>'
       +'</div>';
   }
   box.innerHTML=h+'</div>';
@@ -3454,11 +3454,11 @@ function _showPastePreview(input){
   for(var i=0;i<fs.length;i++){
     if(/^image\//.test(fs[i].type)){
       var img=document.createElement('img'); img.src=URL.createObjectURL(fs[i]);
-      img.style.cssText='width:56px;height:56px;object-fit:cover;border:1px solid #ccc;border-radius:6px';
+      img.style.cssText='width:56px;height:56px;object-fit:cover;border:1px solid var(--bs-n300);border-radius:6px';
       box.appendChild(img);
     } else {
       var s=document.createElement('span'); s.textContent='📄 '+fs[i].name;
-      s.style.cssText='font-size:11px;color:#555;align-self:center'; box.appendChild(s);
+      s.style.cssText='font-size:11px;color:var(--bs-n700);align-self:center'; box.appendChild(s);
     }
   }
 }
@@ -3480,7 +3480,7 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
 function _txSetLabels(masuk){
   document.getElementById('txNilaiLbl').textContent=masuk?'Nilai Masuk / Debet (Rp)':'Nilai Keluar / Kredit (Rp)';
   document.getElementById('txPenjabLbl').textContent=masuk?'Sumber Dana / Penyetor':'Penanggung Jawab (PUM)';
-  document.getElementById('txSimpan').style.background=masuk?'var(--c-ok)':'var(--c-err)';
+  document.getElementById('txSimpan').style.background=masuk?'var(--bs-n700)':'var(--bs-a2)';
 }
 function openModalTransaksi(mode){
   _txEditNo=null;
@@ -3811,22 +3811,22 @@ function submitImporSakti(){
 }
 function _skShowRingkasan(res){
   res=res||{};
-  var h='<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px;font-size:12px">';
+  var h='<div style="background:var(--bs-ac1);border:1px solid var(--bs-ac3);border-radius:8px;padding:8px;font-size:12px">';
   h+='<b>Ringkasan impor:</b><br>'+(res.saktiDiproses||0)+' baris SAKTI &middot; '
     +(res.cocok||0)+' cocok &middot; '+(res.nilaiBeda||0)+' nilai beda &middot; '
     +(res.tanpaPadanan||0)+' tanpa padanan &middot; '+(res.konflik||0)+' konflik';
-  if(typeof res.saktiDitambah!=='undefined') h+='<br><span style="color:var(--c-muted)">('+res.saktiDitambah+' baru, '+res.saktiDiperbarui+' diperbarui)</span>';
+  if(typeof res.saktiDitambah!=='undefined') h+='<br><span style="color:var(--bs-n600)">('+res.saktiDitambah+' baru, '+res.saktiDiperbarui+' diperbarui)</span>';
   h+='</div>';
   var lb=res.listNilaiBeda||[];
   if(lb.length){
-    h+='<div style="margin-top:8px;font-size:12px"><b style="color:#9a3412">Nilai beda ('+lb.length+') — perlu ditinjau:</b>';
+    h+='<div style="margin-top:8px;font-size:12px"><b style="color:var(--bs-a2)">Nilai beda ('+lb.length+') — perlu ditinjau:</b>';
     for(var i=0;i<Math.min(lb.length,20);i++){ var x=lb[i];
       h+='<div>&bull; Kuitansi '+esc(x.kuitansi)+' (Trx '+esc(x.no)+'): kas '+rupiah(x.kredit)+' vs SAKTI '+rupiah(x.nilaiSakti)+' (selisih '+rupiah(x.selisih)+')</div>'; }
     h+='</div>';
   }
   var lk=res.listKonflik||[];
   if(lk.length){
-    h+='<div style="margin-top:8px;font-size:12px"><b style="color:#991b1b">Konflik kuitansi ('+lk.length+') — tidak auto-cocok:</b>';
+    h+='<div style="margin-top:8px;font-size:12px"><b style="color:var(--bs-a2)">Konflik kuitansi ('+lk.length+') — tidak auto-cocok:</b>';
     for(var j=0;j<Math.min(lk.length,20);j++){ var y=lk[j];
       h+='<div>&bull; Kuitansi '+esc(y.kuitansi)+': '+y.txn+' transaksi &times; '+y.sakti+' baris SAKTI</div>'; }
     h+='</div>';
@@ -3930,21 +3930,21 @@ function submitBackfill(){
 }
 function _bfShowRingkasan(res){
   res=res||{};
-  var h='<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px;font-size:12px">';
+  var h='<div style="background:var(--bs-ac1);border:1px solid var(--bs-ac3);border-radius:8px;padding:8px;font-size:12px">';
   h+='<b>Ringkasan backfill:</b><br>'+(res.diproses||0)+' baris diproses &middot; '
     +(res.diisi||0)+' diisi &middot; '+(res.bentrok||0)+' bentrok &middot; '
     +(res.takDitemukan||0)+' transaksi tak ditemukan';
   h+='</div>';
   var lb=res.listBentrok||[];
   if(lb.length){
-    h+='<div style="margin-top:8px;font-size:12px"><b style="color:#9a3412">Bentrok ('+lb.length+') — tidak ditimpa:</b>';
+    h+='<div style="margin-top:8px;font-size:12px"><b style="color:var(--bs-a2)">Bentrok ('+lb.length+') — tidak ditimpa:</b>';
     for(var i=0;i<Math.min(lb.length,20);i++){ var x=lb[i];
       h+='<div>&bull; Trx '+esc(x.no)+': '+esc(x.detail)+'</div>'; }
     h+='</div>';
   }
   var lt=res.listTakDitemukan||[];
   if(lt.length){
-    h+='<div style="margin-top:8px;font-size:12px"><b style="color:#991b1b">Tak ditemukan ('+lt.length+'):</b> '+lt.slice(0,30).map(esc).join(', ');
+    h+='<div style="margin-top:8px;font-size:12px"><b style="color:var(--bs-a2)">Tak ditemukan ('+lt.length+'):</b> '+lt.slice(0,30).map(esc).join(', ');
     h+='</div>';
   }
   document.getElementById('bfHasil').innerHTML=h;
@@ -4132,7 +4132,7 @@ function _ntAddBarangFiles(files){
         _ntBarangFiles.push(c);
         var img=document.createElement('img');
         img.src=c.base64;
-        img.style.cssText='width:56px;height:56px;object-fit:cover;border:1px solid #ccc;border-radius:6px;cursor:pointer';
+        img.style.cssText='width:56px;height:56px;object-fit:cover;border:1px solid var(--bs-n300);border-radius:6px;cursor:pointer';
         img.title='Klik untuk hapus';
         img.onclick=function(){ var idx=_ntBarangFiles.indexOf(c); if(idx>-1) _ntBarangFiles.splice(idx,1); img.remove(); };
         if(pp) pp.appendChild(img);
@@ -4143,7 +4143,7 @@ function _ntAddBarangFiles(files){
 /* ----- Rincian Barang (persediaan): baris item + foto per item ----- */
 function _ntItemRowHtml(it){
   it=it||{};
-  return '<div class="nti-row" style="border:1px solid var(--c-line);border-radius:8px;padding:8px;margin-bottom:8px">'
+  return '<div class="nti-row" style="border:1px solid var(--bs-n300);border-radius:8px;padding:8px;margin-bottom:8px">'
    +'<div class="row2"><div class="field"><label>Nama Barang</label><input type="text" class="nti-nama" value="'+_attr(it.namaBarang)+'"></div>'
    +'<div class="field"><label>Keterangan</label><input type="text" class="nti-ket" value="'+_attr(it.keterangan)+'"></div></div>'
    +'<div class="row2" style="grid-template-columns:1fr 1fr 1fr 1fr"><div class="field"><label>Qty</label><input type="number" step="any" class="nti-qty" value="'+(it.qty!=null?(+it.qty||0):'')+'" oninput="_ntRecalc()"></div>'
@@ -4154,7 +4154,7 @@ function _ntItemRowHtml(it){
    +'<label class="btn ghost" style="width:auto;margin:0;padding:5px 10px;cursor:pointer">&#128247; Foto<input type="file" class="nti-file" accept="image/*" capture="environment" style="display:none" onchange="_ntItemFile(this)"></label>'
    +'<button type="button" class="btn ghost scan-imp" style="width:auto;margin:0;padding:5px 10px;display:none" onclick="_ntItemScan(this)">Impor Scan</button>'
    +'<div class="nti-thumb" style="flex:1"></div>'
-   +'<button type="button" class="btn ghost" style="width:auto;margin:0;color:var(--c-bad)" onclick="_ntRemoveItem(this)">&times;</button>'
+   +'<button type="button" class="btn ghost" style="width:auto;margin:0;color:var(--bs-a2)" onclick="_ntRemoveItem(this)">&times;</button>'
    +'</div></div>';
 }
 function ntAddItem(it){
@@ -5001,9 +5001,9 @@ function renderBuktiList(list){
   var h='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px">';
   for(var i=0;i<list.length;i++){ var b=list[i];
     var thumb=b.isImg?('<img src="'+esc(b.url)+'" style="width:100%;height:70px;object-fit:cover;border-radius:6px">')
-                     :('<div style="height:70px;display:flex;align-items:center;justify-content:center;background:#fee2e2;border-radius:6px;font-size:26px">&#128196;</div>');
+                     :('<div style="height:70px;display:flex;align-items:center;justify-content:center;background:var(--bs-a21);border-radius:6px;font-size:26px">&#128196;</div>');
     h+='<div style="font-size:10px;text-align:center">'+thumb
-      +'<div style="margin:2px 0;color:var(--c-muted)">'+esc(b.jenisDok||'')+'</div>'
+      +'<div style="margin:2px 0;color:var(--bs-n600)">'+esc(b.jenisDok||'')+'</div>'
       +'<a href="'+esc(b.url)+'" target="_blank">lihat</a> &middot; <a href="#" onclick="hapusBukti('+b.urutan+');return false">hapus</a></div>';
   }
   el.innerHTML=h+'</div>';
@@ -5590,7 +5590,7 @@ function _cekSisaPagu(x){
   var sisaSetelah=x.sisaAman-nilai;
   var dasar='Pagu '+rupiah(x.pagu)+' · SAKTI '+rupiah(x.realisasiSakti)+' · <b>sisa aman '+rupiah(x.sisaAman)+'</b>';
   info.innerHTML = (nilai>0 && sisaSetelah<0)
-    ? ('<span style="color:#991b1b;font-weight:700">&#9888; Melebihi pagu '+rupiah(-sisaSetelah)+'</span> — '+dasar+'. Tetap bisa disimpan.')
+    ? ('<span style="color:var(--bs-a2);font-weight:700">&#9888; Melebihi pagu '+rupiah(-sisaSetelah)+'</span> — '+dasar+'. Tetap bisa disimpan.')
     : dasar + (nilai>0 ? (' → sisa setelah transaksi ini '+rupiah(sisaSetelah)) : '');
 }
 
@@ -5967,7 +5967,7 @@ function renderNotaPajak(){
     '<div class="kk-lbl">TOTAL PEMOTONGAN &mdash; '+rows.length+' NOTA</div>'
     +'<div class="kk-num tnum">'+rupiah(sPph+sPpn)+'</div>'
     +'<div style="font-size:13px">PPh <b class="tnum">'+rupiah(sPph)+'</b> &nbsp;&middot;&nbsp; PPN <b class="tnum">'+rupiah(sPpn)+'</b> &nbsp;&middot;&nbsp; <span class="mut">DPP '+rupiah(sDpp)+'</span></div>';
-  if(!rows.length){ box.innerHTML='<div style="text-align:center;color:var(--c-muted);padding:20px">Belum ada nota yang dipotong pajak untuk filter ini.</div>'; return; }
+  if(!rows.length){ box.innerHTML='<div style="text-align:center;color:var(--bs-n600);padding:20px">Belum ada nota yang dipotong pajak untuk filter ini.</div>'; return; }
   var h='';
   for(i=0;i<rows.length;i++){ var n=rows[i];
     h+='<div class="card" style="margin-bottom:8px">'
