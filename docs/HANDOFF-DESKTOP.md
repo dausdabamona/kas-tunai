@@ -100,6 +100,7 @@ Yang berubah: kolom **Urutan** dan tambahan tugas 12–14.
 | # | Urutan | Tugas | Status |
 |---|---|-------|--------|
 | 1 | **1** | Kerangka rail-nav (menggantikan tab atas) | ✅ **selesai & diuji manual** (28 Jul 2026, browser sungguhan) → `f89dd42` (markup+CSS `2476395`). Gerbang temuan G **terbuka** — tugas lain boleh lanjut. Sisa pekerjaan terpisah: breakpoint 1366/1280 dari paket v2 (bagian 3, tabel kerapatan) belum diimplementasikan; yang ada baru markup + sticky-position dasar. |
+| — | **1b** | Tema Broadsheet menyeluruh + kerangka v2 (bar atas, menu, breakpoint) | 🟡 kode selesai; uji klik nyata 2 lebar lolos; **belum diuji manual di browser sungguhan** — perlu deploy.bat sebelum ✅ |
 | 7 | **2** | Parser GLP039 di klien (`FileReader` + unzip xlsx) | 🟡 kode selesai, review akhir bersih → plan `a53db5f`, implementasi `1f77ec0`, fix wave `d4fc6c5` (3 temuan Important dari review whole-branch: `ringkasan.sisa`→`sisaBerkas`+field `lock` baru, `inlineStr` multi-run tak lagi terpotong, catatan wajib "belum diuji file SAKTI asli" dikembalikan). Verifikasi mandiri 12/12 PASS. **Masih 🟡, bukan ✅** — belum pernah dicoba dengan berkas GLP039 asli (baru data acuan teks + ZIP buatan sendiri), wajib sebelum tugas urutan-8 (layar Unggah) memakainya. |
 | 9 | **3** | Layar Pagu & realisasi: tab Pencocokan (tabel pohon) — **baca-saja, berdampingan** | ⬜ belum |
 | — | **4** | *Gerbang:* jalankan paralel 1 siklus GUP, cocokkan hasil lama vs baru | ⬜ belum |
@@ -249,6 +250,15 @@ bagian 3b (disalin penuh karena menjawab risiko R-3/R-4/R-5/R-8 yang memblokir t
 
 Semua ukuran/warna memakai token Broadsheet di bagian 6 (tidak ada warna baru).
 Target sentuh/klik minimal 40px (tombol pil 40px, baris tabel ≈48px).
+
+> **Catatan status (29 Jul 2026).** Seluruh `index.html` sudah bertema
+> Broadsheet — token `--c-*` lama sudah dihapus, `var(--bs-*)` tunggal
+> (lihat tugas **1b** di bagian 1). Tapi itu baru **bahasa visual**; struktur
+> isi layar **belum** v2. Contoh paling jelas: **3b.2 Transaksi** di bawah ini
+> masih daftar kartu dua kolom (`#listTransaksi`), bukan tabel `No/Tgl · Uraian
+> & penyedia · Status · Bukti · Nilai` + panel detail kanan seperti yang
+> dideskripsikan. Uraian per layar di bawah tetap spec yang mengikat untuk
+> tugas 11–15 (redesain struktur) — belum jadi kenyataan di kode.
 
 ### 3b.1 Papan kerja
 1. 4 kartu statistik: **Saldo kas tunai** (accent) · Bank/UP · Belum di-SPBY ·
