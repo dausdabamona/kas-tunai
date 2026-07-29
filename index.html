@@ -132,6 +132,13 @@
   .pk-tenang{background:var(--bs-n200);border-radius:16px;padding:16px 18px;
     cursor:pointer}
   /* Grup dua tingkat di daftar tindakan: bulan lalu DRPP */
+  .pk-urut{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--bs-n600);
+    margin-bottom:10px}
+  .pk-urut select{min-height:40px;border:1px solid var(--bs-n300);border-radius:10px;
+    padding:0 10px;font:inherit;font-size:12.5px;color:var(--bs-ink);
+    background:var(--bs-paper)}
+  .pk-drpp-n{margin-left:auto;font-family:var(--bs-fh);font-weight:600;
+    font-variant-numeric:tabular-nums;color:var(--bs-n800)}
   .pk-grup{margin-bottom:10px}
   .pk-grup-h{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;
     padding:6px 8px;border-radius:12px;background:var(--bs-n200)}
@@ -6015,6 +6022,18 @@ function _pkToggleGrup(key){
   _pkRenderTindakan(pkData);
 }
 
+/* Cara mengurut baris di dalam grup. Bawaan: nilai terbesar dulu -- yang paling
+   besar biasanya yang paling perlu dikenali dan diselesaikan lebih dulu. */
+var pkUrut='nilai-desc';
+function _pkGantiUrut(v){ pkUrut=v; _pkRenderTindakan(pkData); }
+
+function _pkPembanding(){
+  if(pkUrut==='nilai-asc')  return function(a,b){ return (+a.t.kredit||0)-(+b.t.kredit||0); };
+  if(pkUrut==='tgl-desc')   return function(a,b){ return String(b.t.tanggal||'').localeCompare(String(a.t.tanggal||'')); };
+  if(pkUrut==='tgl-asc')    return function(a,b){ return String(a.t.tanggal||'').localeCompare(String(b.t.tanggal||'')); };
+  return function(a,b){ return (+b.t.kredit||0)-(+a.t.kredit||0); };   // nilai-desc
+}
+
 /**
  * Daftar "menunggu tindakan", dikelompokkan dua tingkat: bulan lalu DRPP.
  *
@@ -6033,11 +6052,12 @@ function _pkRenderTindakan(res){
     if(!al.length) continue;
     n++;
     var bk=_pkBulanKey(t);
-    if(!bulan[bk]){ bulan[bk]={drpp:{}, urutDrpp:[], jml:0, nilai:0}; urutBulan.push(bk); }
+    if(!bulan[bk]){ bulan[bk]={drpp:{}, urutDrpp:[], nilaiDrpp:{}, jml:0, nilai:0}; urutBulan.push(bk); }
     var g=bulan[bk];
     var dk=String(t.noDrpp||'').trim();
     if(!g.drpp[dk]){ g.drpp[dk]=[]; g.urutDrpp.push(dk); }
     g.drpp[dk].push({t:t, al:al});
+    g.nilaiDrpp[dk]=(g.nilaiDrpp[dk]||0)+(+t.kredit||0);
     g.jml++; g.nilai+=(+t.kredit||0);
   }
   if(!n){
@@ -6061,15 +6081,25 @@ function _pkRenderTindakan(res){
       +'<span class="pk-grup-n">'+esc(_pkNamaBulan(bk2))+'</span>'
       +'<span class="pk-grup-x">'+g2.jml+' transaksi &middot; '+rupiah(g2.nilai)+'</span></div>';
     if(!tutup){
-      // '' (tanpa DRPP) selalu pertama, sisanya urut nomor DRPP.
+      // '' (tanpa DRPP) SELALU pertama apa pun urutannya -- itu yang belum diproses
+      // sama sekali. Sisanya mengikuti pilihan: bila mengurut nilai, DRPP dengan
+      // total terbesar/terkecil dulu; bila mengurut tanggal, tetap urut nomor DRPP.
+      var urutNilai=(pkUrut==='nilai-desc'||pkUrut==='nilai-asc');
       g2.urutDrpp.sort(function(a,b){
         if(a==='') return -1; if(b==='') return 1;
+        if(urutNilai){
+          var d=(g2.nilaiDrpp[b]||0)-(g2.nilaiDrpp[a]||0);
+          if(pkUrut==='nilai-asc') d=-d;
+          if(d) return d;
+        }
         return a<b?-1:(a>b?1:0);
       });
+      var cmp=_pkPembanding();
       for(di=0;di<g2.urutDrpp.length;di++){
-        var dk2=g2.urutDrpp[di], baris=g2.drpp[dk2], j;
+        var dk2=g2.urutDrpp[di], baris=g2.drpp[dk2].slice(0).sort(cmp), j;
         h+='<div class="pk-drpp">'+(dk2?('DRPP '+esc(dk2)):'Belum masuk DRPP')
-          +' <span class="pk-drpp-x">'+baris.length+'</span></div>';
+          +' <span class="pk-drpp-x">'+baris.length+'</span>'
+          +'<span class="pk-drpp-n">'+rupiah(g2.nilaiDrpp[dk2]||0)+'</span></div>';
         for(j=0;j<baris.length;j++){
           var b=baris[j], t2=b.t;
           h+='<div class="pk-row tindakan" onclick="_pkBukaTransaksi('+(+t2.no||0)+')">'
@@ -6084,7 +6114,17 @@ function _pkRenderTindakan(res){
     }
     h+='</div>';
   }
-  document.getElementById('pkTindakan').innerHTML=h;
+  var bar='<div class="pk-urut">Urutkan'
+    +' <select onchange="_pkGantiUrut(this.value)">'
+    +'<option value="nilai-desc">Nilai terbesar</option>'
+    +'<option value="nilai-asc">Nilai terkecil</option>'
+    +'<option value="tgl-desc">Tanggal terbaru</option>'
+    +'<option value="tgl-asc">Tanggal terlama</option>'
+    +'</select></div>';
+  document.getElementById('pkTindakan').innerHTML=bar+h;
+  // Kembalikan pilihan yang sedang aktif -- innerHTML menulis ulang select-nya.
+  var sel=document.querySelector('#pkTindakan .pk-urut select');
+  if(sel) sel.value=pkUrut;
 }
 
 /**
