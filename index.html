@@ -5834,7 +5834,12 @@ function _apAnalisis(){
       for(var t=0;t<teks.length;t++){
         var s2=teks[t].s, uraian='';
         for(var u=t+1;u<teks.length;u++){ if(!/^[\d.,%-]+$/.test(teks[u].s)){ uraian=teks[u].s; break; } }
-        if(/^\d{6}$/.test(s2)){ akun=s2; uAkun=uraian||uAkun; }
+        // Kode akun belanja SELALU 6 digit diawali 5 (51 pegawai, 52 barang,
+        // 53 modal, 57 bansos). Pola lama /^\d{6}$/ menangkap angka enam digit
+        // APA PUN di baris induk -- volume, satuan, atau nominal seperti 900000
+        // ikut tersimpan sebagai akun, dan pratinjau tidak menunjukkan apa-apa
+        // karena uraian akunnya tetap benar. Jangan dilonggarkan lagi.
+        if(/^5\d{5}$/.test(s2)){ akun=s2; uAkun=uraian||uAkun; }
         else if(/^\d{3}\.[A-Z0-9]+$/i.test(s2)) komp=s2;
         else if(/^[A-Z]{2,4}\.\d+$/.test(s2)){ if(/^[A-Z]{2}\.\d{4}$/.test(s2)) keg=s2; else { ro=s2; uRo=uraian||uRo; } }
         else if(/^[A-Z]{2,4}$/.test(s2) && s2!=='DL') { /* KRO — tak disimpan terpisah */ }
@@ -5950,6 +5955,23 @@ function apPreview(){
     +(cocok===true?' &middot; &#10003; cocok dengan total di berkas'
       :(cocok===false?' &middot; &#9888; TIDAK cocok dengan total di berkas — periksa pemetaan kolom':''))
     +'</div>';
+  // Penjaga kedua: hitung item yang akunnya kosong atau tidak berpola 5xxxxx.
+  // Impor pagu yang salah kolom TIDAK terlihat dari total -- totalnya tetap cocok,
+  // yang rusak justru pembebanannya. Jadi harus diperiksa terpisah.
+  var akunSalah=[], akunKosong=0;
+  for(i=0;i<rows.length;i++){
+    var ak=String(rows[i].akun||'').trim();
+    if(!ak){ akunKosong++; continue; }
+    if(!/^5\d{5}$/.test(ak) && akunSalah.indexOf(ak)<0) akunSalah.push(ak);
+  }
+  if(akunSalah.length || akunKosong){
+    h+='<div style="padding:8px 10px;border-radius:8px;margin-bottom:8px;'
+      +'background:var(--bs-a21);color:var(--bs-a2)"><b>&#9888; Periksa kolom akun.</b> '
+      +(akunSalah.length?('Nilai bukan kode akun: <b>'+esc(akunSalah.slice(0,6).join(', '))+'</b>'
+        +(akunSalah.length>6?(' dan '+(akunSalah.length-6)+' lainnya'):'')+'. '):'')
+      +(akunKosong?(akunKosong+' item tanpa akun. '):'')
+      +'Kode akun belanja selalu 6 angka diawali 5.</div>';
+  }
   h+='<table style="width:100%;border-collapse:collapse"><tr><th style="text-align:left">Akun</th><th style="text-align:left">Item</th><th style="text-align:right">Pagu</th><th style="text-align:right">Realisasi</th></tr>';
   for(i=0;i<n;i++){ var d=rows[i];
     h+='<tr><td>'+esc(d.akun)+'</td><td>'+esc(d.kodeItem+'. '+d.uraianItem).slice(0,44)+'</td>'
