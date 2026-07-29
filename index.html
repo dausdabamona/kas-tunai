@@ -92,6 +92,54 @@
 
   .wrap{padding:14px;max-width:1180px;margin:0}
 
+  /* ---- Papan kerja ---- */
+  .pk-grid{display:flex;gap:18px;align-items:flex-start}
+  .pk-main{flex:1;min-width:0}
+  .pk-side{flex:0 0 404px;display:flex;flex-direction:column;gap:14px}
+  .pk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+  .pk-card{border-radius:20px;padding:20px 22px;background:var(--bs-n200)}
+  .pk-card.utama{background:var(--bs-ac);color:var(--bs-paper)}
+  .pk-card .lbl{font-size:12px;font-weight:700;opacity:.85;margin-bottom:6px}
+  .pk-card .num{font-family:var(--bs-fh);font-weight:600;font-size:24px;
+    font-variant-numeric:tabular-nums}
+  .pk-card.utama .num{font-size:31px}
+  .pk-card .sub{font-size:11.5px;margin-top:4px;color:var(--bs-n600)}
+  .pk-card.utama .sub{color:var(--bs-paper);opacity:.9}
+  .pk-card .sub.lewat{color:var(--bs-a2);font-weight:700}
+  .pk-sec{background:var(--bs-paper);border:1px solid var(--bs-n300);
+    border-radius:16px;padding:16px 18px;margin-bottom:16px}
+  .pk-h{font-family:var(--bs-fh);font-weight:600;font-size:16px;color:var(--bs-ink)}
+  .pk-sub{font-size:12px;color:var(--bs-n600);margin-top:2px;margin-bottom:10px}
+  .pk-row{display:grid;align-items:center;gap:10px;min-height:48px;
+    padding:6px 8px;border-radius:14px;cursor:pointer}
+  .pk-row:hover{background:var(--bs-n200)}
+  .pk-row.tindakan{grid-template-columns:1fr 148px 130px}
+  .pk-row.pagu{grid-template-columns:1fr 120px}
+  .pk-row.pagu.tipis{background:var(--bs-a21)}
+  .pk-row .t1{font-size:15px;color:var(--bs-ink)}
+  .pk-row .t2{font-size:12px;color:var(--bs-n600);margin-top:2px}
+  .pk-row .nom{text-align:right;font-family:var(--bs-fh);font-weight:600;
+    font-variant-numeric:tabular-nums}
+  .pk-bar{height:7px;width:54px;border-radius:999px;background:var(--bs-n300);
+    overflow:hidden;display:inline-block;vertical-align:middle}
+  .pk-bar>i{display:block;height:100%;background:var(--bs-ac)}
+  .pk-bar.tipis>i{background:var(--bs-a2)}
+  .pk-pct{font-size:13px;font-weight:600;margin-left:8px;
+    font-variant-numeric:tabular-nums}
+  .pk-antre{background:var(--bs-a2);color:var(--bs-paper);border-radius:20px;
+    padding:16px 18px}
+  .pk-antre .pk-h{color:var(--bs-paper)}
+  .pk-tenang{background:var(--bs-n200);border-radius:16px;padding:16px 18px;
+    cursor:pointer}
+  .pk-kosong{font-size:13px;color:var(--bs-n600);padding:10px 8px}
+  @media(max-width:1439px){
+    .pk-stats{grid-template-columns:repeat(2,1fr)}
+    .pk-card{padding:16px 18px}
+    .pk-card .num{font-size:21px}
+    .pk-card.utama .num{font-size:26px}
+    .pk-side{flex-basis:348px}
+  }
+
   /* Saldo summary */
   .saldo-sum{background:linear-gradient(135deg,var(--bs-ac7),var(--bs-ac7));color:var(--bs-paper);
     border-radius:14px;padding:15px 18px;margin-bottom:14px}
@@ -301,6 +349,7 @@
 
 <nav class="rail">
   <div class="rail-brand">Kas Tunai<small>Poltek KP Sorong &middot; <span id="userLabel"></span></small></div>
+  <button id="tabPapan" class="rail-item" onclick="switchTab('papan')" title="Papan kerja"><span class="rail-label">Papan kerja</span></button>
   <button id="tabTransaksi" class="rail-item active" onclick="switchTab('transaksi')" title="Transaksi"><span class="rail-label">Transaksi</span></button>
   <button id="tabPajak" class="rail-item" onclick="switchTab('pajak')" title="Nota Kena Pajak"><span class="rail-label">Nota Kena Pajak</span></button>
   <button id="tabDana" class="rail-item" onclick="switchTab('dana')" title="Pagu &amp; realisasi"><span class="rail-label">Pagu &amp; realisasi</span></button>
@@ -334,6 +383,32 @@
     </div>
   </div>
   <button class="tb-utama" onclick="openModal('modalPilihTx')">Catat transaksi</button>
+</div>
+
+<!-- ================= TAB PAPAN KERJA ================= -->
+<div id="viewPapan" class="wrap hidden">
+  <div class="pk-grid">
+    <div class="pk-main">
+      <div id="pkKartu" class="pk-stats"></div>
+      <div class="pk-sec">
+        <div class="pk-h">Menunggu tindakan Anda</div>
+        <div id="pkTindakan"></div>
+      </div>
+      <div class="pk-sec">
+        <div class="pk-h">Sisa pagu paling tipis</div>
+        <div class="pk-sub">Tempat pembebanan berikutnya paling mudah melampaui pagu.</div>
+        <div id="pkPagu"></div>
+      </div>
+    </div>
+    <div class="pk-side">
+      <div id="pkAntrean"></div>
+      <div class="pk-sec">
+        <div class="pk-h">Kotak masuk scan</div>
+        <div id="pkScan"></div>
+      </div>
+      <div id="pkRekon"></div>
+    </div>
+  </div>
 </div>
 
 <!-- ================= TAB TRANSAKSI ================= -->
