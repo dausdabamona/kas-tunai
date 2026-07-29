@@ -117,6 +117,51 @@ function serverLaporAntrean(token, jumlahDraft, jumlahGagal) {
   });
 }
 
+/**
+ * Agregasi satu round-trip untuk layar Papan kerja.
+ *
+ * Field transaksi/saldo/role/isAdmin/batasSetorTanggal sengaja bernama dan
+ * berperilaku IDENTIK dengan serverGetDashboard (termasuk redaksi saldo untuk
+ * peran bukan admin/full) supaya index.html memakai ulang pola pembacaan yang sama.
+ *
+ * Migrasi header (hdr_fixed_*) TIDAK diduplikasi ke sini -- itu milik
+ * serverGetDashboard saja, satu tempat.
+ */
+function serverGetPapanKerja(token) {
+  return _run(token, function (auth) {
+    var role = auth.role;
+    var full = (role === 'admin' || role === 'full');
+    var tx = KasTunai.getTransaksi();
+    if (!full) { for (var i = 0; i < tx.length; i++) { delete tx[i].saldo; } }
+    return {
+      transaksi: tx,
+      saldo: full ? KasTunai.ringkasanSaldo() : null,
+      role: role,
+      isAdmin: (role === 'admin'),
+      serapan: Anggaran.ringkasSerapan(),
+      // v2 menetapkan kotak masuk scan menampilkan 3 baris -- ambil 3, bukan
+      // 60 (bawaan) lalu dipotong di klien.
+      scanTerbaru: ScanInbox.list(3),
+      batasSetorTanggal: CONFIG.BATAS_SETOR_TANGGAL,
+      // Panggil fungsi modul langsung, BUKAN endpoint serverRingkasanRekon --
+      // endpoint tidak boleh memanggil endpoint. Argumen '' = semua periode.
+      rekon: Rekonsiliasi.ringkasan(''),
+      antreanSemua: AntreanStatus.getSemua(),
+      // Status setor pajak tersimpan per NOTA (kolom SETOR_STATUS sheet Multi Nota),
+      // bukan per transaksi. getSemuaNota() sudah mengembalikannya; hitung di sini
+      // supaya klien tidak perlu menarik seluruh daftar nota hanya untuk satu angka.
+      pajakBelumSetor: (function () {
+        var nota = KasTunai.getSemuaNota(), n = 0, j;
+        for (j = 0; j < nota.length; j++) {
+          var x = nota[j];
+          if ((Util.num(x.pajakPph) + Util.num(x.pajakPpn)) > 0 && x.setorStatus !== 'SETOR') n++;
+        }
+        return n;
+      })()
+    };
+  });
+}
+
 /* ============================================================
  * Manajemen User (khusus admin)
  * ============================================================ */
