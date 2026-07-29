@@ -21,6 +21,7 @@
     "DetailNota.gs",
     "Anggaran.gs",
     "Rekonsiliasi.gs",
+    "AntreanStatus.gs",
     "Code.gs"
   ]
 }

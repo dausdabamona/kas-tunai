@@ -110,6 +110,13 @@ function serverGetDashboard(token) {
   });
 }
 
+/** Laporan jumlah draft antrean dari HP staf. Dipanggil diam-diam oleh mobile.html. */
+function serverLaporAntrean(token, jumlahDraft, jumlahGagal) {
+  return _run(token, function (auth) {
+    return AntreanStatus.lapor(auth.email, jumlahDraft, jumlahGagal);
+  });
+}
+
 /* ============================================================
  * Manajemen User (khusus admin)
  * ============================================================ */
