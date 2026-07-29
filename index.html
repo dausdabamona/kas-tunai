@@ -512,10 +512,10 @@
 
 <div id="viewRekon" class="wrap hidden">
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-    <div style="font-size:19px;font-weight:800;color:#0f766e;display:flex;align-items:center;gap:8px">&#128260; Rekonsiliasi SAKTI</div>
-    <button class="btn" style="width:auto;padding:10px 16px;margin:0;min-height:44px;background:var(--c-teal)" onclick="cetakRekon()">&#128424; Cetak Kertas Kerja</button>
+    <div style="font-size:19px;font-weight:800;color:var(--bs-ac);display:flex;align-items:center;gap:8px">&#128260; Rekonsiliasi SAKTI</div>
+    <button class="btn" style="width:auto;padding:10px 16px;margin:0;min-height:44px;background:var(--bs-ac)" onclick="cetakRekon()">&#128424; Cetak Kertas Kerja</button>
   </div>
-  <div id="rekonRingkas" style="font-size:13px;color:var(--c-muted);margin-bottom:10px"></div>
+  <div id="rekonRingkas" style="font-size:13px;color:var(--bs-n600);margin-bottom:10px"></div>
   <div class="rk-filters">
     <select id="rkFilterBulan" onchange="renderRekon()"><option value="">Semua bulan</option></select>
     <select id="rkFilterStatus" onchange="renderRekon()">
@@ -677,12 +677,12 @@
     <h2>&#127974; Impor Rekening Koran (.xlsx)</h2>
     <div class="field"><label>File rekening koran (.xlsx dari BNI)</label>
       <input type="file" id="rkFile" accept=".xlsx,.xls" onchange="rkParse()"></div>
-    <details style="margin-bottom:10px"><summary style="cursor:pointer;font-size:12px;color:var(--c-muted)">atau tempel teks mutasi (salin dari tabel)</summary>
+    <details style="margin-bottom:10px"><summary style="cursor:pointer;font-size:12px;color:var(--bs-n600)">atau tempel teks mutasi (salin dari tabel)</summary>
       <textarea id="rkPaste" rows="4" style="width:100%;font-size:11px" placeholder="Tempel baris mutasi di sini (pemisah Tab), termasuk baris header."></textarea>
       <button class="btn ghost" style="width:auto;padding:6px 12px" onclick="rkParseText()">Olah Teks</button>
     </details>
     <div id="rkMap" class="hidden">
-      <div style="font-size:12px;color:var(--c-muted);margin-bottom:6px">Cocokkan kolom (otomatis ditebak; ubah bila perlu). Debet rekening = uang keluar, Kredit rekening = uang masuk.</div>
+      <div style="font-size:12px;color:var(--bs-n600);margin-bottom:6px">Cocokkan kolom (otomatis ditebak; ubah bila perlu). Debet rekening = uang keluar, Kredit rekening = uang masuk.</div>
       <div class="row2">
         <div class="field"><label>Baris header</label><select id="rkHeader" onchange="_rkPopulateCols();rkRenderPreview()"></select></div>
         <div class="field"><label>Kolom Tanggal</label><select id="rkColTgl" onchange="rkRenderPreview()"></select></div>
@@ -695,8 +695,8 @@
         <div class="field"><label>Kolom Kredit (masuk)</label><select id="rkColKredit" onchange="rkRenderPreview()"></select></div>
         <div class="field"><label>Kolom ID (anti-duplikat)</label><select id="rkColId" onchange="rkRenderPreview()"></select></div>
       </div>
-      <div id="rkPreview" style="max-height:230px;overflow:auto;font-size:11px;border:1px solid var(--c-line);border-radius:8px;padding:6px;margin-bottom:8px"></div>
-      <button class="btn" style="background:var(--c-ok)" onclick="submitImporRk()">Impor ke Kas Bank</button>
+      <div id="rkPreview" style="max-height:230px;overflow:auto;font-size:11px;border:1px solid var(--bs-n300);border-radius:8px;padding:6px;margin-bottom:8px"></div>
+      <button class="btn" style="background:var(--bs-n700)" onclick="submitImporRk()">Impor ke Kas Bank</button>
     </div>
     <button class="btn ghost" onclick="closeModal('modalImporRk')">Tutup</button>
   </div>
@@ -709,7 +709,7 @@
     <div class="field"><label>File ekspor SAKTI (.xlsx)</label>
       <input type="file" id="skFile" accept=".xlsx,.xls" onchange="skParse()"></div>
     <div id="skMap" class="hidden">
-      <div style="font-size:12px;color:var(--c-muted);margin-bottom:6px">Cocokkan kolom (otomatis ditebak; ubah bila perlu). Pilih (tidak ada) bila kolom tak tersedia. Kolom bertanda * wajib.</div>
+      <div style="font-size:12px;color:var(--bs-n600);margin-bottom:6px">Cocokkan kolom (otomatis ditebak; ubah bila perlu). Pilih (tidak ada) bila kolom tak tersedia. Kolom bertanda * wajib.</div>
       <div class="row2">
         <div class="field"><label>Baris header</label><select id="skHeader" onchange="_skPopulateCols();skRenderPreview()"></select></div>
         <div class="field"><label>No PB</label><select id="skColNoPb" onchange="skRenderPreview()"></select></div>
@@ -730,8 +730,8 @@
         <div class="field"><label>No SPP/SSP</label><select id="skColSpp" onchange="skRenderPreview()"></select></div>
         <div class="field"><label>No Bukti Pungut</label><select id="skColBukti" onchange="skRenderPreview()"></select></div>
       </div>
-      <div id="skPreview" style="max-height:200px;overflow:auto;font-size:11px;border:1px solid var(--c-line);border-radius:8px;padding:6px;margin-bottom:8px"></div>
-      <button class="btn" style="background:var(--c-ok)" onclick="submitImporSakti()">Impor &amp; Cocokkan</button>
+      <div id="skPreview" style="max-height:200px;overflow:auto;font-size:11px;border:1px solid var(--bs-n300);border-radius:8px;padding:6px;margin-bottom:8px"></div>
+      <button class="btn" style="background:var(--bs-n700)" onclick="submitImporSakti()">Impor &amp; Cocokkan</button>
     </div>
     <div id="skHasil" style="margin-top:8px"></div>
     <button class="btn ghost" onclick="closeModal('modalImporSakti')">Tutup</button>
@@ -1511,15 +1511,15 @@ function renderKartuKetenangan(){
     +'<span class="kk-badge '+cls+'">'+_ikonRekon(ikon)+'<span>'+esc(badge)+'</span></span>'
     +'<hr class="kk-hr"><div class="kk-work-t">Perlu dikerjakan</div>';
   if((c.belum||0)>0)
-    h+='<div class="kk-work"><span class="ic" style="color:#854d0e">'+_ikonRekon('y')+'</span>'
+    h+='<div class="kk-work"><span class="ic" style="color:var(--bs-a2)">'+_ikonRekon('y')+'</span>'
       +'<span class="tx">'+c.belum+' transaksi belum ada kuitansi</span>'
       +'<button onclick="bukaRekon(\'BELUM\')">Buka</button></div>';
   if((c.nilaiBeda||0)>0)
-    h+='<div class="kk-work"><span class="ic" style="color:#991b1b">'+_ikonRekon('r')+'</span>'
+    h+='<div class="kk-work"><span class="ic" style="color:var(--bs-a2)">'+_ikonRekon('r')+'</span>'
       +'<span class="tx">'+c.nilaiBeda+' nilai beda (telusuri)</span>'
       +'<button onclick="bukaRekon(\'NILAI_BEDA\')">Buka</button></div>';
   var imp = li ? ('terakhir impor SAKTI: '+(li.hariLalu===0?'hari ini':(li.hariLalu!=null?li.hariLalu+' hari lalu':li.tanggal))) : 'SAKTI belum pernah diimpor';
-  h+='<div class="kk-work"><span class="ic" style="color:#0d9488">'+_ikonRekon('g')+'</span>'
+  h+='<div class="kk-work"><span class="ic" style="color:var(--bs-ac)">'+_ikonRekon('g')+'</span>'
     +'<span class="tx">'+esc(imp)+'</span>'
     +'<button class="ghost" onclick="openModalImporSakti()">Impor</button></div>';
   el.innerHTML=h; el.classList.remove('hidden');
@@ -1581,17 +1581,18 @@ function renderRekon(){
   var res=_rekonCompute(), rows=res.rows, c=res.cnt;
   document.getElementById('rekonRingkas').innerHTML=
     'Rekonsiliabel: '+(c.COCOK+c.BELUM+c.NILAI_BEDA)+' &middot; '
-    +'<b style="color:#166534">'+c.COCOK+' cocok</b> &middot; '
-    +'<b style="color:#854d0e">'+c.BELUM+' belum</b> &middot; '
-    +'<b style="color:#991b1b">'+c.NILAI_BEDA+' nilai beda</b> &middot; '
+    +'<b style="color:var(--bs-n700)">'+c.COCOK+' cocok</b> &middot; '
+    +'<b style="color:var(--bs-a2)">'+c.BELUM+' belum</b> &middot; '
+    +'<b style="color:var(--bs-a2)">'+c.NILAI_BEDA+' nilai beda</b> &middot; '
     +c.NON_REKON+' non-rekon';
-  if(!rows.length){ box.innerHTML='<div style="text-align:center;color:var(--c-muted);padding:20px">Tidak ada transaksi untuk filter ini.</div>'; return; }
+  if(!rows.length){ box.innerHTML='<div style="text-align:center;color:var(--bs-n600);padding:20px">Tidak ada transaksi untuk filter ini.</div>'; return; }
   var h='';
   for(var j=0;j<rows.length;j++){ var t=rows[j].t, st=rows[j].st;
     var act=(st==='BELUM'||st==='NILAI_BEDA');
     var d=(st==='NILAI_BEDA'&&_rekonBedaMap[String(t.no)]!=null)?('<div class="rk-delta">&Delta; '+rupiah(Math.abs(_rekonBedaMap[String(t.no)]))+'</div>'):'';
     var sub=esc(t.tanggal||'')+(t.rekonRefPb?(' &middot; '+esc(t.rekonRefPb)):'')+(t.noKuitansi?(' &middot; '+esc(t.noKuitansi)):'');
-    h+='<div class="rk-row'+(act?' click':'')+'"'+(act?(' onclick="editTransaksi(\''+esc(String(t.no))+'\')"'):'')+'>'
+    var rowSty=(st==='NILAI_BEDA')?' style="background:var(--bs-a21);border-radius:14px"':'';
+    h+='<div class="rk-row'+(act?' click':'')+'"'+rowSty+(act?(' onclick="editTransaksi(\''+esc(String(t.no))+'\')"'):'')+'>'
       +_rkBadge(st)
       +'<div class="rk-mid"><div class="keg">'+esc(t.kegiatan||'-')+'</div><div class="sub">'+sub+'</div></div>'
       +'<div class="rk-amt tnum">'+rupiah(+t.kredit||0)+d+'</div></div>';
