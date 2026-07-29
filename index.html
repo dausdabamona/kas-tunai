@@ -15,7 +15,7 @@
        Lihat docs/superpowers/plans/2026-07-28-tema-broadsheet-desktop.md */
     --bs-bg:#f3f2f2; --bs-ink:#201e1d; --bs-paper:#fff;
     --bs-ac:#0088b0; --bs-ac7:#006786; --bs-ac1:#e9f8ff;
-    --bs-a2:#d6006c; --bs-n200:#eae7e7; --bs-n400:#bab6b6; --bs-n600:#7d7979; --bs-n700:#605d5d;
+    --bs-a2:#d6006c; --bs-n200:#eae7e7; --bs-n400:#bab6b6; --bs-n600:#6a6767; --bs-n700:#605d5d;
     --bs-fh:'Source Serif 4',Georgia,serif;
     --bs-ac6:#0077a0; --bs-ac3:#99e0ff;
     --bs-a21:#fff1f4; --bs-a29:#4b1528;
@@ -97,7 +97,7 @@
     border-radius:14px;padding:15px 18px;margin-bottom:14px}
   .saldo-sum .lbl{font-size:12px;opacity:.9}
   .saldo-sum .big{font-size:30px;font-weight:800;margin:2px 0 12px}
-  .saldo-sum .big.neg{color:var(--bs-a21)}
+  .saldo-sum .big.neg{color:var(--bs-paper);background:var(--bs-a2);border-radius:8px;padding:0 10px}
   .saldo-sum .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
   .saldo-sum .gi{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);
     border-radius:10px;padding:9px 12px}
@@ -158,7 +158,7 @@
   .tcard .amt .dt{display:block;font-size:11px;color:var(--bs-n600);font-weight:400;margin-top:3px}
   .lrow{display:flex;justify-content:space-between;align-items:center;gap:8px;border-radius:8px;
     padding:7px 9px;margin-top:8px;font-size:12.5px}
-  .lrow.keluar{background:var(--bs-n200);border:1px solid var(--bs-n200)}
+  .lrow.keluar{background:var(--bs-a21);border:1px solid var(--bs-a21)}
   .lrow.ok{background:var(--bs-n200);border:1px solid var(--bs-n200)}
   .lrow.pajak{background:var(--bs-a21);border:1px solid var(--bs-a21)}
   /* Pil "perlu tindakan" di dalam baris pajak informasional — hanya teksnya, bukan seluruh baris */
@@ -253,7 +253,6 @@
   .kk-work button{min-height:38px;border:0;border-radius:8px;padding:0 14px;font-size:12.5px;font-weight:700;color:var(--bs-paper);background:var(--bs-ac)}
   .kk-work button.ghost{background:var(--bs-paper);color:var(--bs-ac);border:1px solid var(--bs-ac)}
   /* Layar Rekonsiliasi */
-  #tabRekon.active{color:var(--bs-ac)}
   .rk-filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
   .rk-filters select{min-height:44px;border:1px solid var(--bs-n300);border-radius:9px;padding:0 10px;font-size:13px;background:var(--bs-paper)}
   .rk-row{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--bs-n300);border-radius:10px;margin-bottom:7px;background:var(--bs-paper)}
@@ -312,7 +311,7 @@
   <div class="rail-saldo saldo-pill"><div class="l">Saldo</div><div class="v" id="saldoPill">-</div></div>
   <div class="rail-akun">
     <button class="rail-avatar" onclick="toggleMenuAkun()" title="Akun">
-      <span id="avInisial">FD</span>
+      <span id="avInisial"></span>
     </button>
     <div class="rail-akun-menu hidden" id="menuAkun">
       <button class="rail-item hidden" id="btnUsers" onclick="openModalUsers()" title="Kelola User"><span class="rail-label">Kelola User</span></button>
@@ -486,7 +485,7 @@
       <div class="field"><label>Pekerjaan: Nama</label><input type="text" id="spdKerjaNama"></div>
       <div class="field"><label>Pekerjaan: Jabatan</label><input type="text" id="spdKerjaJab"></div>
     </div>
-    <div id="spdEditNote" style="display:none;background:var(--bs-a21);border:1px solid var(--bs-a21);color:var(--bs-a2);border-radius:8px;padding:8px;margin-bottom:8px;font-size:13px"></div>
+    <div id="spdEditNote" style="display:none;background:var(--bs-n200);border:1px solid var(--bs-n200);color:var(--bs-n700);border-radius:8px;padding:8px;margin-bottom:8px;font-size:13px"></div>
     <button class="btn" style="background:var(--bs-ac7)" onclick="cetakSpdForm()">&#128424; Cetak SPD (pratinjau)</button>
     <button class="btn" style="background:var(--bs-ac7);margin-top:8px" onclick="cetakSuratTugas()">&#128221; Cetak Surat Tugas</button>
     <button class="btn lk-only" style="background:var(--bs-n800);margin-top:8px" onclick="cetakRincianBiaya()">&#129534; Cetak Rincian Biaya (Kuitansi Rampung)</button>
@@ -1425,6 +1424,7 @@ function switchTab(tab){
   document.getElementById('tabPajak').classList.toggle('active',tab==='pajak');
   document.getElementById('tabDana').classList.toggle('active',tab==='dana');
   document.getElementById('tabRekon').classList.toggle('active',tab==='rekon');
+  document.getElementById('tbSlot').classList.toggle('hidden',tab!=='transaksi');
   if(tab==='laporan') loadRekap();
   if(tab==='spd' && !document.getElementById('spdPpk').value) resetSpdForm();
   if(tab==='pajak') muatNotaPajak();
@@ -1965,6 +1965,14 @@ function _populateBulan(){
 }
 function _sum(list,f){var s=0;for(var i=0;i<list.length;i++)s+=(+list[i][f]||0);return s;}
 function _initial(s){s=String(s||'?').trim();return (s.charAt(0)||'?').toUpperCase();}
+/* Isi inisial avatar rail dari sumber sesi yang sama dengan #userLabel: nama
+   dulu, jatuh ke email bila nama kosong, dan biarkan kosong bila keduanya
+   kosong — jangan pernah memasang nilai contoh. */
+function _setAvInisial(nama,email){
+  var el=document.getElementById('avInisial'); if(!el) return;
+  var sumber=String(nama||'').trim()||String(email||'').trim();
+  el.textContent=sumber?_initial(sumber):'';
+}
 function _avatarColor(s){var h=0;s=String(s||'');for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))&0xffffff;
   // Avatar hanya membedakan identitas orang, bukan status — --bs-a2 (magenta) DILARANG di
   // sini karena magenta khusus berarti "perlu tindakan Anda"; jika ikut dirotasi di avatar,
@@ -5492,6 +5500,7 @@ function doLogin() {
       NAMA_USER = res.namaUser || '';
       closeModal('modalLogin');
       document.getElementById('userLabel').textContent = email;
+      _setAvInisial(NAMA_USER, email);
       _applyRoleUI();
       if (res.mustChange) {
         document.getElementById('gpwLama').value  = '';
@@ -5852,7 +5861,7 @@ function renderDana(){
     '<div class="kk-lbl" style="color:var(--bs-paper)">SISA AMAN &mdash; '+rows.length+' ITEM'+(_dana.periode?(' &middot; '+esc(_dana.periode)):'')+'</div>'
     +'<div class="kk-num tnum" style="color:var(--bs-paper)">'+rupiah(ts)+'</div>'
     +'<div style="font-size:13px;color:var(--bs-paper)">Pagu <b class="tnum">'+rupiah(tp)+'</b> &middot; Realisasi SAKTI <b class="tnum">'+rupiah(tr)+'</b> &middot; Belanja kas <b class="tnum">'+rupiah(tb)+'</b></div>'
-    +(nLebih?('<div style="margin-top:6px;font-size:13px;color:var(--bs-paper);font-weight:700">&#9888; '+nLebih+' item melebihi pagu</div>'):'')
+    +(nLebih?('<div style="margin-top:6px"><span style="display:inline-block;background:var(--bs-paper);color:var(--bs-a2);border-radius:8px;padding:3px 9px;font-size:11px;font-weight:700">&#9888; '+nLebih+' item melebihi pagu</span></div>'):'')
     +((_dana.belanjaTanpaItem>0)?('<div style="margin-top:4px;font-size:12px;color:var(--bs-paper)">Belanja kas belum bertanda item: '+rupiah(_dana.belanjaTanpaItem)+'</div>'):'');
   if(!rows.length){ box.innerHTML='<div class="empty">Tidak ada item untuk filter ini.</div>'; return; }
   var h='';
@@ -6060,6 +6069,7 @@ function _cekTawaranMobile(){
   }
   document.getElementById('userLabel').textContent =
     (_savedUser && _savedUser.email) || CURRENT_USER || 'tamu';
+  _setAvInisial(NAMA_USER, (_savedUser && _savedUser.email) || CURRENT_USER);
   var btns=document.querySelectorAll('#filterBar button');
   for(var i=0;i<btns.length;i++){
     btns[i].addEventListener('click',function(){
