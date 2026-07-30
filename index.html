@@ -132,6 +132,9 @@
   .pk-tenang{background:var(--bs-n200);border-radius:16px;padding:16px 18px;
     cursor:pointer}
   /* Grup dua tingkat di daftar tindakan: bulan lalu DRPP */
+  #txItemCari{width:100%;min-height:40px;border:1px solid var(--bs-n300);border-radius:10px;
+    padding:0 10px;font:inherit;font-size:12.5px;color:var(--bs-ink);
+    background:var(--bs-paper);margin-bottom:6px}
   #txItem{width:100%;min-height:44px;border:1px solid var(--bs-n300);border-radius:10px;
     padding:0 10px;font:inherit;font-size:13.5px;color:var(--bs-ink);background:var(--bs-paper)}
   .pk-urut{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--bs-n600);
@@ -720,6 +723,8 @@
     <div class="field"><label>Keterangan</label><textarea id="txKeterangan" rows="2"></textarea></div>
     <div id="txAkunWrap">
       <div class="field"><label>Detail Kegiatan (item POK)</label>
+        <input type="text" id="txItemCari" placeholder="ketik untuk menyaring: kode, uraian, atau akun…"
+               autocomplete="off" oninput="_isiPilihanItem()">
         <select id="txItem" onchange="onPilihItem()"><option value="">(belum dipilih)</option></select>
         <div class="tgl" id="txItemInfo" style="margin-top:3px">Opsional. Bila dipilih, Akun/MAK terisi otomatis dan sisa pagu ditampilkan.</div>
       </div>
@@ -5704,9 +5709,19 @@ function _muatItemPagu(cb){
 function _isiPilihanItem(){
   var sel=document.getElementById('txItem'); if(!sel) return;
   var simpan=sel.value;
-  var perAkun={}, urut=[], i;
+  // Penyaring: cocokkan kode, uraian item, kode akun, dan uraian akun sekaligus,
+  // supaya "gaji", "5111", maupun "167" sama-sama menemukan barisnya.
+  var q=document.getElementById('txItemCari');
+  q = q ? String(q.value||'').trim().toLowerCase() : '';
+  var perAkun={}, urut=[], i, cocok=0;
   for(i=0;i<(_itemPagu||[]).length;i++){
     var x=_itemPagu[i], a=String(x.akun||'(tanpa akun)');
+    if(q){
+      var gab=(String(x.kodeItem||'')+' '+String(x.uraianItem||'')+' '
+              +a+' '+String(x.uraianAkun||'')).toLowerCase();
+      if(gab.indexOf(q)<0) continue;
+    }
+    cocok++;
     if(!perAkun[a]){ perAkun[a]=[]; urut.push(a); }
     perAkun[a].push(x);
   }
@@ -5726,7 +5741,22 @@ function _isiPilihanItem(){
     h+='</optgroup>';
   }
   sel.innerHTML=h;
-  if(simpan) sel.value=simpan;
+  // Pertahankan pilihan bila masih lolos saringan. Bila tersaring keluar, jangan
+  // diam-diam mengosongkannya -- pasang kembali sebagai pilihan tersendiri supaya
+  // pembebanan yang sudah dipilih tidak hilang hanya karena mengetik di penyaring.
+  if(simpan){
+    sel.value=simpan;
+    if(sel.value!==simpan){
+      var it0=_cariItem(simpan);
+      var o=document.createElement('option');
+      o.value=simpan;
+      o.textContent=simpan+(it0?(' — '+(it0.uraianItem||'')):'')+'  ·  (pilihan sekarang)';
+      sel.insertBefore(o, sel.firstChild.nextSibling);
+      sel.value=simpan;
+    }
+  }
+  var info=document.getElementById('txItemInfo');
+  if(q && info && cocok===0) info.innerHTML='Tidak ada item yang cocok dengan &ldquo;'+esc(q)+'&rdquo;.';
 }
 
 function _cariItem(teks){
