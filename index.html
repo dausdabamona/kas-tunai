@@ -6717,12 +6717,16 @@ function bukaHitungUlang(){
 
 function _huPratinjau(notas){
   notas = notas || [];
-  var beda = [], setor = 0, tanpaKat = 0, i;
+  var beda = [], setor = 0, tanpaKat = 0, setorTanpaNtpn = 0, i;
   for(i=0;i<notas.length;i++){
     var n = notas[i];
     var idx = n.pajakKatIdx;
     if(idx===null || idx===undefined || idx<0 || idx>=PAJAK_REF.length){ tanpaKat++; continue; }
-    if(String(n.setorStatus||'').toUpperCase()==='SETOR'){ setor++; continue; }
+    // Penanda "sudah disetor" = ADA NOMOR NTPN, bukan kolom status. NTPN baru
+    // terbit setelah uangnya diterima kas negara; status bisa tercentang lebih
+    // dulu atau lupa dicentang. Lihat komentar di KasTunai.hitungUlangPajakBatch.
+    if(String(n.setorNtpn||'').trim()){ setor++; continue; }
+    if(String(n.setorStatus||'').toUpperCase()==='SETOR') setorTanpaNtpn++;
     var r = hitungPajak('', +n.nilai||0, n.pajakTermasukPPN!==false,
                         n.pajakAdaNpwp!==false, PAJAK_REF[idx]);
     var pphLama = +n.pajakPph||0, ppnLama = +n.pajakPpn||0;
@@ -6735,8 +6739,13 @@ function _huPratinjau(notas){
   var h = '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;margin-bottom:10px">'
     + '<span><b>'+notas.length+'</b> nota diperiksa</span>'
     + '<span><b>'+beda.length+'</b> perlu diperbaiki</span>'
-    + '<span>'+setor+' sudah disetor (dilewati)</span>'
-    + '<span>'+tanpaKat+' belum berkategori pajak</span></div>';
+    + '<span>'+setor+' sudah ber-NTPN (dilewati)</span>'
+    + '<span>'+tanpaKat+' belum berkategori pajak</span></div>'
+    + (setorTanpaNtpn ? ('<div style="padding:8px 10px;border-radius:8px;margin-bottom:10px;'
+        + 'background:var(--bs-a21);color:var(--bs-a2);font-size:12.5px"><b>&#9888; '+setorTanpaNtpn
+        + ' nota bertanda sudah setor tetapi belum ada NTPN-nya.</b> Nota itu TETAP dihitung ulang, '
+        + 'karena tanpa NTPN uangnya belum tentu sampai ke kas negara. Bila sebenarnya sudah disetor, '
+        + 'isi dulu NTPN-nya sebelum menerapkan.</div>') : '');
   if(!beda.length){
     document.getElementById('huIsi').innerHTML = h
       + '<div class="pk-kosong">Semua nota sudah sesuai tarif dan ambang yang berlaku. Tidak ada yang perlu diubah.</div>';
@@ -6782,7 +6791,8 @@ function terapkanHitungUlang(){
     .withSuccessHandler(function(res){
       showLoading(false);
       var p = 'Selesai: '+(res.diperbarui||0)+' nota diperbarui.';
-      if(res.dilewatiSetor && res.dilewatiSetor.length) p += ' '+res.dilewatiSetor.length+' dilewati (sudah setor).';
+      if(res.dilewatiSetor && res.dilewatiSetor.length) p += ' '+res.dilewatiSetor.length+' dilewati (sudah ber-NTPN).';
+      if(res.setorTanpaNtpn && res.setorTanpaNtpn.length) p += ' '+res.setorTanpaNtpn.length+' bertanda setor tanpa NTPN ikut diperbarui.';
       if(res.takKetemu && res.takKetemu.length) p += ' '+res.takKetemu.length+' tidak ditemukan.';
       toast(p,'ok');
       closeModal('modalHitungUlang');

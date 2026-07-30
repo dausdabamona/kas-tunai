@@ -634,19 +634,28 @@ var KasTunai = (function () {
    * Nota yang pajaknya SUDAH DISETOR dilewati: uangnya sudah masuk kas negara
    * dengan angka lama, mengubah catatannya membuat SSP tidak lagi cocok dengan
    * pembukuan. Dikembalikan sebagai daftar terpisah supaya bisa ditangani manual.
+   *
+   * PENANDA "sudah disetor" adalah ADANYA NOMOR NTPN, bukan kolom SETOR_STATUS.
+   * NTPN hanya terbit setelah uangnya benar-benar diterima kas negara; status
+   * bisa saja tercentang lebih dulu (atau lupa dicentang). Memakai status sebagai
+   * penjaga berarti nota yang sudah ber-NTPN tapi statusnya belum diset akan
+   * DITIMPA -- arah kesalahan yang paling berbahaya. Nota berstatus SETOR tetapi
+   * belum ber-NTPN TETAP dihitung ulang, dan dilaporkan terpisah supaya tahu.
    */
   function hitungUlangPajakBatch(list) {
     var n = NC();
     SheetRepo.ensureMinCols(CONFIG.SHEETS.MULTI_NOTA, CONFIG.HEADERS.MULTI_NOTA.length);
-    var res = { diperbarui: 0, dilewatiSetor: [], takKetemu: [], txTersentuh: {} };
+    var res = { diperbarui: 0, dilewatiSetor: [], setorTanpaNtpn: [], takKetemu: [], txTersentuh: {} };
     list = list || [];
     for (var i = 0; i < list.length; i++) {
       var d = list[i];
       var hit = _findNotaRow(d.no, d.urutan);
       if (!hit) { res.takKetemu.push(d.no + '#' + d.urutan); continue; }
       var baris = SheetRepo.getData(CONFIG.SHEETS.MULTI_NOTA)[hit.rowIndex - 2];
+      var ntpn = String((baris && baris[n.SETOR_NTPN]) || '').trim();
+      if (ntpn) { res.dilewatiSetor.push(d.no + '#' + d.urutan + ' (NTPN ' + ntpn + ')'); continue; }
       var setor = String((baris && baris[n.SETOR_STATUS]) || '').toUpperCase();
-      if (setor === 'SETOR') { res.dilewatiSetor.push(d.no + '#' + d.urutan); continue; }
+      if (setor === 'SETOR') res.setorTanpaNtpn.push(d.no + '#' + d.urutan);
       SheetRepo.setCells(CONFIG.SHEETS.MULTI_NOTA, hit.rowIndex, Util.set(
         n.PAJAK_DPP, Util.num(d.dpp),
         n.PAJAK_PPH, Util.num(d.pph),
