@@ -3802,7 +3802,7 @@ function _rkDataRows(){
   var hdr=+document.getElementById('rkHeader').value, out=[];
   var cT=+document.getElementById('rkColTgl').value, cU=+document.getElementById('rkColUrai').value,
       cD=+document.getElementById('rkColDebet').value, cK=+document.getElementById('rkColKredit').value,
-      cId=+((document.getElementById('rkColId')||{}).value||-1);
+      cId=_kolomVal('rkColId');
   for(var i=hdr+1;i<_rkRows.length;i++){
     var r=_rkRows[i]; if(!r) continue;
     var tgl=r[cT], deb=_rkNum(r[cD]), kre=_rkNum(r[cK]);
@@ -3891,11 +3891,20 @@ function _skGuess(sel, headRow, kws){
 }
 function _skPopulateCols(){
   var hdr=+document.getElementById('skHeader').value, headRow=_skRows[hdr]||[];
-  var defs=[['skColNoPb',['no pb','nomor pb','no. pb','perintah bayar','no sp2d']],
+  // 'perintah bayar' TIDAK BOLEH dipakai sendirian: judul kolom tanggal berbunyi
+  // "Tgl Perintah Bayar" dan ikut cocok, padahal pemindai mengambil kolom PERTAMA
+  // yang cocok -- akibatnya nomor PB terbaca dari kolom tanggal dan seluruh impor
+  // kacau tanpa pesan galat. Pakai bentuk yang memuat "no".
+  var defs=[['skColNoPb',['no pb','nomor pb','no. pb','no perintah','no. perintah','no sp2d']],
             ['skColKuit',['kuitansi','kwitansi']],
             ['skColNilai',['nilai','jumlah','bruto','rupiah']],
             ['skColAkun',['akun','mak','kode akun','belanja']],
-            ['skColTglPb',['tgl pb','tanggal pb','tgl sp2d']],
+            // 'tgl perintah' WAJIB ada: judul asli laporan SAKTI berbunyi
+            // "Tgl Perintah Bayar", yang tidak memuat "tgl pb" maupun "tanggal pb",
+            // sehingga kolom tanggalnya tidak pernah terdeteksi otomatis. Jangan
+            // memakai 'perintah bayar' saja -- itu juga cocok dengan kolom
+            // "No. Perintah Bayar" dan akan memilih kolom nomor, bukan tanggal.
+            ['skColTglPb',['tgl perintah','tgl pb','tanggal pb','tgl sp2d']],
             ['skColTglKuit',['tgl kuitansi','tanggal kuitansi','tgl kwt']],
             ['skColDrpp',['drpp']],
             ['skColSpp',['spp','ssp']],
@@ -3907,7 +3916,24 @@ function _skPopulateCols(){
     _skGuess(sel, headRow, defs[d][1]);
   }
 }
-function _skColVal(id){ return +((document.getElementById(id)||{}).value||-1); }
+/**
+ * Ambil nomor kolom terpilih dari sebuah <select> pemetaan.
+ *
+ * JANGAN memakai `(el.value || -1)`. Kolom PERTAMA berkas bernilai "0", dan 0
+ * itu falsy -- sehingga `0 || -1` menghasilkan -1 alias "(tidak ada)", dan
+ * seluruh isi kolom pertama DIBUANG diam-diam tanpa pesan galat. Pada laporan
+ * SPBy SAKTI kolom pertamanya adalah "Tgl Perintah Bayar", jadi tanggal PB
+ * tidak pernah ikut terimpor.
+ */
+function _kolomVal(id){
+  var el=document.getElementById(id);
+  if(!el) return -1;
+  var v=String(el.value===undefined||el.value===null?'':el.value).trim();
+  if(v==='') return -1;
+  var n=+v;
+  return isNaN(n)?-1:n;
+}
+function _skColVal(id){ return _kolomVal(id); }
 function _skFindCol(headRow,kw){ for(var c=0;c<_skCols;c++){ if(String(headRow[c]||'').toLowerCase().indexOf(kw)>=0) return c; } return -1; }
 function _skDataRows(){
   var hdr=+document.getElementById('skHeader').value, headRow=_skRows[hdr]||[], out=[];
@@ -4037,7 +4063,7 @@ function _bfPopulateCols(){
     _bfGuess(sel, headRow, defs[d][1]);
   }
 }
-function _bfColVal(id){ return +((document.getElementById(id)||{}).value||-1); }
+function _bfColVal(id){ return _kolomVal(id); }
 function _bfDataRows(){
   var hdr=+document.getElementById('bfHeader').value, out=[];
   var cNo=_bfColVal('bfColNo'), cKu=_bfColVal('bfColKuit'), cDr=_bfColVal('bfColDrpp'), cSp=_bfColVal('bfColSpp');
