@@ -638,10 +638,29 @@
 </div>
 
 <!-- ================= TAB NOTA KENA PAJAK ================= -->
+<div class="modal" id="modalHitungUlang">
+  <div class="sheet" style="max-width:760px">
+    <div class="sheet-h">&#128260; Hitung ulang pajak</div>
+    <div class="tgl" style="margin-bottom:10px">
+      Menghitung ulang PPh dan PPN seluruh nota memakai tarif dan ambang yang berlaku
+      sekarang. Nota yang pajaknya <b>sudah disetor</b> tidak diubah &mdash; uangnya sudah
+      masuk kas negara dengan angka lama.
+    </div>
+    <div id="huIsi"><div class="tgl">Memuat&hellip;</div></div>
+    <div class="sheet-f">
+      <button class="btn ghost" onclick="closeModal('modalHitungUlang')">Tutup</button>
+      <button class="btn hidden" id="huTerap" onclick="terapkanHitungUlang()">Terapkan perubahan</button>
+    </div>
+  </div>
+</div>
+
 <div id="viewPajak" class="wrap hidden">
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
     <div style="font-size:19px;font-weight:800;color:var(--bs-ac);display:flex;align-items:center;gap:8px">&#9881; Nota Kena Pajak</div>
-    <button class="btn" style="width:auto;padding:10px 16px;margin:0;min-height:44px;background:var(--bs-ac)" onclick="cetakRekapPajak()">&#128424; Cetak Rekap Setoran</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" style="width:auto;padding:10px 16px;margin:0;min-height:44px" onclick="bukaHitungUlang()">&#128260; Hitung ulang pajak</button>
+      <button class="btn" style="width:auto;padding:10px 16px;margin:0;min-height:44px;background:var(--bs-ac)" onclick="cetakRekapPajak()">&#128424; Cetak Rekap Setoran</button>
+    </div>
   </div>
   <div style="font-size:12px;color:var(--bs-n600);margin-bottom:10px">Daftar nota yang dipotong pajak, dikelompokkan per penyedia. Dipakai untuk rekap setoran &amp; SPT Masa.</div>
   <div class="rk-filters">
@@ -6677,6 +6696,102 @@ function cetakBuktiPotongDariRekap(i){
   var p=_pjRekapPasangan(i); if(!p){ toast('Data tidak ditemukan','error'); return; }
   _bukaPopup(_renderKuitansiPajakHtml(p.t, _notaPajakObj(p.n), p.n));
 }
+/* ===== Hitung ulang pajak atas nota tersimpan =====
+ * Angkanya dihitung DI SINI memakai hitungPajak() yang sama dengan layar pajak,
+ * bukan disalin ke server. Satu rumus, satu tempat.
+ */
+var _huUsul = [];
+
+function bukaHitungUlang(){
+  _huUsul = [];
+  document.getElementById('huTerap').classList.add('hidden');
+  document.getElementById('huIsi').innerHTML = '<div class="tgl">Memuat seluruh nota&hellip;</div>';
+  openModal('modalHitungUlang');
+  google.script.run
+    .withSuccessHandler(_huPratinjau)
+    .withFailureHandler(function(e){
+      document.getElementById('huIsi').innerHTML =
+        '<div class="tgl">Gagal memuat: '+esc(e&&e.message?e.message:String(e))+'</div>'; })
+    .serverGetSemuaNota(_tok);
+}
+
+function _huPratinjau(notas){
+  notas = notas || [];
+  var beda = [], setor = 0, tanpaKat = 0, i;
+  for(i=0;i<notas.length;i++){
+    var n = notas[i];
+    var idx = n.pajakKatIdx;
+    if(idx===null || idx===undefined || idx<0 || idx>=PAJAK_REF.length){ tanpaKat++; continue; }
+    if(String(n.setorStatus||'').toUpperCase()==='SETOR'){ setor++; continue; }
+    var r = hitungPajak('', +n.nilai||0, n.pajakTermasukPPN!==false,
+                        n.pajakAdaNpwp!==false, PAJAK_REF[idx]);
+    var pphLama = +n.pajakPph||0, ppnLama = +n.pajakPpn||0;
+    if(r.pph===pphLama && r.ppn===ppnLama) continue;
+    beda.push({ no:n.no, urutan:n.urutan, penyedia:n.namaPenyedia||'', nilai:+n.nilai||0,
+                kategori:PAJAK_REF[idx].label,
+                dpp:r.dpp, pph:r.pph, ppn:r.ppn, pphLama:pphLama, ppnLama:ppnLama });
+  }
+  _huUsul = beda;
+  var h = '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;margin-bottom:10px">'
+    + '<span><b>'+notas.length+'</b> nota diperiksa</span>'
+    + '<span><b>'+beda.length+'</b> perlu diperbaiki</span>'
+    + '<span>'+setor+' sudah disetor (dilewati)</span>'
+    + '<span>'+tanpaKat+' belum berkategori pajak</span></div>';
+  if(!beda.length){
+    document.getElementById('huIsi').innerHTML = h
+      + '<div class="pk-kosong">Semua nota sudah sesuai tarif dan ambang yang berlaku. Tidak ada yang perlu diubah.</div>';
+    return;
+  }
+  var selisihPph = 0, selisihPpn = 0;
+  h += '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    + '<tr><th style="text-align:left">Nota</th><th style="text-align:left">Kategori</th>'
+    + '<th style="text-align:right">Nilai</th><th style="text-align:right">PPh</th>'
+    + '<th style="text-align:right">PPN</th></tr>';
+  for(i=0;i<beda.length && i<40;i++){
+    var b = beda[i];
+    selisihPph += (b.pph-b.pphLama); selisihPpn += (b.ppn-b.ppnLama);
+    h += '<tr><td>No '+esc(String(b.no))+' &middot; '+esc(String(b.urutan))
+      +  (b.penyedia?('<br><span style="color:var(--bs-n600)">'+esc(b.penyedia)+'</span>'):'')+'</td>'
+      +  '<td>'+esc(b.kategori)+'</td>'
+      +  '<td style="text-align:right">'+rupiah(b.nilai)+'</td>'
+      +  '<td style="text-align:right">'+_huSel(b.pphLama,b.pph)+'</td>'
+      +  '<td style="text-align:right">'+_huSel(b.ppnLama,b.ppn)+'</td></tr>';
+  }
+  h += '</table>';
+  if(beda.length>40) h += '<div class="tgl" style="margin-top:4px">(menampilkan 40 dari '+beda.length+')</div>';
+  for(i=40;i<beda.length;i++){ selisihPph += (beda[i].pph-beda[i].pphLama); selisihPpn += (beda[i].ppn-beda[i].ppnLama); }
+  h += '<div style="margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--bs-a21);color:var(--bs-a2);font-size:12.5px">'
+    + '<b>Dampak keseluruhan:</b> PPh '+(selisihPph>=0?'+':'')+rupiah(selisihPph)
+    + ' &middot; PPN '+(selisihPpn>=0?'+':'')+rupiah(selisihPpn)
+    + '. Periksa dulu sebelum menerapkan &mdash; angka ini memengaruhi berapa yang disetor ke kas negara.</div>';
+  document.getElementById('huIsi').innerHTML = h;
+  document.getElementById('huTerap').classList.remove('hidden');
+}
+
+function _huSel(lama, baru){
+  if(lama===baru) return rupiah(baru);
+  return '<span style="color:var(--bs-n600);text-decoration:line-through">'+rupiah(lama)+'</span>'
+       + '<br><b style="color:var(--bs-a2)">'+rupiah(baru)+'</b>';
+}
+
+function terapkanHitungUlang(){
+  if(!_huUsul.length) return;
+  if(!confirm('Perbarui pajak '+_huUsul.length+' nota? Perubahan tercatat di log audit.')) return;
+  showLoading(true,'Memperbarui '+_huUsul.length+' nota...');
+  google.script.run
+    .withSuccessHandler(function(res){
+      showLoading(false);
+      var p = 'Selesai: '+(res.diperbarui||0)+' nota diperbarui.';
+      if(res.dilewatiSetor && res.dilewatiSetor.length) p += ' '+res.dilewatiSetor.length+' dilewati (sudah setor).';
+      if(res.takKetemu && res.takKetemu.length) p += ' '+res.takKetemu.length+' tidak ditemukan.';
+      toast(p,'ok');
+      closeModal('modalHitungUlang');
+      loadAll();
+    })
+    .withFailureHandler(function(e){ showLoading(false); toast(e&&e.message?e.message:String(e),'error'); })
+    .serverHitungUlangPajak(_tok, _huUsul);
+}
+
 function cetakRekapPajak(){
   var rows=_pjTerfilter();
   if(!rows.length){ toast('Tidak ada data untuk dicetak','info'); return; }

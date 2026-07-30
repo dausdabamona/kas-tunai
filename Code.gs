@@ -434,6 +434,11 @@ function serverSimpanPajak(token, no, d) {
   return _run(token, function (auth) { return KasTunai.simpanPajak(no, d); });
 }
 /** Simpan pajak satu nota (per penyedia); total otomatis dijumlahkan ke transaksi. */
+/** Hitung ulang pajak sejumlah nota. Angkanya dihitung di klien; server menyimpan. */
+function serverHitungUlangPajak(token, list) {
+  return _run(token, function (auth) { return KasTunai.hitungUlangPajakBatch(list); });
+}
+
 function serverSimpanPajakNota(token, no, urutan, d) {
   return _run(token, function (auth) { return KasTunai.simpanPajakNota(no, urutan, d); });
 }

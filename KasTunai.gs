@@ -623,6 +623,55 @@ var KasTunai = (function () {
    * kolom pajak transaksi agar kartu, ekspor SAKTI, dan Papan
    * Kerja tetap membaca satu sumber angka.
    * -------------------------------------------------------- */
+  /**
+   * Tulis ulang pajak SEJUMLAH nota sekaligus (hitung ulang massal).
+   *
+   * Rumusnya TIDAK ditulis di sini. Perhitungan dilakukan di klien memakai
+   * hitungPajak() yang sudah ada, lalu hasilnya dikirim ke sini untuk disimpan.
+   * Menyalin rumus ke server berarti tiga salinan (desktop, mobile, server) yang
+   * harus dijaga sama -- dan yang ketiga pasti tertinggal saat tarif berubah.
+   *
+   * Nota yang pajaknya SUDAH DISETOR dilewati: uangnya sudah masuk kas negara
+   * dengan angka lama, mengubah catatannya membuat SSP tidak lagi cocok dengan
+   * pembukuan. Dikembalikan sebagai daftar terpisah supaya bisa ditangani manual.
+   */
+  function hitungUlangPajakBatch(list) {
+    var n = NC();
+    SheetRepo.ensureMinCols(CONFIG.SHEETS.MULTI_NOTA, CONFIG.HEADERS.MULTI_NOTA.length);
+    var res = { diperbarui: 0, dilewatiSetor: [], takKetemu: [], txTersentuh: {} };
+    list = list || [];
+    for (var i = 0; i < list.length; i++) {
+      var d = list[i];
+      var hit = _findNotaRow(d.no, d.urutan);
+      if (!hit) { res.takKetemu.push(d.no + '#' + d.urutan); continue; }
+      var baris = SheetRepo.getData(CONFIG.SHEETS.MULTI_NOTA)[hit.rowIndex - 2];
+      var setor = String((baris && baris[n.SETOR_STATUS]) || '').toUpperCase();
+      if (setor === 'SETOR') { res.dilewatiSetor.push(d.no + '#' + d.urutan); continue; }
+      SheetRepo.setCells(CONFIG.SHEETS.MULTI_NOTA, hit.rowIndex, Util.set(
+        n.PAJAK_DPP, Util.num(d.dpp),
+        n.PAJAK_PPH, Util.num(d.pph),
+        n.PAJAK_PPN, Util.num(d.ppn)));
+      AuditLog.write('HITUNG_ULANG_PAJAK', CONFIG.SHEETS.MULTI_NOTA, d.no + '#' + d.urutan,
+        'pph ' + Util.num(d.pphLama) + '->' + Util.num(d.pph) +
+        ' ppn ' + Util.num(d.ppnLama) + '->' + Util.num(d.ppn));
+      // Per NOTA, bukan per transaksi: _recalcDibayarNota butuh nomor urut nota.
+      // Memanggilnya hanya dengan nomor transaksi membuat notanya tidak ketemu
+      // dan DIBAYAR_PENYEDIA tetap memakai angka lama -- padahal itu nilai yang
+      // benar-benar diserahkan ke penyedia.
+      _recalcDibayarNota(d.no, d.urutan);
+      res.txTersentuh[String(d.no)] = 1;
+      res.diperbarui++;
+    }
+    DeferredFlush.mark();
+    // Total pajak transaksi dihitung sekali per transaksi, setelah semua notanya selesai.
+    for (var no in res.txTersentuh) {
+      if (!res.txTersentuh.hasOwnProperty(no)) continue;
+      _recalcPajakTransaksi(no);
+    }
+    res.txTersentuh = null;
+    return res;
+  }
+
   function simpanPajakNota(transactionId, urutan, d) {
     var hit = _findNotaRow(transactionId, urutan);
     if (!hit) throw new Error('Nota tidak ditemukan');
@@ -806,7 +855,7 @@ var KasTunai = (function () {
     uploadKuitansi: uploadKuitansi,
     hapusKuitansi: hapusKuitansi,
     simpanPajak: simpanPajak,
-    simpanPajakNota: simpanPajakNota,
+    simpanPajakNota: simpanPajakNota, hitungUlangPajakBatch: hitungUlangPajakBatch,
     getNotaPajak: getNotaPajak,
     getSemuaNota: getSemuaNota,
     tandaiSetorPajak: tandaiSetorPajak,
