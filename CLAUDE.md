@@ -58,9 +58,18 @@ manajemen user, layout SPJ. Jangan pindahkan pekerjaan meja ke layar kecil.
 ## Perintah
 
 ```bat
-deploy.bat            # cara baku: git pull + clasp push --force + versi baru
+deploy.bat            # git pull + clasp push  (TANPA versi baru - staf belum lihat)
+deploy.bat rilis      # + buat versi baru      (staf melihat perubahan)
 deploy.bat nopull     # lewati git pull
 ```
+
+**Versi dipisah dengan sengaja.** Apps Script membatasi **200 versi per proyek** dan versi
+**tidak bisa dihapus** (menu penghapusnya ada di editor lama yang sudah dipensiunkan).
+`deploy.bat` versi lama membuat versi tiap kali dijalankan, sehingga batasnya tercapai
+30 Jul 2026 dan memaksa seluruh proyek disalin — yang **mengubah URL** dan mengharuskan
+pintasan di HP tiap staf diganti satu per satu. Saat mencoba-coba: `deploy` biasa, lalu
+periksa lewat URL `/dev` (Deploy → Test deployments) yang selalu menjalankan kode terbaru.
+Prosedur pindah proyek bila batasnya tercapai lagi: `docs/PINDAH-PROYEK.md`.
 
 `deploy.bat` memakai `clasp deploy -i <DEPLOY_ID>` sehingga **URL web app tidak
 berubah**. Jangan menjalankan `clasp deploy` tanpa `-i` — itu membuat deployment

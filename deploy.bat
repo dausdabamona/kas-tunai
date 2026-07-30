@@ -1,22 +1,41 @@
 @echo off
 setlocal enabledelayedexpansion
 REM ============================================================
-REM  Kas Tunai — deploy sekali klik
-REM    1) tarik kode terbaru dari GitHub (git pull)
-REM    2) unggah ke Apps Script (clasp push --force)
-REM    3) buat VERSI BARU pada deployment web app yang sama
-REM       -> URL web app TIDAK berubah
+REM  Kas Tunai — deploy
 REM
-REM  Cara pakai:  deploy.bat            (pull + push + versi baru)
-REM               deploy.bat nopull     (lewati git pull)
+REM    deploy            tarik kode + unggah SAJA  (tanpa versi baru)
+REM    deploy rilis      tarik kode + unggah + BUAT VERSI BARU
+REM    deploy nopull     unggah saja, lewati git pull
+REM    deploy rilis nopull
 REM
-REM  Diuji dengan clasp 3.3.0:
-REM    clasp push -f
-REM    clasp deploy -i <deploymentId> -d "<deskripsi>"
+REM  KENAPA VERSI DIPISAH — baca ini sebelum mengubahnya kembali:
+REM    Apps Script membatasi 200 VERSI per proyek, dan versi TIDAK BISA
+REM    DIHAPUS lewat editor baru maupun API. Versi lama deploy.bat membuat
+REM    versi baru SETIAP KALI dijalankan, jadi tiap percobaan kecil ikut
+REM    membakar satu jatah. Batas itu tercapai 30 Jul 2026 dan memaksa
+REM    seluruh proyek disalin ke proyek baru — yang MENGUBAH URL web app
+REM    dan mengharuskan semua pintasan di HP staf diganti satu per satu.
+REM
+REM    Sekarang: saat mencoba-coba pakai "deploy" biasa lalu periksa lewat
+REM    URL /dev (Deploy > Test deployments) yang selalu menjalankan kode
+REM    terbaru. Buat versi HANYA saat perubahan itu memang mau dipakai staf.
 REM ============================================================
 
 SET DEPLOY_ID=AKfycbye24yskdQ-NvEpBLVfhATRxBzeE-Vq6VcDUlG_0n9EoN8P9vswtYSVApxJTvaLQgI
 SET BRANCH=claude/determined-archimedes-od8jtc
+
+REM --- baca argumen (boleh ditulis dalam urutan apa pun) ---
+SET MODE=push
+SET DOPULL=1
+:bacaarg
+if "%~1"=="" goto :selesaiarg
+if /I "%~1"=="rilis"  SET MODE=rilis
+if /I "%~1"=="nopull" SET DOPULL=0
+shift
+goto :bacaarg
+:selesaiarg
+
+if "%MODE%"=="rilis" (SET LANGKAH=3) else (SET LANGKAH=2)
 
 REM --- pastikan dijalankan di folder repo ---
 if not exist ".clasp.json" (
@@ -27,9 +46,9 @@ if not exist ".clasp.json" (
 )
 
 REM --- 1) git pull ---
-if /I "%~1"=="nopull" goto :lewatipull
+if "%DOPULL%"=="0" goto :lewatipull
 echo(
-echo === 1/3  Menarik kode terbaru dari GitHub ===
+echo === 1/%LANGKAH%  Menarik kode terbaru dari GitHub ===
 git pull origin %BRANCH%
 if errorlevel 1 (
   echo [PERINGATAN] git pull gagal / dilewati. Lanjut memakai kode lokal.
@@ -53,11 +72,27 @@ if errorlevel 1 (
 
 REM --- 2) clasp push ---
 echo(
-echo === 2/3  Mengunggah kode ke Apps Script ===
+echo === 2/%LANGKAH%  Mengunggah kode ke Apps Script ===
 call clasp push --force
 if errorlevel 1 goto :gagalclasp
 
-REM --- 3) versi baru deployment ---
+if "%MODE%"=="rilis" goto :buatversi
+
+echo(
+echo ============================================================
+echo  KODE SUDAH TERUNGGAH - tetapi BELUM dipakai staf.
+echo(
+echo  Web app masih menyajikan versi lama. Untuk memeriksa hasilnya
+echo  sekarang juga, buka URL /dev:
+echo    editor Apps Script -^> Deploy -^> Test deployments -^> salin URL
+echo  URL itu SELALU menjalankan kode terbaru, tanpa membuat versi.
+echo(
+echo  Bila sudah yakin dan mau dipakai staf, jalankan:
+echo      deploy rilis
+echo ============================================================
+goto :akhir
+
+:buatversi
 echo(
 echo === 3/3  Membuat versi baru web app ===
 if "%DEPLOY_ID%"=="GANTI_DENGAN_DEPLOYMENT_ID" (
@@ -66,24 +101,14 @@ if "%DEPLOY_ID%"=="GANTI_DENGAN_DEPLOYMENT_ID" (
   goto :akhir
 )
 for /f "tokens=1-4 delims=/ " %%a in ("%DATE%") do set TGL=%%a%%b%%c
-call clasp deploy -i %DEPLOY_ID% -d "update %TGL% %TIME:~0,5%"
+call clasp deploy -i %DEPLOY_ID% -d "rilis %TGL% %TIME:~0,5%"
 if errorlevel 1 goto :gagaldeploy
 
 echo(
 echo ============================================================
-echo  SELESAI. Kode + versi baru sudah aktif.
+echo  SELESAI. Kode + versi baru sudah aktif untuk staf.
 echo  Buka web app lalu tekan Ctrl+Shift+R (hard refresh).
-echo  Tip: ketik  clasp open-web-app  untuk membukanya langsung.
-echo ============================================================
-echo(
-echo  PERIKSA HAK AKSES - sekali saja, tidak perlu diulang tiap deploy:
-echo    Apps Script mengunci pengaturan "Who has access" pada deployment
-echo    yang sudah ada, jadi mengubah appsscript.json belum tentu cukup.
-echo    Buka editor -^> Deploy -^> Manage deployments -^> ikon pensil,
-echo    lalu setel "Who has access" ke  Anyone  - BUKAN "Anyone with a
-echo    Google Account" - kemudian tekan Deploy.
-echo    Uji: buka URL web app di jendela penyamaran. Bila TIDAK diminta
-echo    memilih Akun Google, pengaturannya sudah benar.
+echo  Di HP: tutup tab lalu buka ulang dari pintasan.
 echo ============================================================
 goto :akhir
 
@@ -97,9 +122,15 @@ goto :akhir
 :gagaldeploy
 echo(
 echo [GAGAL] Pembuatan versi baru bermasalah.
-echo   - Pastikan DEPLOY_ID benar. Lihat daftarnya:  clasp deployments
-echo   - Kode tetap sudah terunggah; Anda bisa buat versi baru manual lewat
-echo     editor: Deploy ^> Manage deployments ^> Edit (pensil) ^> New version.
+echo(
+echo  Bila pesannya "Script has reached the limit of 200 versions":
+echo    Batas itu KERAS dan versi TIDAK BISA dihapus. Jalan keluarnya
+echo    menyalin proyek ke proyek baru. Langkah lengkap + hal yang mudah
+echo    terlewat ada di:   docs\PINDAH-PROYEK.md
+echo(
+echo   Penyebab lain: DEPLOY_ID salah. Lihat daftarnya:  clasp deployments
+echo   Kode tetap sudah terunggah; bisa juga buat versi manual lewat
+echo   editor: Deploy ^> Manage deployments ^> Edit (pensil) ^> New version.
 goto :akhir
 
 :akhir
