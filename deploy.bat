@@ -12,9 +12,9 @@ REM  KENAPA VERSI DIPISAH — baca ini sebelum mengubahnya kembali:
 REM    Apps Script membatasi 200 VERSI per proyek, dan versi TIDAK BISA
 REM    DIHAPUS lewat editor baru maupun API. Versi lama deploy.bat membuat
 REM    versi baru SETIAP KALI dijalankan, jadi tiap percobaan kecil ikut
-REM    membakar satu jatah. Batas itu tercapai 30 Jul 2026 dan memaksa
-REM    seluruh proyek disalin ke proyek baru — yang MENGUBAH URL web app
-REM    dan mengharuskan semua pintasan di HP staf diganti satu per satu.
+REM    membakar satu jatah. Batas itu tercapai 30 Jul 2026. Versi lama
+REM    memang bisa dihapus, tetapi itu pekerjaan manual yang tidak perlu
+REM    ada kalau jatahnya tidak dibakar untuk percobaan kecil.
 REM
 REM    Sekarang: saat mencoba-coba pakai "deploy" biasa lalu periksa lewat
 REM    URL /dev (Deploy > Test deployments) yang selalu menjalankan kode
@@ -124,9 +124,11 @@ echo(
 echo [GAGAL] Pembuatan versi baru bermasalah.
 echo(
 echo  Bila pesannya "Script has reached the limit of 200 versions":
-echo    Batas itu KERAS dan versi TIDAK BISA dihapus. Jalan keluarnya
-echo    menyalin proyek ke proyek baru. Langkah lengkap + hal yang mudah
-echo    terlewat ada di:   docs\PINDAH-PROYEK.md
+echo    HAPUS sebagian versi lama, lalu jalankan  deploy rilis  lagi.
+echo    URL web app TIDAK berubah, pintasan di HP staf tetap jalan.
+echo    Jangan hapus versi yang sedang dipakai deployment aktif -
+echo    lihat dulu di Deploy ^> Manage deployments.
+echo    Panduan lengkap:  docs\BATAS-VERSI-APPS-SCRIPT.md
 echo(
 echo   Penyebab lain: DEPLOY_ID salah. Lihat daftarnya:  clasp deployments
 echo   Kode tetap sudah terunggah; bisa juga buat versi manual lewat
