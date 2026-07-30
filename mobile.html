@@ -2278,7 +2278,9 @@ function hitungPajak(nominal, ref, termasukPPN, adaNpwp){
   if (!adaNpwp && tarif > 0 && x2) tarif = tarif * 2;
   var pph = (ref.jenisPPh && tarif > 0 && (!ref.minPPh || nominal >= ref.minPPh))
     ? Math.round(tarif * dpp) : 0;
-  var ppn = (kenaPPN && (!ref.minPPN || nominal >= ref.minPPN))
+  // Ambang PPN dibandingkan terhadap DPP (tanpa PPN), bukan bruto nota --
+  // sama persis dengan desktop. Lihat komentar di hitungPajak() index.html.
+  var ppn = (kenaPPN && (!ref.minPPN || dpp >= ref.minPPN))
     ? Math.round(ref.ppn * dpp) : 0;
   return { dpp:dpp, pph:pph, ppn:ppn, tarif:tarif, kenaPPN:kenaPPN, x2:x2 };
 }
