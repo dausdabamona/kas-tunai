@@ -134,8 +134,24 @@ var Anggaran = (function () {
       belanja[kode] = (belanja[kode] || 0) + nilai;
     }
     var out = [], tot = { pagu: 0, realisasiSakti: 0, belanjaKas: 0, sisaAman: 0 };
+    // Belanja pegawai (akun 51xxxx: gaji, tunjangan, uang makan, lembur) dibayar
+    // lewat LS/payroll, TIDAK PERNAH lewat kas tunai. Menampilkannya di layar POK
+    // hanya memenuhi daftar dengan ratusan baris yang tidak akan pernah dibebani
+    // dari sini, dan membuat "sisa pagu paling tipis" didominasi akun yang bukan
+    // urusan bendahara kas tunai.
+    //
+    // Disaring di sini, BUKAN di tiap layar, karena ketersediaan() adalah satu-
+    // satunya corong untuk layar Pagu & realisasi, dropdown item POK, dan panel
+    // Papan kerja. getPagu() sengaja TIDAK disaring supaya data tersimpan utuh.
+    var pegawai = { jumlah: 0, pagu: 0, realisasiSakti: 0 };
     for (i = 0; i < pagu.length; i++) {
       var it = pagu[i];
+      if (/^51/.test(_norm(it.akun))) {
+        pegawai.jumlah++;
+        pegawai.pagu += it.pagu;
+        pegawai.realisasiSakti += it.realisasiSakti;
+        continue;
+      }
       var bk = belanja[it.kodeItem.toUpperCase()] || 0;
       var belumSakti = Math.max(0, bk - it.realisasiSakti);
       var sisaAman = it.pagu - it.realisasiSakti - belumSakti;
@@ -152,6 +168,10 @@ var Anggaran = (function () {
              String(a.kodeItem).localeCompare(String(b.kodeItem));
     });
     return { items: out, total: tot, belanjaTanpaItem: tanpaItem,
+             // Dilaporkan, bukan dibuang diam-diam: layar menyebut berapa yang
+             // dikecualikan supaya total yang tampil tidak terbaca sebagai
+             // seluruh pagu satker.
+             pegawaiDikecualikan: pegawai,
              periode: (pagu.length ? pagu[0].periode : '') };
   }
 

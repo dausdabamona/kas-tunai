@@ -6523,7 +6523,13 @@ function renderDana(){
     +'<div class="kk-num tnum" style="color:var(--bs-paper)">'+rupiah(ts)+'</div>'
     +'<div style="font-size:13px;color:var(--bs-paper)">Pagu <b class="tnum">'+rupiah(tp)+'</b> &middot; Realisasi SAKTI <b class="tnum">'+rupiah(tr)+'</b> &middot; Belanja kas <b class="tnum">'+rupiah(tb)+'</b></div>'
     +(nLebih?('<div style="margin-top:6px"><span style="display:inline-block;background:var(--bs-paper);color:var(--bs-a2);border-radius:8px;padding:3px 9px;font-size:11px;font-weight:700">&#9888; '+nLebih+' item melebihi pagu</span></div>'):'')
-    +((_dana.belanjaTanpaItem>0)?('<div style="margin-top:4px;font-size:12px;color:var(--bs-paper)">Belanja kas belum bertanda item: '+rupiah(_dana.belanjaTanpaItem)+'</div>'):'');
+    +((_dana.belanjaTanpaItem>0)?('<div style="margin-top:4px;font-size:12px;color:var(--bs-paper)">Belanja kas belum bertanda item: '+rupiah(_dana.belanjaTanpaItem)+'</div>'):'')
+    // Belanja pegawai disaring dari daftar; sebutkan berapa, supaya angka Pagu di
+    // atas tidak terbaca sebagai seluruh pagu satker.
+    +((_dana.pegawaiDikecualikan&&_dana.pegawaiDikecualikan.jumlah>0)
+      ?('<div style="margin-top:4px;font-size:12px;color:var(--bs-paper);opacity:.9">Di luar daftar: '
+        +_dana.pegawaiDikecualikan.jumlah+' item belanja pegawai (akun 51) '
+        +rupiah(_dana.pegawaiDikecualikan.pagu)+' &mdash; dibayar lewat LS, bukan kas tunai</div>'):'');
   if(!rows.length){ box.innerHTML='<div class="empty">Tidak ada item untuk filter ini.</div>'; return; }
   var h='';
   for(i=0;i<rows.length;i++){ var x=rows[i];
