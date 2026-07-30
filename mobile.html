@@ -855,7 +855,122 @@ function tglPendek(iso){
 /* Layar tugas (catat/kamera/review) menyembunyikan navigasi bawah — mode fokus. */
 var TUGAS = {catat:1, kamera:1, review:1, pajak:1, kembali:1, pindah:1, nota:1, edit:1, setorpajak:1};
 var TASKSCR = {Catat:1, Review:1, Pajak:1, Kembali:1, Pindah:1, Nota:1, Edit:1, SetorPajak:1};
+/* ===================== Tombol Back Android =====================
+ * Masalah: aplikasi ini satu halaman, jadi tombol Back peramban langsung
+ * MENUTUP aplikasi dari layar mana pun -- termasuk saat sedang mengisi nota.
+ *
+ * Cara kerja: tumpukan layar disimpan di JS, dan satu entri history dititipkan
+ * ke peramban selama tumpukan itu tidak kosong. Saat Back ditekan, popstate
+ * menangkapnya dan kita pindah ke layar sebelumnya alih-alih keluar. Di beranda
+ * tumpukan kosong dan titipannya dilepas, jadi Back berperilaku normal (keluar).
+ * Rinciannya di blok komentar tepat sebelum _pasangJaring().
+ */
+var RIWAYAT = [];          // tumpukan layar yang bisa dikembalikan (murni JS)
+var HOME    = 'beranda';   // di sini Back dibiarkan keluar seperti biasa
+
+/* SATU ENTRI JARING, BUKAN SATU PER LAYAR.
+ *
+ * Tumpukan layar disimpan di RIWAYAT (JS). Ke peramban kita hanya menitipkan
+ * SATU entri history -- "jaring" -- yang dipasang selama RIWAYAT tidak kosong.
+ * Setiap Back memakan jaring itu, kita tangani, lalu memasangnya lagi bila
+ * masih ada layar yang bisa dituju.
+ *
+ * Kenapa bukan satu entri per layar: saat pengguna menekan Beranda dari layar
+ * dalam, seluruh entri sisa harus dilepas dengan history.go(-n). Pelepasan itu
+ * ASINKRON -- kalau pengguna langsung berpindah layar lagi, pushState yang baru
+ * bertabrakan dengan rewind yang belum jalan dan hitungannya meleset. Dengan
+ * satu jaring, pelepasannya paling banyak SATU langkah dan tidak bisa menumpuk.
+ *
+ * Catatan penting soal Apps Script: aplikasi ini berjalan di dalam IFRAME
+ * sandbox. pushState HANYA boleh dipanggil TANPA mengubah URL (argumen ketiga
+ * dibiarkan kosong) -- memberi URL apa pun akan ditolak peramban karena beda
+ * origin, dan seluruh navigasi ikut mati. Jangan menambahkan argumen URL.
+ */
+var _jaring     = false;  // benar bila entri titipan kita sedang terpasang
+var _lepasPop   = 0;      // popstate dari history.back() kita sendiri -> abaikan
+var _jaringTunda= false;  // jaring diminta saat pelepasan masih di jalan
+var _backMati   = false;  // pushState ditolak lingkungan -> menyerah, Back normal
+
+function _pasangJaring(){
+  if (_jaring || _backMati) return;
+  // JANGAN pushState selagi history.back() kita belum mendarat. Peramban
+  // menghitung tujuan traversal dari posisi saat back() dipanggil, jadi entri
+  // baru yang disisipkan sebelum mendarat membuatnya melompat SATU entri
+  // terlalu jauh -- aplikasi ikut tertutup padahal pengguna cuma pindah layar.
+  // Tunda sampai popstate pelepasan itu tiba.
+  if (_lepasPop > 0){ _jaringTunda = true; return; }
+  try { history.pushState({ kt:1 }, ''); } catch(e) { _backMati = true; return; }
+  _jaring = true;
+}
+
+/** Dorong satu layar ke tumpukan dan pastikan jaringnya terpasang. */
+function _dorongRiwayat(dari){
+  _pasangJaring();
+  if (_backMati) return;    // tanpa jaring, tumpukan tidak boleh ikut tumbuh
+  RIWAYAT.push(dari);
+}
+
+/** Kembali satu langkah menurut tumpukan. False bila sudah di pangkal. */
+function kembaliLayar(){
+  if (!RIWAYAT.length) return false;
+  _tampilkan(RIWAYAT.pop());
+  return true;
+}
+
+/* ATURAN YANG TIDAK BOLEH DILANGGAR: jaring hanya boleh terpasang selama
+   RIWAYAT tidak kosong, dan setiap popstate wajib mengonsumsi tepat satu isi
+   RIWAYAT lalu memasang ulang jaringnya bila masih ada sisa. Kalau timpang,
+   akan ada tekanan Back yang tidak melakukan apa-apa -- pengguna merasa
+   tombolnya macet. Jangan memanggil go() dari dalam popstate: go() memasang
+   jaring baru dan membuat hitungannya meleset. */
+window.addEventListener('popstate', function(){
+  // 0. popstate yang dipicu history.back() kita sendiri saat pulang ke beranda.
+  //    Diabaikan -- layarnya sudah ditampilkan sebelum entri dilepas.
+  if (_lepasPop > 0){
+    _lepasPop--;
+    if (_jaringTunda){ _jaringTunda = false; if (RIWAYAT.length) _pasangJaring(); }
+    return;
+  }
+
+  _jaring = false;          // jaring baru saja dimakan peramban
+
+  // 1. Pratinjau foto terbuka -> tutup, konsumsi satu entri.
+  var lf = $('lihatFoto');
+  if (lf && lf.className.indexOf('hide') < 0){
+    tutupLihatFoto();
+    RIWAYAT.pop();
+  }
+  // 2. Layar kamera -> kerjakan efek samping tutupKamera TANPA go(),
+  //    supaya FOTO_TUJUAN kembali 'catat' dan foto nota dirender ulang.
+  else if (SCREEN === 'kamera'){
+    RIWAYAT.pop();
+    _tampilkan(_kameraKembali());
+  }
+  // 3. Layar biasa. Bila RIWAYAT sudah kosong (di beranda), tidak ada yang
+  //    dikerjakan -- jaring memang sudah dilepas dan peramban keluar.
+  else {
+    kembaliLayar();
+  }
+
+  if (RIWAYAT.length) _pasangJaring();
+});
+
 function go(scr){
+  // Beranda = pangkal. Tumpukan dikosongkan DAN jaringnya dilepas, supaya
+  // tekanan Back berikutnya benar-benar keluar seperti yang diharapkan
+  // pengguna -- bukan memakan entri sisa tanpa melakukan apa pun.
+  if (scr === HOME){
+    RIWAYAT = [];
+    _jaringTunda = false;
+    _tampilkan(scr);
+    if (_jaring){ _jaring = false; _lepasPop++; try { history.back(); } catch(e) { _lepasPop--; } }
+    return;
+  }
+  if (SCREEN && SCREEN !== scr) _dorongRiwayat(SCREEN);
+  _tampilkan(scr);
+}
+
+function _tampilkan(scr){
   SCREEN = scr;
   var semua = ['Login','Beranda','Transaksi','Detail','Catat','Review','Pajak','Kembali','Pindah','Nota','Edit','Akun','Antrean','Pum','PajakLintas','SetorPajak'];
   for (var i=0;i<semua.length;i++){
@@ -1382,6 +1497,9 @@ function detailPajak(t, notas){
 /* Penampil foto ukuran penuh. cbHapus opsional -> tombol Hapus ikut muncul. */
 var LIHAT_CB = null;
 function lihatFoto(fileId, cbHapus){
+  // Dorong satu entri supaya tombol Back menutup pratinjau, bukan meninggalkan
+  // layar. Dipasangkan dengan RIWAYAT.pop() di penangan popstate.
+  _dorongRiwayat(SCREEN);
   LIHAT_CB = cbHapus || null;
   $('lfImg').src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(fileId) + '&sz=w1000';
   $('lfHapus').className = LIHAT_CB ? 'btn' : 'btn hide';
@@ -1812,10 +1930,13 @@ function _rvKelompok(jenis, judul, jml){
 function tambahFotoJenis(jenis){ FOTO_TUJUAN='catat'; setFotoJenis(jenis); go('kamera'); }
 /* Dari layar nota: potret lewat layar kamera yang sama, lalu kembali ke nota. */
 function ntAmbil(jenis){ FOTO_TUJUAN='nota'; setFotoJenis(jenis); go('kamera'); }
-function tutupKamera(){
-  if (FOTO_TUJUAN === 'nota'){ FOTO_TUJUAN='catat'; ntRenderFoto(); go('nota'); return; }
-  go('review');
+/* Efek samping keluar-kamera, dipisah dari navigasinya supaya bisa dipakai
+   juga oleh penangan tombol Back tanpa ikut mendorong entri riwayat baru. */
+function _kameraKembali(){
+  if (FOTO_TUJUAN === 'nota'){ FOTO_TUJUAN='catat'; ntRenderFoto(); return 'nota'; }
+  return 'review';
 }
+function tutupKamera(){ go(_kameraKembali()); }
 /* Salah pilih saat memotret bisa dibetulkan di sini, tanpa memotret ulang. */
 function tukarJenisFoto(i){
   if (!FOTOS[i]) return;
