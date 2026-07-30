@@ -152,6 +152,15 @@ Lunas  bila ΣNota + ΣKembaliSisa ≥ (nilaiSpby > 0 ? nilaiSpby : UM)
 - Pengembalian: `bukaPengembalian()` menghitung wajib kembali; `serverTambahPengembalian`
   otomatis membuat transaksi masuk dan menautkannya (`REF_MASUK_NO`).
 - Cetak Tanda Terima penyerahan uang muka: `cetakTandaTerima()` + `_htmlTandaTerima()`.
+- Tombol Back Android kembali satu layar; keluar hanya di beranda (e69219d).
+  **Model: satu entri "jaring"** — tumpukan layar ada di `RIWAYAT` (JS), sedangkan
+  ke peramban hanya dititipkan SATU entri `pushState` selama tumpukan tak kosong.
+  Jangan mengubahnya jadi satu entri per layar: menekan Beranda dari layar dalam
+  akan memaksa `history.go(-n)`, dan rewind panjang itu bertabrakan dengan
+  `pushState` berikutnya sehingga peramban melompat terlalu jauh dan aplikasi
+  tetap tertutup. `_pasangJaring()` juga sengaja MENUNDA pemasangan selama
+  `_lepasPop > 0` karena alasan yang sama. Semua `pushState` wajib tanpa argumen
+  URL (iframe sandbox Apps Script).
 
 ### Belum ada / putus
 
