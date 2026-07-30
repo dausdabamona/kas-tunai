@@ -160,6 +160,12 @@
   .camTop .ttl{text-align:center;flex:1}
   .camTop .ttl b{font-family:var(--fh);font-size:16px;font-weight:600;display:block}
   .camTop .ttl span{font-size:12px;opacity:.7}
+  /* Ubin "tambah foto" -- harus terbaca sebagai tombol, bukan tempat kosong. */
+  .tile.tileAdd{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:4px;border:1.5px dashed var(--n400);background:transparent;color:var(--n600);
+    font-size:11px;font-weight:600;cursor:pointer}
+  .tile.tileAdd i{font-size:22px}
+  .tile.tileAdd:active{background:var(--n200)}
   /* Pemilih jenis bukti: nota (Bukti A) vs barang diterima (Bukti B) */
   .camSeg{display:flex;gap:6px;margin:0 18px 10px;background:rgba(243,242,242,.14);border-radius:999px;padding:4px}
   .camSeg button{flex:1;min-height:40px;border:none;border-radius:999px;background:none;color:#fff;
@@ -1387,6 +1393,35 @@ function _dtTile(fileId, urlFile){
   return '<button class="tile" onclick="lihatFoto(' + aq(fileId) + ')">'
        + '<img src="https://drive.google.com/thumbnail?id=' + esc(fileId) + '&sz=w200" alt=""></button>';
 }
+
+/**
+ * Ubin "tambah foto" di layar detail transaksi.
+ *
+ * Sebelumnya ubin kosong hanya HIASAN -- tidak bisa diketuk sama sekali, jadi
+ * satu-satunya jalan menambah foto adalah lewat Ubah nota. Padahal saat berdiri
+ * di depan penyedia, yang dibutuhkan justru memotret langsung dari layar ini.
+ *
+ * Diketuk -> layar kamera yang SUDAH ADA, yang sudah menawarkan Galeri maupun
+ * jepret. Sengaja TIDAK membuat pemilih sendiri: satu alur kamera, satu tempat
+ * penanganan berkas.
+ */
+function _dtTileTambah(no, urutan, jenis, ikon, jml){
+  return '<button class="tile tileAdd" onclick="_dtTambahFoto(' + aq(no) + ',' + aq(urutan) + ',' + aq(jenis) + ')"'
+       + ' title="Ketuk untuk menambah foto">'
+       + '<i class="ph-duotone ' + esc(jml ? 'ph-plus' : ikon) + '"></i>'
+       + '<span>' + (jml ? 'Tambah' : 'Ambil foto') + '</span></button>';
+}
+
+/**
+ * Buka nota itu lalu langsung ke layar kamera dengan jenis yang benar.
+ * bukaNotaUbah menyiapkan konteks NT (termasuk foto lama), ntAmbil menyetel
+ * tujuan + jenis. Urutannya penting: konteks dulu, baru kamera.
+ */
+function _dtTambahFoto(no, urutan, jenis){
+  bukaNotaUbah(no, urutan);
+  if (!NT || String(NT.urutan) !== String(urutan)) return;   // nota tak ketemu, pesan sudah muncul
+  ntAmbil(jenis);
+}
 function detailNota(t, notas){
   var h = '<div class="sec-h" style="margin-top:8px"><div class="t">Nota (' + notas.length + ')</div>'
         + (isKeluar(t) ? ('<button class="lnk" onclick="bukaNotaBaru('+aq(t.no)+')">+ Tambah nota</button>') : '')
@@ -1436,9 +1471,11 @@ function detailNota(t, notas){
         '<div class="banner" style="margin-top:10px"><i class="ph-duotone ph-warning"></i>'
         + '<span>Belum ada foto nota. SPJ akan ditolak tanpa scan notanya.</span></div>')
       +  '<div class="kick" style="margin-top:10px">Bukti A — nota · ' + jmlA + ' foto</div>'
-      +  '<div class="fotoStrip">' + (fa || '<div class="tile"><i class="ph-duotone ph-receipt"></i></div>') + '</div>'
+      +  '<div class="fotoStrip">' + fa
+      +    _dtTileTambah(t.no, n.urutan, 'nota', 'ph-receipt', jmlA) + '</div>'
       +  '<div class="kick" style="margin-top:8px">Bukti B — barang diterima · ' + jmlB + ' foto</div>'
-      +  '<div class="fotoStrip">' + (fb || '<div class="tile"><i class="ph-duotone ph-package"></i></div>') + '</div>'
+      +  '<div class="fotoStrip">' + fb
+      +    _dtTileTambah(t.no, n.urutan, 'barang', 'ph-package', jmlB) + '</div>'
       + '<div style="display:flex;gap:10px;margin-top:12px">'
       +   '<button class="btn pink" style="flex:1.4" onclick="bukaPajak('+aq(t.no)+','+aq(n.urutan)+')">Potongan pajak</button>'
       +   '<button class="btn" style="flex:1" onclick="bukaNotaUbah('+aq(t.no)+','+aq(n.urutan)+')">&#9998; Ubah</button>'
