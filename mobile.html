@@ -53,8 +53,11 @@
   .sec-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
   .sec-h .t{font-family:var(--fh);font-size:20px;font-weight:600}
   .lnk{background:none;border:none;padding:8px 0;font-size:14px;color:var(--ac7)}
+  /* Tepi kiri SELALU menyediakan ruang 4px, walau pitanya tembus pandang —
+     kalau hanya baris berwarna yang diberi tepi, daftarnya jadi bergerigi. */
   .row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;width:100%;
-    padding:14px 0;border-bottom:1px solid var(--n200);background:none;border-left:none;border-right:none;border-top:none;text-align:left}
+    padding:14px 0 14px 10px;border-bottom:1px solid var(--n200);background:none;
+    border-left:4px solid transparent;border-right:none;border-top:none;text-align:left}
   .row .ur,.rowCard .ur{font-size:16px;line-height:1.3}
   .row .meta,.rowCard .meta{font-size:13px;color:var(--n600);margin-top:3px}
   .row .amt,.rowCard .amt{font-family:var(--fh);font-size:16px;font-weight:600;white-space:nowrap;text-align:right}
@@ -64,6 +67,21 @@
   .tag{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:4px 10px;
     background:var(--bg);color:var(--n800)}
   .tag.pink{background:var(--a2);color:#fff} .tag.ac{background:var(--ac);color:#fff}
+
+  /* ===== Kode warna keadaan transaksi (pita kiri) =====
+     Warnanya mengikuti aturan tema: magenta HANYA untuk yang menuntut tindakan,
+     teal untuk yang sedang berjalan, abu untuk yang sudah beres. Jangan
+     menambah warna baru di sini tanpa mengubah aturan itu lebih dulu.
+
+     Selektornya SENGAJA majemuk (.row.pw-*, bukan .pw-* saja). Aturan .rowCard
+     memasang border-left tembus pandang dan letaknya lebih bawah di berkas ini,
+     jadi selektor sekelas akan kalah dan seluruh pita hilang tanpa pesan galat. */
+  .row.pw-perlu,.rowCard.pw-perlu{border-left-color:var(--a2)}
+  .row.pw-jalan,.rowCard.pw-jalan{border-left-color:var(--ac)}
+  .row.pw-beres,.rowCard.pw-beres{border-left-color:var(--n300)}
+  /* Tag "beres" harus tetap terbaca sebagai tag. Latar --bg sama persis dengan
+     latar halaman, jadi tagnya menghilang dan tampak seperti tulisan biasa. */
+  .tag.beres{background:var(--n200);color:var(--n700)}
 
   /* ===== Kartu transaksi geser (tugas 11, Fase 1) ===== */
   .rowWrap{position:relative;overflow:hidden;border-bottom:1px solid var(--n200);touch-action:pan-y}
@@ -76,7 +94,8 @@
   .ra-tt{background:var(--ac7)}
   .ra-kembali{background:var(--n700)}
   .rowCard{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;
-    gap:12px;width:100%;padding:14px 0;background:var(--bg);transition:transform .18s ease-out;text-align:left}
+    gap:12px;width:100%;padding:14px 0 14px 10px;background:var(--bg);border-left:4px solid transparent;
+    transition:transform .18s ease-out;text-align:left}
 
   /* ===== Pencarian & chip ===== */
   .search{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--n400);padding:8px 0;margin-bottom:14px}
@@ -1091,6 +1110,52 @@ function statusTeks(t){
   if (String(t.statusRekon||'').toUpperCase()==='COCOK') return {txt:'Sudah rekon', warn:false};
   return {txt:'Belum SPBY', warn:false};
 }
+/* ===== Keadaan kerja satu transaksi — SATU warna per kartu =====
+ * Berjenjang: yang paling mendesak menang, dicek dari atas ke bawah. Angkanya
+ * SELURUHNYA dari hitungNeraca() (docs/HANDOFF-MOBILE.md bagian 2). Jangan
+ * menghitung ulang neraca di sini -- rumus kembar adalah cara paling cepat
+ * membuat dua layar menampilkan dua kesimpulan berbeda untuk transaksi sama.
+ *
+ * Hanya untuk PENGELUARAN yang bukan pindah dana. Transaksi masuk dan pindah
+ * dana tidak punya siklus pertanggungjawaban, jadi tidak diberi warna sama
+ * sekali (null) -- memberi mereka pita abu akan terbaca "sudah beres" padahal
+ * memang tidak ada yang perlu dikerjakan.
+ */
+var KEADAAN = {
+  periksa:   {n:'Periksa dulu',       w:'perlu'},
+  belumnota: {n:'Belum bernota',      w:'perlu'},
+  notakurang:{n:'Nota kurang',        w:'perlu'},
+  belumfoto: {n:'Belum foto',         w:'perlu'},
+  kembalian: {n:'Kembalian tertahan', w:'perlu'},
+  bernota:   {n:'Sudah bernota',      w:'jalan'},
+  lunas:     {n:'Lunas',              w:'beres'}
+};
+function keadaanTx(t){
+  if (!isKeluar(t) || !bukanPindahDana(t)) return null;
+  var b = hitungNeraca(t, null, null);
+  // Nota melebihi uang muka. Rumusnya menyebut ini 'lunas', tapi lampu hijau di
+  // atas keadaan janggal berbahaya -- keputusan yang sama sudah dipakai panel
+  // neraca di layar detail. Diperiksa lebih dulu supaya tidak lolos jadi teal.
+  if (b.sisaPUM < 0)                     return KEADAAN.periksa;
+  if ((+t.notaJml || 0) === 0)           return KEADAAN.belumnota;
+  if (!b.lunas)                          return KEADAAN.notakurang;
+  if (fotoCount(t) === 0)                return KEADAAN.belumfoto;
+  // Nota sudah menutup target SPBy, tetapi sisa uang muka belum kembali ke
+  // bendahara. Hanya mungkin bila nilaiSpby < uang muka yang diserahkan.
+  if (b.sisaPUM > 0)                     return KEADAAN.kembalian;
+  if (!t.noSpby && String(t.statusRekon||'').toUpperCase() !== 'COCOK')
+                                         return KEADAAN.bernota;
+  return KEADAAN.lunas;
+}
+/** Kelas pita untuk elemen kartu; string kosong bila transaksi tak berwarna. */
+function kelasPita(k){ return k ? (' pw-' + k.w) : ''; }
+/** Tag keadaan; ikut aturan warna yang sama dengan pitanya. */
+function tagKeadaan(k){
+  if (!k) return '';
+  var c = (k.w==='perlu') ? ' pink' : (k.w==='jalan' ? ' ac' : ' beres');
+  return '<span class="tag' + c + '">' + esc(k.n) + '</span>';
+}
+
 function lolosFilter(t){
   if (FILTER==='semua') return true;
   if (FILTER==='belumspby') return isKeluar(t) && !t.noSpby;
@@ -1125,16 +1190,21 @@ function renderBeranda(){
 /* ringkas=true (Beranda): meta "No · penyedia · akun" + status di kanan.
    ringkas=false (Transaksi): meta "No · n nota · n foto" + deretan tag. */
 function barisTx(t, ringkas){
+  var kd = keadaanTx(t);
   if (ringkas){
     var st = statusTeks(t);
     var metaR = 'No ' + esc(String(t.no))
          + (t.penjab ? (' · ' + esc(t.penjab)) : '')
          + (t.akun ? (' · ' + esc(String(t.akun).split(' ')[0])) : '');
     var kananR = '<span class="st' + (st.warn?' warn':'') + '" style="display:block">' + esc(st.txt) + '</span>';
-    return '<button class="row" onclick="bukaDetail(' + aq(t.no) + ')">'
+    // Beranda tidak punya deretan tag seperti daftar transaksi, jadi tag
+    // keadaannya dipasang sendiri di bawah meta supaya bahasanya tetap satu.
+    var tagR = kd ? ('<span class="tags">' + tagKeadaan(kd) + '</span>') : '';
+    return '<button class="row' + kelasPita(kd) + '" onclick="bukaDetail(' + aq(t.no) + ')">'
       + '<span style="flex:1;min-width:0">'
       +   '<span class="ur" style="display:block">' + esc(t.kegiatan||'-') + '</span>'
       +   '<span class="meta" style="display:block">' + metaR + '</span>'
+      +   tagR
       + '</span>'
       + '<span><span class="amt" style="display:block">' + rp(t.kredit||t.debet) + '</span>' + kananR + '</span>'
       + '</button>';
@@ -1145,7 +1215,7 @@ function barisTx(t, ringkas){
   var isi = '<span style="flex:1;min-width:0">'
     +   '<span class="ur" style="display:block">' + esc(t.kegiatan||'-') + '</span>'
     +   '<span class="meta" style="display:block">' + meta + '</span>'
-    +   tagsTx(t)
+    +   tagsTx(t, kd)
     + '</span>'
     + '<span><span class="amt" style="display:block">' + rp(t.kredit||t.debet) + '</span></span>';
   if (!isKeluar(t)){
@@ -1166,11 +1236,13 @@ function barisTx(t, ringkas){
     + '<i class="ph-duotone ph-arrow-u-down-left"></i>Kembali</button>';
   return '<div class="rowWrap">'
     + '<div class="rowActions">' + aksi + '</div>'
-    + '<div class="rowCard" data-no="' + esc(String(t.no)) + '">' + isi + '</div>'
+    + '<div class="rowCard' + kelasPita(kd) + '" data-no="' + esc(String(t.no)) + '">' + isi + '</div>'
     + '</div>';
 }
-function tagsTx(t){
+function tagsTx(t, kd){
   var h = '<span class="tags">';
+  // Keadaan kerja tampil paling depan -- ia yang menentukan warna pitanya.
+  h += tagKeadaan(kd);
   if (pajakBelum(t)) h += '<span class="tag pink">Pajak belum</span>';
   if (t.noSpby) h += '<span class="tag ac">SPBY ' + esc(t.noSpby) + '</span>';
   else if (isKeluar(t)) h += '<span class="tag">Belum SPBY</span>';
