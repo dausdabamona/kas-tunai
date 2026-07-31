@@ -93,6 +93,38 @@ itu mencatat perbedaan v1→v2 baris per baris.
 
 ---
 
+## 0d. Pembebanan satu transaksi ke beberapa item POK — 31 Jul 2026 (🟡 belum diuji manual)
+
+Sheet baru **`Pembebanan Item`** (`CONFIG.SHEETS.PEMBEBANAN`). Terbentuk sendiri saat
+pertama dipakai — tidak ada langkah migrasi.
+
+**Aturan yang menjaga angkanya benar, jangan dilanggar:**
+
+- Transaksi beritem tunggal **tidak punya baris** di sheet itu; pembebanannya tetap dari
+  `KAS_TUNAI.KODE_ITEM`. Itulah sebabnya seluruh data lama tetap terbaca apa adanya.
+- Bila ada baris rincian, `ketersediaan()` memakai rincian itu dan **melewati
+  `KODE_ITEM`**. Menghitung keduanya berarti membebani pagu hampir dua kali lipat —
+  `continue` di dalam gelung itu bukan penghematan, ia yang menjaga angkanya.
+- Σ `NILAI` satu transaksi **wajib sama persis** dengan `KREDIT`-nya. Dijaga di
+  `Anggaran.periksaRincian()`, dipanggil endpoint **sebelum** transaksi tersimpan.
+- Item utama = yang dipilih di dropdown. Nilainya **tidak diketik**, melainkan sisa =
+  nilai transaksi − Σ item tambahan. Karena itu Σ selalu pas secara konstruksi; yang
+  masih bisa salah hanyalah sisa itu menjadi ≤ 0, dan itu ditolak di klien.
+- `simpanPembebanan()` membuang baris bernilai ≤ 0. Jadi item utama bernilai 0 akan
+  lenyap dan Σ-nya jadi timpang — sebabnya jauh dari galatnya. Penjagaannya ada di
+  `submitTransaksi()`.
+
+Panel rekomendasinya mengelompokkan berdasarkan `KODE_KOMPONEN`. **Bila kolom itu kosong
+di data Pagu**, panel mundur ke akun dan mengatakannya di judul. Belum diperiksa apakah
+impor POK yang dipakai satker ini benar-benar mengisi `KODE_KOMPONEN` — kalau tidak,
+pengelompokannya jadi per akun, dan itulah yang akan terlihat.
+
+Belum ada di HP (`mobile.html`), sengaja: memilah pembebanan itu pekerjaan meja.
+
+Uji: `uji-pembebanan.js` (16 asersi, `Anggaran.gs` di node dengan sheet tiruan) dan
+`uji-pok.js` (26 asersi, panel di Chromium). Keduanya dibuktikan bisa gagal dengan
+kerusakan sengaja. **Belum dibuka pengguna di browser sungguhan.**
+
 ## 0c. Papan kerja — selesai 29 Jul 2026 (kode), belum diuji manual
 
 Rencana: `docs/superpowers/plans/2026-07-29-papan-kerja-desktop.md`. Delapan tugas,

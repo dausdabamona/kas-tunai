@@ -137,6 +137,28 @@
     background:var(--bs-paper);margin-bottom:6px}
   #txItem{width:100%;min-height:44px;border:1px solid var(--bs-n300);border-radius:10px;
     padding:0 10px;font:inherit;font-size:13.5px;color:var(--bs-ink);background:var(--bs-paper)}
+  /* Rekomendasi item POK satu komponen + pembagian nilainya */
+  #txKomponen{margin-top:8px;border:1px solid var(--bs-n300);border-radius:12px;
+    background:var(--bs-paper);overflow:hidden}
+  .kmp-h{padding:8px 10px;background:var(--bs-n200);font-size:11.5px;font-weight:700;
+    color:var(--bs-n700);letter-spacing:.04em;text-transform:uppercase}
+  .kmp-h .sub{display:block;margin-top:2px;font-weight:400;font-size:11px;
+    letter-spacing:0;text-transform:none;color:var(--bs-n600)}
+  .kmp-r{display:flex;align-items:center;gap:8px;padding:7px 10px;
+    border-top:1px solid var(--bs-n200);font-size:12.5px}
+  .kmp-r.utama{background:var(--bs-ac1)}
+  .kmp-r input[type=checkbox]{width:18px;height:18px;flex:none}
+  .kmp-r .ur{flex:1;min-width:0;line-height:1.3}
+  .kmp-r .ur b{font-variant-numeric:tabular-nums}
+  .kmp-r .ur span{display:block;color:var(--bs-n600);font-size:11px}
+  .kmp-r input[type=text]{width:120px;flex:none;text-align:right;min-height:32px;
+    border:1px solid var(--bs-n300);border-radius:8px;padding:0 8px;font:inherit;
+    font-size:12.5px;font-variant-numeric:tabular-nums;background:var(--bs-paper)}
+  .kmp-r input[type=text][readonly]{background:var(--bs-n200);color:var(--bs-n700)}
+  .kmp-t{padding:8px 10px;border-top:1px solid var(--bs-n300);font-size:12px;
+    display:flex;justify-content:space-between;gap:10px;font-variant-numeric:tabular-nums}
+  .kmp-t b{font-size:13px}
+  .kmp-t.salah{background:var(--bs-a21);color:var(--bs-a2)}
   .chip.pk-isi{cursor:pointer}
   .chip.pk-isi:hover{outline:2px solid var(--bs-a2);outline-offset:1px}
   .pk-spby{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;
@@ -748,7 +770,7 @@
     <div class="field"><label>Tanggal</label><input type="date" id="txTanggal"></div>
     <div class="field"><label>Kegiatan / Uraian</label><input type="text" id="txKegiatan" placeholder="Nama kegiatan"></div>
     <div class="field"><label id="txPenjabLbl">Penanggung Jawab</label><input type="text" id="txPenjab"></div>
-    <div class="field"><label id="txNilaiLbl">Nilai</label><input type="text" class="numfmt" id="txNilai" value="0" inputmode="numeric" oninput="_cekSisaPagu()"></div>
+    <div class="field"><label id="txNilaiLbl">Nilai</label><input type="text" class="numfmt" id="txNilai" value="0" inputmode="numeric" oninput="_cekSisaPagu();_pbHitung()"></div>
     <div class="field"><label>Keterangan</label><textarea id="txKeterangan" rows="2"></textarea></div>
     <div id="txAkunWrap">
       <div class="field"><label>Detail Kegiatan (item POK)</label>
@@ -756,6 +778,7 @@
                autocomplete="off" oninput="_isiPilihanItem()">
         <select id="txItem" onchange="onPilihItem()"><option value="">(belum dipilih)</option></select>
         <div class="tgl" id="txItemInfo" style="margin-top:3px">Opsional. Bila dipilih, Akun/MAK terisi otomatis dan sisa pagu ditampilkan.</div>
+        <div id="txKomponen" class="hidden"></div>
       </div>
       <div class="field"><label>Akun / Kode Akun (MAK)</label>
         <input type="text" id="txAkun" list="txAkunList" placeholder="mis. 521811" autocomplete="off">
@@ -3650,7 +3673,8 @@ function openModalTransaksi(mode){
   document.getElementById('txNoKuitansi').value='';
   document.getElementById('txNoDrpp').value='';
   document.getElementById('txNoSpp').value='';
-  document.getElementById('txItem').value=''; _muatItemPagu(function(){ var sl=document.getElementById('txItem'); if(sl) sl.value=''; onPilihItem(); });
+  document.getElementById('txItem').value=''; _pbReset();
+  _muatItemPagu(function(){ var sl=document.getElementById('txItem'); if(sl) sl.value=''; onPilihItem(); });
   document.getElementById('txAkunWrap').style.display=masuk?'none':'';
   _onTxPersediaan();
   openModal('modalTransaksi');
@@ -3681,6 +3705,23 @@ function editTransaksi(no){
   // Nilai dipasang DI DALAM callback: <select> tidak bisa disetel sebelum
   // opsinya ada -- kalau dipasang lebih dulu, pilihannya diam-diam jadi kosong.
   var _kodeTx = t.kodeItem ? String(t.kodeItem) : '';
+  // Rincian pembebanan dimuat terpisah: ia tidak ikut di payload transaksi
+  // (sengaja — hampir semua transaksi beritem tunggal dan tidak punya baris
+  // rincian sama sekali, jadi memuatnya untuk semua hanya menambah beban).
+  _pbReset();
+  google.script.run
+    .withSuccessHandler(function(list){
+      var utamaKode=_kodeTx;
+      for(var i=0;i<(list||[]).length;i++){
+        // Item utama TIDAK masuk _pbTambahan — nilainya selalu dihitung
+        // sebagai sisa. Menaruhnya di sana akan menghitungnya dua kali.
+        if(String(list[i].kodeItem)===String(utamaKode)) continue;
+        _pbTambahan[String(list[i].kodeItem)]=+list[i].nilai||0;
+      }
+      _pbRender();
+    })
+    .withFailureHandler(function(){ /* rincian gagal dimuat: form tetap bisa dipakai */ })
+    .serverGetPembebanan(_tok, no);
   _muatItemPagu(function(){
     var sel=document.getElementById('txItem');
     if(sel){
@@ -4160,10 +4201,27 @@ function submitTransaksi(){
     noDrpp:(_txMode==='keluar')?document.getElementById('txNoDrpp').value.trim():'',
     noSpp:(_txMode==='keluar')?document.getElementById('txNoSpp').value.trim():'',
     kodeItem:(_txMode==='keluar')?((_cariItem(document.getElementById('txItem').value)||{}).kodeItem||''):'',
-    uraianItem:(_txMode==='keluar')?((_cariItem(document.getElementById('txItem').value)||{}).uraianItem||''):''
+    uraianItem:(_txMode==='keluar')?((_cariItem(document.getElementById('txItem').value)||{}).uraianItem||''):'',
+    // Selalu dikirim (walau []) supaya membuka lalu mengosongkan centang
+    // benar-benar menghapus rincian lama, bukan menyisakannya diam-diam.
+    rincianItem:(_txMode==='keluar')?_pbRincian():[]
   };
   if(!data.kegiatan){toast('Kegiatan/uraian wajib diisi','error');return;}
   if(nilai<=0){toast('Nilai harus lebih dari 0','error');return;}
+  // Σ rincian selalu sama dengan nilai transaksi secara konstruksi (item utama
+  // = sisa), jadi yang perlu dijaga hanyalah sisa itu sendiri. Nol pun ditolak:
+  // server membuang baris bernilai <= 0, sehingga item utama akan lenyap dan
+  // Σ-nya jadi timpang — galatnya muncul jauh dari sebabnya.
+  if(data.rincianItem.length){
+    var _sisa=+data.rincianItem[0].nilai||0;
+    if(_sisa<0){
+      toast('Nilai item tambahan melebihi nilai transaksi sebesar '+rupiah(-_sisa),'error'); return;
+    }
+    if(_sisa===0){
+      toast('Item utama tidak kebagian nilai. Jadikan salah satu item tambahan sebagai item utama, atau kurangi nilainya.','error');
+      return;
+    }
+  }
   if(_txEditNo!=null){
     var no=_txEditNo;
     showLoading(true,'Memperbarui...');
@@ -5840,15 +5898,160 @@ function _cariItem(teks){
 function onPilihItem(){
   var info=document.getElementById('txItemInfo');
   var x=_cariItem(document.getElementById('txItem').value);
-  if(!x){ info.innerHTML='Opsional. Bila dipilih, Akun/MAK terisi otomatis dan sisa pagu ditampilkan.'; return; }
+  if(!x){ info.innerHTML='Opsional. Bila dipilih, Akun/MAK terisi otomatis dan sisa pagu ditampilkan.';
+          _pbReset(); _pbRender(); return; }
   var ak=document.getElementById('txAkun'); if(ak && !ak.value.trim()) ak.value=x.akun;
   _cekSisaPagu(x);
+  _pbRender();
+}
+
+/* ============ Pembebanan ke beberapa item POK satu komponen ============
+ *
+ * Item utama = yang dipilih di dropdown; nilainya TIDAK diketik melainkan
+ * dihitung = nilai transaksi − Σ item tambahan. Dengan begitu bendahara cuma
+ * mengetik bagian-bagian kecilnya ("1,5 jt ATK, 1 jt penggandaan") dan sisanya
+ * jatuh ke item utama dengan sendirinya — tidak mungkin timpang karena salah
+ * hitung sendiri. Yang masih bisa salah hanyalah Σ tambahan MELEBIHI nilai
+ * transaksi, dan itu ditolak terang-terangan sebelum bisa disimpan.
+ *
+ * Kuncinya kode item, bukan indeks baris: daftar item bisa tersaring ulang
+ * setiap kali kotak cari diketik, dan indeks akan menunjuk baris yang salah.
+ */
+var _pbTambahan = {};   // kodeItem -> nilai (hanya item TAMBAHAN, tanpa yang utama)
+
+function _pbReset(){ _pbTambahan={}; }
+
+/** Nilai yang benar-benar dibebankan ke item utama = transaksi − Σ tambahan. */
+function _pbBagianUtama(){
+  var total=unfmt((document.getElementById('txNilai')||{}).value||'0'), jml=0, k;
+  for(k in _pbTambahan) if(_pbTambahan.hasOwnProperty(k)) jml+=(+_pbTambahan[k]||0);
+  return total-jml;
+}
+
+/** Item lain sekomponen dengan item utama. Kosong bila tak ada pembanding. */
+function _pbSekomponen(utama){
+  if(!utama) return {kunci:'', label:'', list:[]};
+  // KODE_KOMPONEN bisa kosong bila berkas POK yang diimpor tidak memuatnya.
+  // Jangan menampilkan grup "(tanpa komponen)" yang isinya seluruh POK —
+  // mundur ke akun, dan katakan apa adanya di judulnya.
+  var pakaiKomp = !!String(utama.komponen||'').trim();
+  var kunci = pakaiKomp ? String(utama.komponen) : String(utama.akun||'');
+  var out=[];
+  if(!kunci) return {kunci:'', label:'', list:[]};
+  for(var i=0;i<(_itemPagu||[]).length;i++){
+    var it=_itemPagu[i];
+    var k = pakaiKomp ? String(it.komponen||'') : String(it.akun||'');
+    if(k!==kunci) continue;
+    if(String(it.kodeItem)===String(utama.kodeItem)) continue;
+    out.push(it);
+  }
+  return { kunci:kunci, list:out,
+           label: pakaiKomp ? ('Komponen '+kunci) : ('Akun '+kunci+' (komponen tidak ada di data POK)') };
+}
+
+/** Membangun ulang seluruh kotak. JANGAN dipanggil dari oninput — lihat _pbHitung. */
+function _pbRender(){
+  var box=document.getElementById('txKomponen'); if(!box) return;
+  var utama=_cariItem((document.getElementById('txItem')||{}).value||'');
+  var grup=_pbSekomponen(utama);
+  if(!utama || !grup.list.length){ box.className='hidden'; box.innerHTML=''; return; }
+  box.className='';
+
+  var h='<div class="kmp-h">'+esc(grup.label)
+    +'<span class="sub">'+grup.list.length+' item lain di komponen ini. Centang bila belanja ini juga membebani item tersebut, lalu isi nilainya.</span></div>';
+  h+='<div class="kmp-r utama"><input type="checkbox" checked disabled>'
+    +'<span class="ur"><b>'+esc(String(utama.kodeItem))+'</b> — '+esc(utama.uraianItem||'')
+    +'<span>item utama · sisanya jatuh ke sini dengan sendirinya</span></span>'
+    +'<input type="text" id="pbUtamaVal" readonly value="0"></div>';
+  for(var i=0;i<grup.list.length;i++){
+    var it=grup.list[i], kode=String(it.kodeItem), q='\''+esc(kode)+'\'';
+    var ada=_pbTambahan.hasOwnProperty(kode);
+    h+='<div class="kmp-r">'
+      +'<input type="checkbox" '+(ada?'checked ':'')+'onchange="_pbCentang('+q+',this.checked)">'
+      +'<span class="ur"><b>'+esc(kode)+'</b> — '+esc(it.uraianItem||'')
+      +'<span>sisa aman '+rupiah(it.sisaAman)+'</span></span>'
+      +'<input type="text" class="numfmt" inputmode="numeric" '+(ada?'':'disabled ')
+      +'value="'+esc(ada?_grp(+_pbTambahan[kode]||0):'0')+'" '
+      +'oninput="_pbIsi('+q+',this.value)"></div>';
+  }
+  h+='<div class="kmp-t hidden" id="pbTotal"></div>';
+  box.innerHTML=h;
+  _pbHitung();
+}
+
+/**
+ * Perbarui HANYA angka turunannya (nilai item utama + baris ringkasan).
+ *
+ * Membangun ulang innerHTML dari oninput akan mengganti kotak yang sedang
+ * diketik dengan elemen baru — fokus dan posisi kursor hilang, jadi hanya digit
+ * pertama yang masuk lalu kursor terlempar. Baris item sengaja tidak disentuh.
+ */
+function _pbHitung(){
+  var val=document.getElementById('pbUtamaVal'), ring=document.getElementById('pbTotal');
+  if(!val||!ring) return;
+  var total=unfmt((document.getElementById('txNilai')||{}).value||'0');
+  var jml=0, aktif=0, k;
+  for(k in _pbTambahan){ if(!_pbTambahan.hasOwnProperty(k)) continue; aktif++; jml+=(+_pbTambahan[k]||0); }
+  var sisaUtama=total-jml, salah=(sisaUtama<0);
+  val.value=_grp(sisaUtama);
+  _cekSisaPagu();          // baris sisa pagu di atas ikut memakai bagian utama
+  if(!aktif){ ring.className='kmp-t hidden'; ring.innerHTML=''; return; }
+  ring.className='kmp-t'+(salah?' salah':'');
+  ring.innerHTML='<span>'+(aktif+1)+' item · nilai transaksi '+rupiah(total)+'</span>'
+    +'<b>'+(salah
+        ? ('&#9888; item tambahan lebih besar '+rupiah(-sisaUtama)+' dari nilai transaksi')
+        : ('item utama '+rupiah(sisaUtama)))+'</b>';
+}
+
+function _pbCentang(kode, on){
+  if(on){
+    // Prasetel = sisa yang belum terbagi, bukan 0. Kasus paling sering adalah
+    // dua item, dan dengan begini yang kedua sudah benar tanpa diketik.
+    var total=unfmt((document.getElementById('txNilai')||{}).value||'0'), jml=0, k;
+    for(k in _pbTambahan) if(_pbTambahan.hasOwnProperty(k)) jml+=(+_pbTambahan[k]||0);
+    _pbTambahan[kode]=Math.max(0, total-jml);
+  } else {
+    delete _pbTambahan[kode];
+  }
+  _pbRender();
+}
+function _pbIsi(kode, teks){
+  if(!_pbTambahan.hasOwnProperty(kode)) return;
+  _pbTambahan[kode]=unfmt(teks);
+  _pbHitung();
+}
+
+/**
+ * Rincian siap kirim, atau [] bila transaksi ini beritem tunggal.
+ * Item utama SELALU ikut supaya server tidak perlu menebak sisanya.
+ */
+function _pbRincian(){
+  var utama=_cariItem((document.getElementById('txItem')||{}).value||'');
+  if(!utama) return [];
+  var grup=_pbSekomponen(utama), out=[], i, jml=0;
+  for(i=0;i<grup.list.length;i++){
+    var it=grup.list[i], kode=String(it.kodeItem);
+    if(!_pbTambahan.hasOwnProperty(kode)) continue;
+    var n=+_pbTambahan[kode]||0;
+    if(n<=0) continue;
+    out.push({kodeItem:kode, uraianItem:it.uraianItem||'', akun:it.akun||'', nilai:n});
+    jml+=n;
+  }
+  if(!out.length) return [];
+  var total=unfmt((document.getElementById('txNilai')||{}).value||'0');
+  out.unshift({kodeItem:String(utama.kodeItem), uraianItem:utama.uraianItem||'',
+               akun:utama.akun||'', nilai:total-jml});
+  return out;
 }
 function _cekSisaPagu(x){
   var info=document.getElementById('txItemInfo'); if(!info) return;
   if(!x) x=_cariItem(document.getElementById('txItem').value);
   if(!x) return;
-  var nilai=unfmt((document.getElementById('txNilai')||{}).value||'0');
+  // Yang membebani item utama adalah BAGIANNYA, bukan seluruh nilai transaksi.
+  // Kalau dipakai nilai penuh, baris ini akan berkata "sisa setelah transaksi
+  // ini Rp 4,5 jt" sementara panel di bawahnya berkata Rp 2 jt — dua angka
+  // berbeda untuk hal yang sama, di layar yang sama.
+  var nilai=_pbBagianUtama();
   var sisaSetelah=x.sisaAman-nilai;
   var dasar='Pagu '+rupiah(x.pagu)+' · SAKTI '+rupiah(x.realisasiSakti)+' · <b>sisa aman '+rupiah(x.sisaAman)+'</b>';
   info.innerHTML = (nilai>0 && sisaSetelah<0)

@@ -48,7 +48,8 @@ var CONFIG = {
     SESSIONS:       'Sessions',
     SAKTI_SPBY:     'SAKTI_SPBy',
     PAGU:           'Pagu',
-    MASTER_PUM:     'Master PUM'
+    MASTER_PUM:     'Master PUM',
+    PEMBEBANAN:     'Pembebanan Item'
   },
 
   // Index kolom sheet Kas Tunai (0-based, A-X = 24 kolom inti + kolom kuitansi TTD)
@@ -171,6 +172,22 @@ var CONFIG = {
       'KODE_ITEM', 'URAIAN_ITEM', 'AKUN', 'URAIAN_AKUN',
       'KODE_KOMPONEN', 'KODE_RO', 'URAIAN_RO', 'KODE_KEGIATAN', 'KODE_PROGRAM',
       'PAGU', 'REALISASI_SAKTI', 'SISA_SAKTI', 'PERIODE', 'IMPORT_BATCH'
+    ],
+    // Rincian pembebanan satu transaksi ke BEBERAPA item POK.
+    //
+    // Hanya diisi bila transaksi dibebankan ke lebih dari satu item. Transaksi
+    // beritem tunggal tetap memakai KAS_TUNAI.KODE_ITEM apa adanya dan TIDAK
+    // punya baris di sini -- itu yang membuat seluruh data lama tetap terbaca
+    // tanpa migrasi. Anggaran.ketersediaan() memilih sumbernya: ada baris di
+    // sini -> pakai rinciannya; tidak ada -> bebankan penuh ke KODE_ITEM.
+    //
+    // Σ NILAI seluruh baris satu transaksi WAJIB sama dengan KREDIT transaksi
+    // itu. Kalau timpang, pagu terserap lebih besar atau lebih kecil dari uang
+    // yang benar-benar keluar, dan selisihnya tidak akan pernah ketahuan dari
+    // layar mana pun. Penjagaannya ada di Anggaran.simpanPembebanan().
+    PEMBEBANAN: [
+      'NO_TRANSAKSI', 'KODE_ITEM', 'URAIAN_ITEM', 'AKUN', 'NILAI',
+      'IS_DELETED', 'DELETED_AT', 'DELETED_BY'
     ],
     // Nomor WhatsApp pemegang uang muka, untuk tombol Tagih (tugas 9).
     // Key = nama PUM (case-insensitive), sama seperti MASTER_PENYEDIA.

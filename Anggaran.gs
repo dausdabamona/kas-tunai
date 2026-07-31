@@ -111,6 +111,124 @@ var Anggaran = (function () {
     return out;
   }
 
+  /* ---------------- Pembebanan ke beberapa item ---------------- */
+  function PB() { return Util.colMap(CONFIG.SHEETS.PEMBEBANAN); }
+
+  /**
+   * Rincian pembebanan satu transaksi, atau [] bila transaksi itu beritem
+   * tunggal (yang merupakan keadaan normal untuk hampir semua transaksi).
+   */
+  function getPembebanan(no) {
+    var nama = CONFIG.SHEETS.PEMBEBANAN;
+    SheetRepo.sheet(nama);
+    var b = PB(), data = SheetRepo.getData(nama), out = [];
+    for (var i = 0; i < data.length; i++) {
+      var r = data[i];
+      if (isDeleted(r[b.IS_DELETED])) continue;
+      if (String(r[b.NO_TRANSAKSI]) !== String(no)) continue;
+      out.push({ kodeItem: _norm(r[b.KODE_ITEM]), uraianItem: _norm(r[b.URAIAN_ITEM]),
+                 akun: _norm(r[b.AKUN]), nilai: Util.num(r[b.NILAI]) });
+    }
+    return out;
+  }
+
+  /**
+   * Ganti seluruh rincian satu transaksi.
+   *
+   * rincian: [{kodeItem, uraianItem, akun, nilai}] — kurang dari dua baris
+   * berarti transaksi beritem tunggal, jadi rinciannya DIHAPUS dan pembebanan
+   * kembali mengikuti KAS_TUNAI.KODE_ITEM. Itu bukan kasus khusus yang harus
+   * dihindari, melainkan jalur normalnya.
+   *
+   * totalKredit dipakai sebagai penjaga: Σ nilai wajib sama persis. Uang dan
+   * pagu bilangan bulat, jadi perbandingannya juga bulat -- tanpa toleransi.
+   */
+  /**
+   * Saring + periksa rincian TANPA menyentuh sheet. Dipisah supaya endpoint
+   * bisa menolak masukan yang timpang SEBELUM transaksinya tersimpan; kalau
+   * pemeriksaan baru terjadi sesudahnya, pengguna melihat pesan galat padahal
+   * transaksinya sudah terlanjur ada.
+   * @return {{bersih:Array, total:number}}
+   */
+  function periksaRincian(rincian, totalKredit) {
+    rincian = rincian || [];
+    var bersih = [], jml = 0, i, dipakai = {};
+    for (i = 0; i < rincian.length; i++) {
+      var it = rincian[i] || {};
+      var kode = _norm(it.kodeItem);
+      var nilai = Util.num(it.nilai);
+      if (!kode || nilai <= 0) continue;
+      // Item kembar akan dihitung dua kali oleh ketersediaan() dan membuat pagu
+      // item itu terserap berlipat -- ditolak, bukan digabung diam-diam.
+      if (dipakai[kode.toUpperCase()])
+        throw new Error('Item ' + kode + ' dipilih lebih dari sekali.');
+      dipakai[kode.toUpperCase()] = true;
+      bersih.push({ kodeItem: kode, uraianItem: _norm(it.uraianItem),
+                    akun: _norm(it.akun), nilai: nilai });
+      jml += nilai;
+    }
+    if (bersih.length >= 2) {
+      var target = Util.num(totalKredit);
+      if (jml !== target)
+        throw new Error('Rincian pembebanan Rp ' + jml + ' tidak sama dengan nilai transaksi Rp '
+                        + target + '. Selisih Rp ' + (target - jml) + '.');
+    }
+    return { bersih: bersih, total: jml };
+  }
+
+  function simpanPembebanan(no, rincian, totalKredit) {
+    var nama = CONFIG.SHEETS.PEMBEBANAN;
+    SheetRepo.sheet(nama);
+    SheetRepo.ensureMinCols(nama, CONFIG.HEADERS.PEMBEBANAN.length);
+    var b = PB(), lebar = CONFIG.HEADERS.PEMBEBANAN.length, i;
+    var hasil = periksaRincian(rincian, totalKredit);
+    var bersih = hasil.bersih, jml = hasil.total;
+
+    // Baris lama dimatikan lebih dulu supaya penggantian tidak meninggalkan
+    // sisa yang ikut terhitung. Tanpa hard delete, sesuai aturan proyek.
+    var data = SheetRepo.getData(nama), n = 0;
+    for (i = 0; i < data.length; i++) {
+      if (isDeleted(data[i][b.IS_DELETED])) continue;
+      if (String(data[i][b.NO_TRANSAKSI]) !== String(no)) continue;
+      SheetRepo.setCells(nama, i + 2, Util.set(
+        b.IS_DELETED, 'Y', b.DELETED_AT, new Date(), b.DELETED_BY, getOperator()));
+      n++;
+    }
+    if (bersih.length >= 2) {
+      for (i = 0; i < bersih.length; i++) {
+        var row = []; for (var z = 0; z < lebar; z++) row[z] = '';
+        row[b.NO_TRANSAKSI] = no;
+        row[b.KODE_ITEM]    = bersih[i].kodeItem;
+        row[b.URAIAN_ITEM]  = bersih[i].uraianItem;
+        row[b.AKUN]         = bersih[i].akun;
+        row[b.NILAI]        = bersih[i].nilai;
+        row[b.IS_DELETED]   = '';
+        SheetRepo.appendRow(nama, row);
+      }
+    }
+    DeferredFlush.mark();
+    AuditLog.write('PEMBEBANAN', nama, no,
+      (bersih.length >= 2 ? (bersih.length + ' item, Rp ' + jml) : 'kembali ke item tunggal')
+      + (n ? (' (' + n + ' baris lama diganti)') : ''));
+    return { success: true, jumlahItem: bersih.length, total: jml };
+  }
+
+  /** Peta NO transaksi -> rincian, dibaca sekali untuk seluruh ketersediaan(). */
+  function _petaPembebanan() {
+    var nama = CONFIG.SHEETS.PEMBEBANAN;
+    SheetRepo.sheet(nama);
+    var b = PB(), data = SheetRepo.getData(nama), peta = {};
+    for (var i = 0; i < data.length; i++) {
+      var r = data[i];
+      if (isDeleted(r[b.IS_DELETED])) continue;
+      var no = String(r[b.NO_TRANSAKSI]);
+      if (!no) continue;
+      if (!peta[no]) peta[no] = [];
+      peta[no].push({ kode: _norm(r[b.KODE_ITEM]).toUpperCase(), nilai: Util.num(r[b.NILAI]) });
+    }
+    return peta;
+  }
+
   /* ---------------- Ketersediaan dana ---------------- */
   /**
    * Sandingkan pagu dengan belanja kas per item.
@@ -121,7 +239,8 @@ var Anggaran = (function () {
    */
   function ketersediaan() {
     var pagu = getPagu();
-    var kas = SheetRepo.getData(CONFIG.SHEETS.KAS_TUNAI), belanja = {}, tanpaItem = 0, i;
+    var kas = SheetRepo.getData(CONFIG.SHEETS.KAS_TUNAI), belanja = {}, tanpaItem = 0, i, j;
+    var rinci = _petaPembebanan();
     for (i = 0; i < kas.length; i++) {
       var r = kas[i];
       if (isDeleted(r[C.IS_DELETED])) continue;
@@ -129,6 +248,16 @@ var Anggaran = (function () {
       if (nilai <= 0) continue;
       var ref = String(r[C.REF_TRANSFER] || '');
       if (ref.indexOf('TF-') === 0) continue;            // pindah dana, bukan belanja
+      // Transaksi yang dibebankan ke beberapa item POK: pakai rinciannya, dan
+      // JANGAN juga membebani KODE_ITEM -- kolom itu hanya menyimpan item
+      // pertama untuk keperluan tampilan, jadi menghitung keduanya berarti
+      // membebani pagu hampir dua kali lipat.
+      var pecah = rinci[String(r[C.NO])];
+      if (pecah && pecah.length) {
+        for (j = 0; j < pecah.length; j++)
+          belanja[pecah[j].kode] = (belanja[pecah[j].kode] || 0) + pecah[j].nilai;
+        continue;
+      }
       var kode = _norm(r[C.KODE_ITEM]).toUpperCase();
       if (!kode) { tanpaItem += nilai; continue; }
       belanja[kode] = (belanja[kode] || 0) + nilai;
@@ -208,5 +337,7 @@ var Anggaran = (function () {
   }
 
   return { imporPagu: imporPagu, getPagu: getPagu, ketersediaan: ketersediaan,
-           ringkasSerapan: ringkasSerapan };
+           ringkasSerapan: ringkasSerapan,
+           getPembebanan: getPembebanan, simpanPembebanan: simpanPembebanan,
+           periksaRincian: periksaRincian };
 })();

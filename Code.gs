@@ -424,11 +424,37 @@ function serverGetSuratTugas(token, noTransaksi) {
 function serverBatalkanPd(token, noTransaksi) {
   return _run(token, function (auth) { return SuratTugas.remove(noTransaksi); });
 }
+/* Rincian pembebanan ke beberapa item POK (data.rincianItem) diperiksa LEBIH
+   DULU, sebelum transaksinya tersimpan. Kalau urutannya dibalik, masukan yang
+   totalnya timpang akan meninggalkan transaksi tersimpan tanpa rincian sambil
+   menampilkan pesan galat -- pengguna mengira tak ada yang tersimpan. */
 function serverTambahTransaksi(token, data) {
-  return _run(token, function (auth) { return KasTunai.tambahTransaksi(data); });
+  return _run(token, function (auth) {
+    data = data || {};
+    Anggaran.periksaRincian(data.rincianItem, data.kredit);
+    var res = KasTunai.tambahTransaksi(data);
+    // Antrean luring boleh mengirim ulang; transaksi duplikat tidak ditulis
+    // ulang, jadi rinciannya pun tidak perlu ditimpa.
+    if (res && res.success && !res.duplikat)
+      Anggaran.simpanPembebanan(res.no, data.rincianItem, data.kredit);
+    return res;
+  });
 }
 function serverUpdateTransaksi(token, no, data) {
-  return _run(token, function (auth) { return KasTunai.updateTransaksi(no, data); });
+  return _run(token, function (auth) {
+    data = data || {};
+    // undefined = layar ini memang tidak mengurus pembebanan (mis. HP), jadi
+    // rincian yang sudah ada dibiarkan. Array kosong = sengaja dikosongkan.
+    if (data.rincianItem !== undefined) Anggaran.periksaRincian(data.rincianItem, data.kredit);
+    var res = KasTunai.updateTransaksi(no, data);
+    if (res && res.success && data.rincianItem !== undefined)
+      Anggaran.simpanPembebanan(no, data.rincianItem, data.kredit);
+    return res;
+  });
+}
+/** Rincian pembebanan satu transaksi, untuk mengisi ulang form Ubah. */
+function serverGetPembebanan(token, no) {
+  return _run(token, function (auth) { return Anggaran.getPembebanan(no); });
 }
 function serverSimpanPajak(token, no, d) {
   return _run(token, function (auth) { return KasTunai.simpanPajak(no, d); });
