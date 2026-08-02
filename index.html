@@ -1945,6 +1945,26 @@ function submitSettings(){
   }).withFailureHandler(fail).serverSetSettings(_tok, drive, scan);
 }
 /* Rapikan penyimpanan Drive (dry run / sungguhan); ulangi hingga sisa habis */
+/* Gambar tercecer di root My Drive yang namanya TIDAK ber-pola aplikasi.
+   Hanya didaftar, tidak dipindah -- asal-usulnya tidak bisa dipastikan dari
+   namanya, dan menebak berarti berisiko menaruh foto pribadi ke dalam berkas
+   pertanggungjawaban. Daftar ini ada supaya file itu TERLIHAT; selama ini ia
+   tak muncul di layar mana pun sehingga bisa menumpuk tanpa disadari. */
+function _migLiarHtml(res){
+  if(!res || !res.liarJml) return '';
+  var h='<div style="margin-top:8px;padding:8px 10px;background:var(--bs-a21);border-radius:10px">'
+    +'<b style="color:var(--bs-a2)">&#9888; '+res.liarJml+' gambar tercecer di root My Drive</b>'
+    +'<div style="font-size:11px;margin:3px 0 6px">Namanya tidak mengikuti pola aplikasi, jadi <b>tidak dipindah otomatis</b>. '
+    +'Buka satu per satu; bila ternyata nota, unggah ulang lewat transaksinya lalu hapus yang di root.</div>'
+    +'<div style="max-height:180px;overflow:auto;font-size:11px">';
+  for(var i=0;i<res.liar.length;i++){
+    var f=res.liar[i];
+    h+='<div style="padding:2px 0"><a href="'+esc(f.url)+'" target="_blank" rel="noopener">'+esc(f.nama)+'</a>'
+      +' <span style="color:var(--bs-n600)">'+esc(f.tanggal)+' · '+Math.round((+f.ukuran||0)/1024)+' KB</span></div>';
+  }
+  if(res.liarJml>res.liar.length) h+='<div style="color:var(--bs-n600)">…dan '+(res.liarJml-res.liar.length)+' lagi</div>';
+  return h+'</div></div>';
+}
 var _migTot=0;
 function rapikanDrive(dryRun){
   if(!dryRun && !confirm('Pindahkan semua file lama ke struktur folder per transaksi?\nFile ID tetap (link tidak rusak). Lanjut?')) return;
@@ -1961,10 +1981,12 @@ function _migStep(dryRun){
       if(dryRun){
         showLoading(false);
         info.innerHTML='Pratinjau: <b>'+(res.moved||0)+'</b> file akan dipindah, '+(res.skipped||0)+' sudah rapi (dari '+res.total+'). '
-          +(res.log&&res.log.length?('<br><span style="font-size:11px">'+esc(res.log.slice(0,8).join(' · '))+'…</span>'):'');
+          +(res.log&&res.log.length?('<br><span style="font-size:11px">'+esc(res.log.slice(0,8).join(' · '))+'…</span>'):'')
+          +_migLiarHtml(res);
         return;
       }
-      info.innerHTML='Dipindah: <b>'+_migTot+'</b> · dilewati '+(res.skipped||0)+' · gagal '+(res.failed||0)+' (total '+res.total+')';
+      info.innerHTML='Dipindah: <b>'+_migTot+'</b> · dilewati '+(res.skipped||0)+' · gagal '+(res.failed||0)+' (total '+res.total+')'
+        +_migLiarHtml(res);
       // Bila masih ada yang dipindah pada batch ini, lanjutkan batch berikutnya
       if((res.moved||0)>0){ _migStep(false); }
       else { showLoading(false); toast('Rapikan selesai: '+_migTot+' file dipindah','success'); }

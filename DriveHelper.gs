@@ -162,13 +162,34 @@ var DriveHelper = (function () {
       } catch (e) { failed++; if (log.length < 80) log.push('GAGAL ' + c.fileId + ': ' + e.message); }
     }
     // Sapu file "liar" di root My Drive yang ber-pola nama aplikasi (tak tercatat di sheet).
+    //
+    // Gambar di root yang namanya TIDAK ber-pola aplikasi hanya DIDAFTAR, tidak
+    // dipindah. Asal-usulnya tidak bisa dipastikan dari nama seperti
+    // "1783384474...jpg.jpg" -- bisa nota, bisa foto pribadi, bisa keluaran
+    // aplikasi lain milik pemilik akun yang sama. Memindahkannya diam-diam ke
+    // folder bukti transaksi berarti menebak, dan tebakan yang salah menaruh
+    // foto pribadi ke dalam berkas pertanggungjawaban. Didaftar saja supaya
+    // terlihat dari dalam aplikasi -- selama ini ia tak terlihat di mana pun,
+    // itulah sebabnya ia bisa menumpuk berbulan-bulan tanpa disadari.
+    var liar = [], liarJml = 0;
     if (opts.sweepRoot !== false && ((new Date()).getTime() - startMs) <= TIME) {
       var it = DriveApp.getRootFolder().getFiles();
       while (it.hasNext()) {
-        if (moved >= limit || ((new Date()).getTime() - startMs) > TIME) break;
+        if (((new Date()).getTime() - startMs) > TIME) break;
         var fl = it.next();
         var no = _noFromName(fl.getName());
-        if (!no) continue;
+        if (!no) {
+          if (String(fl.getMimeType() || '').indexOf('image/') === 0) {
+            liarJml++;
+            if (liar.length < 50) liar.push({
+              fileId: fl.getId(), nama: fl.getName(), ukuran: fl.getSize(),
+              tanggal: Utilities.formatDate(fl.getDateCreated(), Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+              url: fl.getUrl()
+            });
+          }
+          continue;
+        }
+        if (moved >= limit) continue;
         try {
           var fol = ctxFolder({ noTransaksi: no });
           if (dry) { if (log.length < 80) log.push('RENCANA(sapu): ' + fl.getName() + ' → Txn-' + ('000' + no).slice(-4)); moved++; continue; }
@@ -180,7 +201,8 @@ var DriveHelper = (function () {
     if (!dry) {
       try { AuditLog.write('MIGRATE_DRIVE', 'Drive', '', 'dipindah=' + moved + ' dilewati=' + skipped + ' gagal=' + failed); } catch (e) {}
     }
-    return { moved: moved, skipped: skipped, failed: failed, log: log, total: cands.length };
+    return { moved: moved, skipped: skipped, failed: failed, log: log, total: cands.length,
+             liar: liar, liarJml: liarJml };
   }
 
   return {
