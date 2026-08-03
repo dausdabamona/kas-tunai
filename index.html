@@ -159,6 +159,22 @@
     display:flex;justify-content:space-between;gap:10px;font-variant-numeric:tabular-nums}
   .kmp-t b{font-size:13px}
   .kmp-t.salah{background:var(--bs-a21);color:var(--bs-a2)}
+  /* Berkas GUP: SPP → DRPP → SPBy → transaksi */
+  .gup-k{border:1px solid var(--bs-n300);border-radius:12px;margin-bottom:10px;overflow:hidden}
+  .gup-k.tertinggal{border-color:var(--bs-a2)}
+  .gup-h{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bs-n200)}
+  .gup-h .jd{flex:1;min-width:0;font-family:var(--bs-fh);font-size:15px;font-weight:600}
+  .gup-h .nl{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+  .gup-k.tertinggal .gup-h{background:var(--bs-a21)}
+  .gup-sub{padding:6px 12px;font-size:11.5px;color:var(--bs-n700);border-bottom:1px solid var(--bs-n200)}
+  .gup-sub b{color:var(--bs-a2)}
+  .gup-d{padding:6px 12px 8px}
+  .gup-d>.t{font-size:12px;font-weight:700;color:var(--bs-n700);margin:6px 0 2px}
+  .gup-s{margin-left:14px;border-left:2px solid var(--bs-n300);padding-left:8px;margin-bottom:4px}
+  .gup-s>.t{font-size:11.5px;color:var(--bs-n600);margin-bottom:1px}
+  .gup-t{display:flex;gap:8px;font-size:12px;padding:1px 0;font-variant-numeric:tabular-nums}
+  .gup-t .u{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gup-t .b0{color:var(--bs-a2);font-weight:700}
   .chip.pk-isi{cursor:pointer}
   .chip.pk-isi:hover{outline:2px solid var(--bs-a2);outline-offset:1px}
   .pk-spby{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;
@@ -490,6 +506,7 @@
       <button id="btnPickSpby" class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="toggleSpbyPick()">&#9745; Pilih untuk Gabung</button>
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="eksporSakti()">&#11015; Ekspor Data SAKTI</button>
       <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalPagu()">&#128200; Impor Pagu</button>
+      <button class="btn ghost" style="width:auto;padding:6px 12px;margin:0 0 0 6px" onclick="openModalGup()">&#128193; Berkas GUP</button>
     </div>
   </div>
 
@@ -1164,6 +1181,21 @@
     <button class="btn" onclick="submitSpbyGab()">Simpan SPBY ke transaksi terpilih</button>
     <button class="btn b-dark" onclick="cetakSpbyGab()">&#128424; Cetak SPBY Gabungan</button>
     <button class="btn ghost" onclick="closeModal('modalSpbyGab')">Tutup</button>
+  </div>
+</div>
+
+<!-- ================= MODAL BERKAS GUP ================= -->
+<div class="modal" id="modalGup">
+  <div class="sheet" style="max-width:900px">
+    <h2>&#128193; Berkas Pertanggungjawaban GUP</h2>
+    <div class="tgl" style="margin-bottom:10px">Satu <b>SPP = satu GUP</b>. Susunannya
+      <b>SPP &rarr; DRPP &rarr; SPBy &rarr; transaksi &rarr; nota</b>, langsung dari nomor yang sudah
+      diisi di tiap transaksi. Tombol <b>Ekspor ZIP</b> membungkus seluruh bukti satu GUP dengan
+      susunan folder yang sama, siap dicetak berurutan. Foto <b>tidak dipindah</b> — ia tetap di
+      folder transaksinya, ZIP ini salinan untuk diserahkan.</div>
+    <div id="gupList" style="max-height:460px;overflow:auto"></div>
+    <div id="gupInfo" class="tgl" style="margin-top:8px"></div>
+    <button class="btn ghost" onclick="closeModal('modalGup')">Tutup</button>
   </div>
 </div>
 
@@ -3005,6 +3037,81 @@ function submitPecah(){
     .withFailureHandler(fail)
     .serverPecahTransaksi(_tok, _pcTarget, parts);
 }
+/* ============== Berkas pertanggungjawaban GUP ==============
+ * Satu SPP = satu GUP (dikonfirmasi pengguna 3 Agu 2026). Hierarkinya dibaca
+ * apa adanya dari nomor yang sudah tersimpan di tiap transaksi; tidak ada
+ * penomoran baru dan tidak ada berkas yang dipindah dari rumahnya.
+ */
+function openModalGup(){
+  document.getElementById('gupList').innerHTML='<div class="empty">Memuat...</div>';
+  document.getElementById('gupInfo').innerHTML='';
+  openModal('modalGup');
+  google.script.run.withSuccessHandler(_gupRender).withFailureHandler(fail).serverDaftarGup(_tok);
+}
+/* Beri awalan HANYA bila nomornya belum memuatnya. Nomor di satker ini kadang
+   sudah ditulis "DRPP-11", dan menempel tanpa memeriksa memberi "DRPP DRPP-11".
+   Aturan yang sama dipakai BerkasGup._seg() untuk nama folder di dalam ZIP. */
+function _gupLbl(awalan, nilai){
+  var v=String(nilai||'').trim();
+  if(!v) return '';
+  return (v.toUpperCase().indexOf(awalan.toUpperCase())===0) ? v : (awalan+' '+v);
+}
+function _gupRender(d){
+  var box=document.getElementById('gupList'), list=(d&&d.gup)||[];
+  if(!list.length){ box.innerHTML='<div class="empty">Belum ada belanja yang tercatat.</div>'; return; }
+  var h='', i;
+  for(i=0;i<list.length;i++){
+    var g=list[i];
+    // Kelompok tanpa SPP = belanja yang belum masuk GUP mana pun. Ia ditandai
+    // magenta karena itulah pekerjaan yang tertinggal, bukan sekadar catatan.
+    var judul = g.belumSpp ? 'Belum masuk GUP mana pun' : ('GUP &middot; '+esc(_gupLbl('SPP', g.spp)));
+    h+='<div class="gup-k'+(g.belumSpp?' tertinggal':'')+'">'
+      +'<div class="gup-h"><span class="jd">'+judul+'</span>'
+      +'<span class="nl">'+rupiah(g.nilai)+'</span>'
+      +(g.belumSpp?'':('<button class="btn ghost" style="width:auto;padding:5px 10px;margin:0" '
+        +'onclick="_gupEkspor(\''+esc(g.spp)+'\')">&#11015; Ekspor ZIP</button>'))
+      +'</div>';
+    h+='<div class="gup-sub">'+g.jmlTxn+' transaksi &middot; '+g.jmlBukti+' berkas bukti'
+      +(g.tanpaBukti?(' &middot; <b>'+g.tanpaBukti+' transaksi belum ada buktinya</b>'):'')
+      +(g.tanpaSpby?(' &middot; <b>'+g.tanpaSpby+' belum punya SPBy</b>'):'')
+      +'</div><div class="gup-d">';
+    for(var a=0;a<g.drpp.length;a++){
+      var dr=g.drpp[a];
+      h+='<div class="t">'+(dr.belumDrpp?'(belum ada DRPP)':esc(_gupLbl('DRPP', dr.drpp)))
+        +' &middot; '+rupiah(dr.nilai)+'</div>';
+      for(var b=0;b<dr.spby.length;b++){
+        var sp=dr.spby[b];
+        h+='<div class="gup-s"><div class="t">'+(sp.belumSpby?'(belum ada SPBy)':esc(_gupLbl('SPBy', sp.spby)))+'</div>';
+        for(var c=0;c<sp.txn.length;c++){
+          var t=sp.txn[c];
+          h+='<div class="gup-t"><span class="u">No '+esc(String(t.no))+' &middot; '
+            +esc(t.kegiatan||'(tanpa keterangan)')+'</span>'
+            +'<span class="'+(t.jmlBukti?'':'b0')+'">'+t.jmlBukti+' bukti</span>'
+            +'<span>'+rupiah(t.kredit)+'</span></div>';
+        }
+        h+='</div>';
+      }
+    }
+    h+='</div></div>';
+  }
+  box.innerHTML=h;
+}
+function _gupEkspor(spp){
+  if(!confirm('Bungkus seluruh bukti GUP / SPP '+spp+' jadi satu ZIP?\n\nFile aslinya TIDAK dipindah — ZIP ini salinan untuk diserahkan.')) return;
+  showLoading(true,'Membungkus berkas...');
+  var info=document.getElementById('gupInfo');
+  google.script.run
+    .withSuccessHandler(function(r){
+      showLoading(false);
+      info.innerHTML='&#9989; <b>'+esc(r.nama)+'</b> &mdash; '+r.jml+' berkas dari '+r.jmlTxn+' transaksi'
+        +(r.gagal?(' <span style="color:var(--bs-a2)">('+r.gagal+' tidak terbaca)</span>'):'')
+        +' &middot; <a href="'+esc(r.url)+'" target="_blank" rel="noopener">Unduh</a>';
+      toast('Berkas GUP siap: '+r.jml+' file','success');
+    })
+    .withFailureHandler(fail)
+    .serverEksporGup(_tok, spp);
+}
+
 /* ============== SPBY Gabungan ============== */
 function openModalSpbyGab(preselect){
   document.getElementById('sgNo').value='';

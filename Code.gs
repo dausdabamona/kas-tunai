@@ -452,6 +452,17 @@ function serverUpdateTransaksi(token, no, data) {
     return res;
   });
 }
+/* ===== Berkas pertanggungjawaban GUP (SPP → DRPP → SPBy → transaksi) ===== */
+function serverDaftarGup(token) {
+  return _run(token, function (auth) { return BerkasGup.daftar(); });
+}
+/** Bungkus seluruh bukti satu GUP jadi ZIP di Exports/. Butuh hak tulis. */
+function serverEksporGup(token, noSpp) {
+  return _run(token, function (auth) {
+    if (auth.role !== 'admin' && auth.role !== 'full') throw new Error('Akses ditolak');
+    return BerkasGup.ekspor(noSpp);
+  });
+}
 /** Rincian pembebanan satu transaksi, untuk mengisi ulang form Ubah. */
 function serverGetPembebanan(token, no) {
   return _run(token, function (auth) { return Anggaran.getPembebanan(no); });

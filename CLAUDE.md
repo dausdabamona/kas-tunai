@@ -32,6 +32,7 @@ dua entry point: `index.html` (desktop) dan `mobile.html` (HP).
 | `KasTunai.gs` | Transaksi, multi-nota, foto barang, SPBY, rekap, `getNotaPajak` |
 | `FotoNota.gs` | Foto per nota (`NO_TRANSAKSI` + `NOTA_ID`) |
 | `Anggaran.gs` | Pagu POK & `ketersediaan()` — **berbasis `KODE_ITEM`, bukan akun** + pembebanan satu transaksi ke beberapa item (`simpanPembebanan`) |
+| `BerkasGup.gs` | Berkas pertanggungjawaban **SPP(=GUP) → DRPP → SPBy → transaksi**; ekspor ZIP |
 | `Rekonsiliasi.gs` | Impor rek koran / SAKTI, pencocokan |
 | `Pengembalian.gs`, `MasterPenyedia.gs`, `SuratTugas.gs`, `BuktiPD.gs`, `ScanInbox.gs`, `Users.gs`, `Settings.gs` | modul pendukung |
 | `Code.gs` | `doGet()` + seluruh `server*` |

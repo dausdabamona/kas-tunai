@@ -93,6 +93,33 @@ itu mencatat perbedaan v1→v2 baris per baris.
 
 ---
 
+## 0e. Berkas pertanggungjawaban GUP — 3 Agu 2026 (🟡 belum diuji manual)
+
+`BerkasGup.gs` + tombol **Berkas GUP** di toolbar beranda.
+
+**Keputusan pengguna (3 Agu 2026): satu SPP = satu GUP.** Karena itu TIDAK ada kolom
+`NO_GUP` dan tidak boleh ditambahkan — hierarkinya dibaca apa adanya dari kolom yang
+sudah ada: `NO_SPP` → `NO_DRPP` → `NO_SPBY` → transaksi.
+
+**Aturan yang menjaga berkasnya benar:**
+
+- **Foto TIDAK dipindah ke pohon folder kedua.** Ia tetap di
+  `Bukti Transaksi/{tahun}/{bulan}/Txn-NNNN/`; yang dibuat adalah salinan gabungan
+  sekali pakai (ZIP) di `Exports/`. Kalau fotonya disalin permanen ke pohon per-GUP,
+  cepat atau lambat kedua salinan berbeda dan tidak ada yang tahu mana yang benar.
+- `daftar()` **membuang** transaksi terhapus, pindah dana (`TF-`), dan transaksi masuk.
+  Ketiganya bukan belanja dan tidak boleh masuk berkas pertanggungjawaban.
+- Transaksi yang **belum punya SPP/DRPP/SPBy tetap ditampilkan** dalam kelompok
+  bertanda `belumSpp`/`belumDrpp`/`belumSpby` — justru itu pekerjaan yang tertinggal.
+  Kelompok tanpa SPP sengaja **tidak diberi tombol Ekspor**.
+- `_seg()` / `_gupLbl()` memberi awalan **hanya bila nomornya belum memuatnya**. Nomor
+  di satker ini kadang sudah ditulis `DRPP-11`; tanpa pemeriksaan itu, folder di dalam
+  ZIP jadi `DRPP-DRPP-11`.
+
+Uji: `uji-gup.js` (28 asersi, node + sheet tiruan, termasuk jalur di dalam ZIP) dan
+`uji-gup-ui.js` (14 asersi, Chromium). Keduanya dibuktikan bisa gagal.
+**Belum dijalankan pengguna terhadap data sungguhan.**
+
 ## 0d. Pembebanan satu transaksi ke beberapa item POK — 31 Jul 2026 (🟡 belum diuji manual)
 
 Sheet baru **`Pembebanan Item`** (`CONFIG.SHEETS.PEMBEBANAN`). Terbentuk sendiri saat
