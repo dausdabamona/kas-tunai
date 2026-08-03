@@ -93,6 +93,45 @@ itu mencatat perbedaan v1→v2 baris per baris.
 
 ---
 
+## 0g. Papan kerja v3 — desain ulang, 3 Agu 2026 (🟡 belum diuji manual)
+
+Spec: `docs/superpowers/specs/2026-08-03-papan-kerja-v3-design.md`. Menggantikan susunan
+`#viewPapan` hasil rencana 29 Jul.
+
+**Empat asumsi di spec ternyata tidak sesuai kode; diperiksa dulu sebelum ditulis.**
+Ini bukan koreksi kosmetik — tiga di antaranya akan jadi kerja sia-sia:
+
+| Asumsi spec | Kenyataan di kode |
+|---|---|
+| `scanBelumKait` = berkas scan "tanpa `NO_TRANSAKSI`", perlu fungsi list berfilter | `ScanInbox` membaca **folder Drive**; tidak ada kolom `NO_TRANSAKSI` sama sekali. Berkas yang sudah dipakai dipindah ke `_Terpakai` oleh `archive()`, jadi seluruh isi kotak masuk memang belum dikaitkan. Cukup `ScanInbox.list(50)` — tidak ada penyaringan yang perlu ditulis. |
+| Tambahkan `kategoriPajak` ke `serverGetPapanKerja` | `PAJAK_REF` **sudah** global di klien, diisi dari `serverGetDashboard`. Menambahkannya lagi hanya menarik data yang sama dua kali. Tidak dikerjakan. |
+| Aksi `nota`: field "Total nota" + "Kembalian" | Menulis total mentah akan menyimpang dari `NOTA_TOTAL` yang diturunkan dari baris nota. Panel membuat **baris nota sungguhan** lewat `serverTambahNota` (nama penyedia + nilai + tanggal). |
+| `lastImport` perlu diformat di server | Sudah berupa `{tanggal, hariLalu}` dari `Rekonsiliasi._parseBatch()`. Bugnya murni di klien: dirangkai langsung jadi `[object Object]`. |
+
+**Bug laten yang sekalian ditambal:** `ScanInbox.list()` **melempar** bila folder scan
+belum diatur. Versi lama memanggilnya tanpa penjagaan, jadi seluruh Papan kerja gagal
+muat hanya karena satu pengaturan opsional kosong. Sekarang dibungkus `try`.
+
+**Yang wajib dijaga sama:** `_pkJumlahAntrean()` di `Code.gs` dan `_pkKriteriaTindakan()`
+di `index.html` adalah dua salinan kriteria yang sama. Bila salah satu berubah, badge pil
+akan menampilkan angka yang tidak cocok dengan isinya.
+
+`_pkFokusHariIni()` **membuang kemunculan kedua** satu transaksi. Satu transaksi bisa
+memenuhi tiga antrean sekaligus; tanpa penjagaan itu ia memenuhi seluruh lima slot fokus.
+
+Panel aksi berkunci **tempat + jenis + id** (`pkAksiF_…` / `pkAksiA_…`): item yang sama
+bisa tampil di blok fokus dan di antrean sekaligus, dan id tanpa pembeda akan saling
+menimpa.
+
+Uji: `uji-pk3.js` — 38 asersi lewat **klik sungguhan** (bukan `page.evaluate`), dengan
+mata-mata pada stub `google.script.run` untuk membuktikan simpan **tidak** memanggil
+`serverGetPapanKerja` kedua kali. Regresi tema `kt-tema-ui.js` tetap 22 PASS / 0 GAGAL.
+Dibuktikan bisa gagal lewat tiga kerusakan sengaja. **Belum dibuka pengguna di browser
+sungguhan.**
+
+Belum dikerjakan dari spec: tombol "Catat transaksi" dibiarkan di `.topbar-v2`
+(spec §2.1 mengizinkan bila memindahkannya mengganggu tab lain).
+
 ## 0f. Pindah dana keluar dari daftar tindakan Papan kerja — 3 Agu 2026
 
 `_pkKriteriaTindakan()` sekarang mengembalikan `[]` untuk pindah dana (`REF_TRANSFER`

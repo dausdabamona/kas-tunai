@@ -133,20 +133,31 @@ function serverGetPapanKerja(token) {
     var full = (role === 'admin' || role === 'full');
     var tx = KasTunai.getTransaksi();
     if (!full) { for (var i = 0; i < tx.length; i++) { delete tx[i].saldo; } }
+
+    // Kotak masuk scan TIDAK punya kolom NO_TRANSAKSI. ScanInbox membaca sebuah
+    // folder Drive; berkas yang sudah dipakai dipindahkan ke '_Terpakai' oleh
+    // ScanInbox.archive(). Jadi seluruh isi kotak masuk memang "belum dikaitkan"
+    // menurut definisinya -- tidak ada penyaringan yang perlu dilakukan.
+    //
+    // Dibungkus try: _folder() MELEMPAR bila folder scan belum diatur di
+    // Pengaturan, dan tanpa penjagaan ini seluruh Papan kerja ikut gagal muat
+    // hanya karena satu pengaturan opsional belum diisi.
+    var scan = [];
+    try { scan = ScanInbox.list(50); } catch (e) { scan = []; }
+
     return {
       transaksi: tx,
       saldo: full ? KasTunai.ringkasanSaldo() : null,
       role: role,
       isAdmin: (role === 'admin'),
-      serapan: Anggaran.ringkasSerapan(),
-      // v2 menetapkan kotak masuk scan menampilkan 3 baris -- ambil 3, bukan
-      // 60 (bawaan) lalu dipotong di klien.
-      scanTerbaru: ScanInbox.list(3),
+      scanBelumKait: scan,
       batasSetorTanggal: CONFIG.BATAS_SETOR_TANGGAL,
       // Panggil fungsi modul langsung, BUKAN endpoint serverRingkasanRekon --
       // endpoint tidak boleh memanggil endpoint. Argumen '' = semua periode.
       rekon: Rekonsiliasi.ringkasan(''),
-      antreanSemua: AntreanStatus.getSemua(),
+      // Hitungan PENUH tiap antrean, dihitung di server. Badge pil harus
+      // menampilkan angka sebenarnya, bukan panjang array yang sudah dipotong.
+      jumlahAntrean: _pkJumlahAntrean(tx, scan.length),
       // Status setor pajak tersimpan per NOTA (kolom SETOR_STATUS sheet Multi Nota),
       // bukan per transaksi. getSemuaNota() sudah mengembalikannya; hitung di sini
       // supaya klien tidak perlu menarik seluruh daftar nota hanya untuk satu angka.
@@ -159,6 +170,65 @@ function serverGetPapanKerja(token) {
         return n;
       })()
     };
+  });
+}
+
+/**
+ * Hitungan penuh tiap antrean Papan kerja.
+ *
+ * Kriterianya WAJIB sama persis dengan _pkKriteriaTindakan() di index.html --
+ * bila berbeda, badge pil menampilkan angka yang tidak cocok dengan isinya.
+ * Rumus sisaPUM adalah salinan mode ringkas hitungNeraca (docs/HANDOFF-MOBILE.md
+ * bagian 2); bila rumus itu berubah, KEDUA salinan harus ikut diperbarui.
+ *
+ * Pindah dana (REF_TRANSFER diawali 'TF-') dikecualikan dari semuanya: ia tidak
+ * punya siklus pertanggungjawaban sama sekali.
+ */
+function _pkJumlahAntrean(tx, jmlScan) {
+  var n = { spby: 0, pajak: 0, nota: 0, foto: (jmlScan || 0), rekon: 0 };
+  for (var i = 0; i < tx.length; i++) {
+    var t = tx[i];
+    var kredit = Util.num(t.kredit);
+    if (String(t.statusRekon || '').toUpperCase() === 'NILAI_BEDA') n.rekon++;
+    if (kredit <= 0) continue;
+    if (String(t.refTransfer || '').indexOf('TF-') === 0) continue;
+    if (!t.noSpby) n.spby++;
+    if (t.pajakKatIdx === null || t.pajakKatIdx === undefined || t.pajakKatIdx === '') n.pajak++;
+    var um = (Util.num(t.uangDiserahkan) > 0) ? Util.num(t.uangDiserahkan) : kredit;
+    if ((um - Util.num(t.notaTotal) - Util.num(t.kembalianTotal)) > 0) n.nota++;
+  }
+  return n;
+}
+
+/**
+ * Kaitkan satu berkas kotak masuk scan ke sebuah transaksi.
+ *
+ * Tiga langkah modul (ambil berkas → unggah sebagai foto nota → arsipkan) yang
+ * digabung jadi SATU endpoint. Menyusunnya di klien akan membuat tiga round-trip
+ * yang bisa putus di tengah dan meninggalkan berkas terunggah tapi tidak
+ * terarsipkan -- muncul lagi di kotak masuk seolah belum dikerjakan.
+ *
+ * notaId: foto nota berkunci (NO_TRANSAKSI, NOTA_ID). Bila transaksinya belum
+ * punya nota sama sekali, dipakai 1 -- fotonya menempel pada nota pertama yang
+ * nanti dibuat, bukan hilang.
+ */
+function serverKaitkanScan(token, fileId, noTransaksi, keterangan) {
+  return _run(token, function (auth) {
+    if (auth.role !== 'admin' && auth.role !== 'full') throw new Error('Akses ditolak');
+    var no = String(noTransaksi == null ? '' : noTransaksi).trim();
+    if (!no) throw new Error('Nomor transaksi belum diisi.');
+    if (!getRowByTransactionId(no)) throw new Error('Transaksi No ' + no + ' tidak ditemukan.');
+    var notas = KasTunai.getMultiNota(no);
+    var notaId = notas.length ? notas[notas.length - 1].urutan : 1;
+    var f = ScanInbox.getFile(fileId);
+    FotoNota.uploadFotoNota(no, notaId, [{
+      base64: f.base64, mimeType: f.mimeType,
+      lat: '', lng: '', keterangan: String(keterangan || f.namaFile || '')
+    }]);
+    // Diarsipkan PALING AKHIR: bila unggahnya gagal, berkasnya harus tetap ada
+    // di kotak masuk supaya bisa dicoba lagi.
+    ScanInbox.archive(fileId);
+    return { success: true, no: no, notaId: notaId };
   });
 }
 

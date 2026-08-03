@@ -92,48 +92,77 @@
 
   .wrap{padding:14px;max-width:1180px;margin:0}
 
-  /* ---- Papan kerja ---- */
-  .pk-grid{display:flex;gap:18px;align-items:flex-start}
-  .pk-main{flex:1;min-width:0}
-  .pk-side{flex:0 0 404px;display:flex;flex-direction:column;gap:14px}
-  /* Lima kartu: saldo tunai, bank, belum SPBY, pajak, pindah dana. Dibuat
-     mengalir (auto-fit) alih-alih jumlah kolom tetap supaya penambahan kartu
-     berikutnya tidak meninggalkan satu kartu sendirian di baris kedua. */
-  .pk-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:18px}
-  .pk-card{border-radius:20px;padding:20px 22px;background:var(--bs-n200)}
-  .pk-card.utama{background:var(--bs-ac);color:var(--bs-paper)}
-  .pk-card .lbl{font-size:12px;font-weight:700;opacity:.85;margin-bottom:6px}
-  .pk-card .num{font-family:var(--bs-fh);font-weight:600;font-size:24px;
-    font-variant-numeric:tabular-nums}
-  .pk-card.utama .num{font-size:31px}
-  .pk-card .sub{font-size:11.5px;margin-top:4px;color:var(--bs-n600)}
-  .pk-card.utama .sub{color:var(--bs-paper);opacity:.9}
-  .pk-card .sub.lewat{color:var(--bs-a2);font-weight:700}
-  .pk-sec{background:var(--bs-paper);border:1px solid var(--bs-n300);
-    border-radius:16px;padding:16px 18px;margin-bottom:16px}
-  .pk-h{font-family:var(--bs-fh);font-weight:600;font-size:16px;color:var(--bs-ink)}
-  .pk-sub{font-size:12px;color:var(--bs-n600);margin-top:2px;margin-bottom:10px}
-  .pk-row{display:grid;align-items:center;gap:10px;min-height:48px;
-    padding:6px 8px;border-radius:14px;cursor:pointer}
-  .pk-row:hover{background:var(--bs-n200)}
-  .pk-row.tindakan{grid-template-columns:1fr 148px 130px}
-  .pk-row.pagu{grid-template-columns:1fr 120px}
-  .pk-row.pagu.tipis{background:var(--bs-a21)}
-  .pk-row .t1{font-size:15px;color:var(--bs-ink)}
-  .pk-row .t2{font-size:12px;color:var(--bs-n600);margin-top:2px}
-  .pk-row .nom{text-align:right;font-family:var(--bs-fh);font-weight:600;
-    font-variant-numeric:tabular-nums}
-  .pk-bar{height:7px;width:54px;border-radius:999px;background:var(--bs-n300);
-    overflow:hidden;display:inline-block;vertical-align:middle}
-  .pk-bar>i{display:block;height:100%;background:var(--bs-ac)}
-  .pk-bar.tipis>i{background:var(--bs-a2)}
-  .pk-pct{font-size:13px;font-weight:600;margin-left:8px;
-    font-variant-numeric:tabular-nums}
-  .pk-antre{background:var(--bs-a2);color:var(--bs-paper);border-radius:20px;
-    padding:16px 18px}
-  .pk-antre .pk-h{color:var(--bs-paper)}
-  .pk-tenang{background:var(--bs-n200);border-radius:16px;padding:16px 18px;
-    cursor:pointer}
+  /* ---- Papan kerja v3 ----
+     Tanpa kotak: hierarkinya dibawa ukuran huruf dan garis, bukan kartu
+     berlatar. Lima kartu radius 20px versi lama memakan seluruh lipatan
+     pertama tanpa menjawab "apa yang harus saya kerjakan hari ini". */
+  .pk3{max-width:1320px;padding:34px 44px 72px 40px}
+  .pk3-tgl{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--bs-n600)}
+  .pk3-judul{font-family:var(--bs-fh);font-size:38px;font-weight:600;color:var(--bs-ink);
+    line-height:1.15;margin:10px 0 0;max-width:22ch}
+  .pk3-lead{font-size:16px;color:var(--bs-n700);max-width:62ch;margin:12px 0 0;line-height:1.5}
+
+  /* Empat angka telanjang, tanpa kotak/radius/latar. */
+  .pk3-angka{display:flex;flex-wrap:wrap;gap:56px;margin:34px 0 6px}
+  .pk3-a .lbl{font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--bs-n600);margin-bottom:6px}
+  .pk3-a .num{font-family:var(--bs-fh);font-size:34px;font-weight:600;
+    font-variant-numeric:tabular-nums;color:var(--bs-ink);line-height:1.1}
+  .pk3-a .num.perlu{color:var(--bs-a2)}
+  .pk3-a .sub{font-size:13px;color:var(--bs-n600);margin-top:4px}
+
+  .pk3-blok{margin-top:44px}
+  .pk3-blok-h{display:flex;align-items:baseline;gap:14px;
+    border-bottom:2px solid var(--bs-ink);padding-bottom:8px;margin-bottom:4px}
+  .pk3-blok-n{font-family:var(--bs-fh);font-size:22px;font-weight:600;color:var(--bs-ink)}
+  .pk3-sisa{margin-left:auto;font-size:13px;color:var(--bs-n600)}
+
+  /* Lima hal hari ini: baris bernomor, dipisah garis -- bukan kartu. */
+  .pk3-f{display:grid;grid-template-columns:52px 1fr 200px 170px;gap:20px;
+    align-items:start;padding:18px 0;border-top:1px solid var(--bs-n300)}
+  .pk3-f:first-child{border-top:none}
+  .pk3-f .urut{font-family:var(--bs-fh);font-size:30px;color:var(--bs-n400);
+    font-variant-numeric:tabular-nums;line-height:1}
+  .pk3-f .jd{font-size:19px;color:var(--bs-ink);line-height:1.3}
+  .pk3-f .mt{font-size:13px;color:var(--bs-n600);margin-top:3px}
+  .pk3-f .al{font-size:14px;color:var(--bs-n700);margin-top:8px;max-width:58ch;line-height:1.45}
+  .pk3-f .nom{text-align:right;font-family:var(--bs-fh);font-size:19px;font-weight:600;
+    font-variant-numeric:tabular-nums;color:var(--bs-ink)}
+  .pk3-f .aksi{text-align:right}
+  .pk3-tenang{font-size:15px;color:var(--bs-n600);font-style:italic;padding:20px 0;max-width:58ch}
+
+  /* Tombol pil aksi utama & outline -- target sentuh >= 40px. */
+  .pk3-btn{min-height:40px;padding:0 18px;border-radius:999px;border:none;
+    background:var(--bs-ac);color:var(--bs-paper);font:inherit;font-size:13.5px;
+    font-weight:600;cursor:pointer}
+  .pk3-btn:hover{background:var(--bs-ac7)}
+  .pk3-btn.garis{background:transparent;color:var(--bs-ac7);
+    border:1px solid var(--bs-ac);min-height:36px;padding:0 14px;font-size:12.5px}
+  .pk3-btn.netral{background:transparent;color:var(--bs-n700);
+    border:1px solid var(--bs-n400);min-height:36px;padding:0 14px;font-size:12.5px}
+
+  /* Pemilih antrean */
+  .pk3-pil{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 0}
+  .pk3-pil button{min-height:44px;padding:0 18px;border-radius:999px;
+    border:1px solid var(--bs-n400);background:transparent;color:var(--bs-n800);
+    font:inherit;font-size:13.5px;cursor:pointer;display:flex;align-items:center;gap:8px}
+  .pk3-pil button.on{background:var(--bs-ink);color:var(--bs-paper);border-color:var(--bs-ink)}
+  .pk3-pil .bdg{font-variant-numeric:tabular-nums;font-weight:600;font-size:12.5px;opacity:.75}
+  .pk3-ket{font-size:15px;color:var(--bs-n700);max-width:64ch;margin:14px 0 4px;line-height:1.5}
+
+  /* Panel aksi inline, satu komponen untuk empat jenis. */
+  .pk3-aksi-p{background:var(--bs-ac1);border-radius:14px;max-width:720px;
+    padding:14px 16px;margin:4px 0 10px}
+  .pk3-aksi-p .pandu{font-size:13px;color:var(--bs-n700);margin-bottom:10px;line-height:1.45}
+  .pk3-aksi-p .baris{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+  .pk3-aksi-p label{display:block;font-size:11.5px;font-weight:700;
+    color:var(--bs-n600);margin-bottom:4px}
+  .pk3-aksi-p input,.pk3-aksi-p select{min-height:40px;border:1px solid var(--bs-n300);
+    border-radius:10px;padding:0 10px;font:inherit;font-size:13px;
+    background:var(--bs-paper);color:var(--bs-ink)}
+  .pk3-aksi-p .lebar{flex:1;min-width:220px}
+  .pk3-aksi-p .tombol{display:flex;gap:8px;margin-top:12px}
+
   /* Grup dua tingkat di daftar tindakan: bulan lalu DRPP */
   #txItemCari{width:100%;min-height:40px;border:1px solid var(--bs-n300);border-radius:10px;
     padding:0 10px;font:inherit;font-size:12.5px;color:var(--bs-ink);
@@ -178,43 +207,59 @@
   .gup-t{display:flex;gap:8px;font-size:12px;padding:1px 0;font-variant-numeric:tabular-nums}
   .gup-t .u{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .gup-t .b0{color:var(--bs-a2);font-weight:700}
-  .chip.pk-isi{cursor:pointer}
-  .chip.pk-isi:hover{outline:2px solid var(--bs-a2);outline-offset:1px}
-  .pk-spby{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;
-    margin:2px 0 8px 20px;padding:10px 12px;background:var(--bs-n200);border-radius:12px}
-  .pk-spby label{font-size:11.5px;font-weight:700;color:var(--bs-n600)}
-  .pk-spby input{min-height:40px;border:1px solid var(--bs-n300);border-radius:10px;
-    padding:0 10px;font:inherit;font-size:13px;background:var(--bs-paper);color:var(--bs-ink)}
-  .pk-spby input[type=text]{flex:1;min-width:200px}
-  .pk-spby .btn{min-height:40px;margin:0}
-  .pk-spby-t{flex-basis:100%;font-size:11.5px;color:var(--bs-n600)}
+  /* Antrean: bulan -> DRPP -> baris. Pengelompokannya dipertahankan (keputusan
+     yang tidak ditawar ulang), hanya gayanya yang berubah dari pil jadi garis. */
   .pk-urut{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--bs-n600);
-    margin-bottom:10px}
+    margin:14px 0 6px}
   .pk-urut select{min-height:40px;border:1px solid var(--bs-n300);border-radius:10px;
     padding:0 10px;font:inherit;font-size:12.5px;color:var(--bs-ink);
     background:var(--bs-paper)}
-  .pk-drpp-n{margin-left:auto;font-family:var(--bs-fh);font-weight:600;
-    font-variant-numeric:tabular-nums;color:var(--bs-n800)}
-  .pk-grup{margin-bottom:10px}
-  .pk-grup-h{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;
-    padding:6px 8px;border-radius:12px;background:var(--bs-n200)}
-  .pk-grup-h:hover{background:var(--bs-n300)}
-  .pk-kar{font-size:11px;color:var(--bs-n600);width:12px}
-  .pk-grup-n{font-family:var(--bs-fh);font-weight:600;font-size:15px;color:var(--bs-ink)}
-  .pk-grup-x{margin-left:auto;font-size:12px;color:var(--bs-n600);
+  .pk-grup{margin-bottom:26px}
+  .pk-grup-h{display:flex;align-items:baseline;gap:10px;min-height:44px;cursor:pointer;
+    border-bottom:2px solid var(--bs-ink);padding-bottom:6px}
+  .pk-kar{font-size:12px;color:var(--bs-n600);width:12px}
+  .pk-grup-n{font-family:var(--bs-fh);font-weight:600;font-size:20px;color:var(--bs-ink)}
+  .pk-grup-x{margin-left:auto;font-size:13px;color:var(--bs-n600);
     font-variant-numeric:tabular-nums}
   .pk-drpp{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;
-    color:var(--bs-n600);padding:9px 8px 3px 20px}
+    letter-spacing:.1em;text-transform:uppercase;color:var(--bs-n600);padding:16px 0 4px}
   .pk-drpp-x{background:var(--bs-n200);color:var(--bs-n800);border-radius:999px;
-    padding:1px 7px;font-size:11px}
-  .pk-grup .pk-row{margin-left:20px}
-  .pk-kosong{font-size:13px;color:var(--bs-n600);padding:10px 8px}
+    padding:1px 7px;font-size:11px;letter-spacing:0}
+  .pk-drpp-n{margin-left:auto;font-family:var(--bs-fh);font-weight:600;font-size:13px;
+    letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums;color:var(--bs-n800)}
+  .pk-row{display:grid;grid-template-columns:1fr 190px 150px 132px;gap:14px;
+    align-items:center;min-height:44px;padding:7px 0;
+    border-bottom:1px solid var(--bs-n200);cursor:pointer}
+  .pk-row:hover{background:#f7f6f6}
+  .pk-row .t1{font-size:15px;color:var(--bs-ink)}
+  .pk-row .t2{font-size:12px;color:var(--bs-n600);margin-top:2px}
+  /* Kolom status: KALIMAT pendek, bukan pil magenta. Seluruh antrean ini memang
+     "perlu tindakan"; menandai tiap baris dengan magenta membuat penandanya
+     kehilangan arti (kosakata warna, plans/2026-07-29-papan-kerja-desktop.md). */
+  .pk-row .st{font-size:13px;color:var(--bs-n700)}
+  .pk-row .nom{text-align:right;font-family:var(--bs-fh);font-weight:600;
+    font-variant-numeric:tabular-nums}
+  .pk-row .aksi{text-align:right}
+  .pk-grup-kaki{font-size:12.5px;color:var(--bs-n600);padding:10px 0 0}
+  .pk-kosong{font-size:15px;color:var(--bs-n600);padding:18px 0;max-width:58ch}
+
+  /* Kaki halaman: kartu ketenangan turun jadi catatan kaki. */
+  .pk3-kaki{margin-top:52px;border-top:1px solid var(--bs-n300);padding-top:18px}
+  .pk3-kaki .lbl{font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--bs-n600);margin-bottom:8px}
+  .pk3-kaki .baris{font-size:14px;color:var(--bs-n800);margin-bottom:4px}
+  .pk3-kaki .baris b.perlu{color:var(--bs-a2)}
+  .pk3-kaki a{color:var(--bs-ac7);cursor:pointer;font-size:14px}
   @media(max-width:1439px){
-    .pk-stats{grid-template-columns:repeat(2,1fr)}
-    .pk-card{padding:16px 18px}
-    .pk-card .num{font-size:21px}
-    .pk-card.utama .num{font-size:26px}
-    .pk-side{flex-basis:348px}
+    .pk3{padding:28px 28px 60px}
+    .pk3-judul{font-size:30px}
+    .pk3-angka{gap:36px}
+    .pk3-a .num{font-size:28px}
+    /* Kolom aksi & nominal dilipat ke bawah judul, bukan dipersempit sampai
+       tombolnya terpotong. */
+    .pk3-f{grid-template-columns:38px 1fr 150px;gap:14px}
+    .pk3-f .aksi{grid-column:2/-1;text-align:left;margin-top:8px}
+    .pk-row{grid-template-columns:1fr 150px 120px 118px;gap:10px}
   }
 
   /* Saldo summary */
@@ -465,27 +510,29 @@
 
 <!-- ================= TAB PAPAN KERJA ================= -->
 <div id="viewPapan" class="wrap hidden">
-  <div class="pk-grid">
-    <div class="pk-main">
-      <div id="pkKartu" class="pk-stats"></div>
-      <div class="pk-sec">
-        <div class="pk-h">Menunggu tindakan Anda</div>
-        <div id="pkTindakan"></div>
+  <div class="pk3">
+    <div class="pk3-tgl" id="pkTgl"></div>
+    <h1 class="pk3-judul" id="pkJudul">Memuat papan kerja…</h1>
+    <p class="pk3-lead" id="pkLead"></p>
+
+    <div class="pk3-angka" id="pkAngka"></div>
+
+    <div class="pk3-blok">
+      <div class="pk3-blok-h">
+        <span class="pk3-blok-n">Hari ini</span>
+        <span class="pk3-sisa" id="pkFokusSisa"></span>
       </div>
-      <div class="pk-sec">
-        <div class="pk-h">Sisa pagu paling tipis</div>
-        <div class="pk-sub">Tempat pembebanan berikutnya paling mudah melampaui pagu.</div>
-        <div id="pkPagu"></div>
-      </div>
+      <div id="pkFokus"></div>
     </div>
-    <div class="pk-side">
-      <div id="pkAntrean"></div>
-      <div class="pk-sec">
-        <div class="pk-h">Kotak masuk scan</div>
-        <div id="pkScan"></div>
-      </div>
-      <div id="pkRekon"></div>
+
+    <div class="pk3-blok">
+      <div class="pk3-blok-h"><span class="pk3-blok-n">Antrean pekerjaan</span></div>
+      <div class="pk3-pil" id="pkPil"></div>
+      <div class="pk3-ket" id="pkKet"></div>
+      <div id="pkTindakan"></div>
     </div>
+
+    <div class="pk3-kaki" id="pkRekon"></div>
   </div>
 </div>
 
@@ -6501,8 +6548,7 @@ function _pkKriteriaTindakan(t){
   // Pindah dana bank<->tunai TIDAK punya siklus pertanggungjawaban sama sekali:
   // tidak perlu SPBY, tidak kena pajak, tidak ada uang muka yang harus bernota.
   // Sebelum penjagaan ini ia memenuhi daftar tindakan dengan puluhan baris
-  // "Belum SPBY" yang tidak akan pernah bisa diselesaikan. Akumulasinya saja
-  // yang ditampilkan, lewat kartu di _pkRenderKartu().
+  // "Belum SPBY" yang tidak akan pernah bisa diselesaikan.
   if(!_notTransfer(t)) return alasan;
   if((+t.kredit||0)>0 && !t.noSpby) alasan.push('Belum SPBY');
   if((+t.kredit||0)>0 && (t.pajakKatIdx===null||t.pajakKatIdx===undefined)) alasan.push('Pajak belum diisi');
@@ -6516,200 +6562,270 @@ function _pkKriteriaTindakan(t){
 }
 
 var pkData=null;
+var PK_FOKUS_N=5;                 // banyak item yang ditawarkan tiap hari
+var pkAntreanAktif='spby';
 
+/* Definisi antrean. Kriterianya WAJIB sama dengan _pkJumlahAntrean() di Code.gs
+   -- kalau berbeda, badge pil menampilkan angka yang tidak cocok dengan isinya. */
+var PK_ANTREAN=[
+  {k:'spby', n:'Belum di-SPBY', aksi:'Catat SPBY',
+   ket:'Belanja di sini sudah tercatat tetapi belum punya nomor SPBY. Selama nomornya kosong, belanja ini belum bisa ikut ke berkas GUP berikutnya.',
+   st:'Belum ada nomor SPBY'},
+  {k:'pajak', n:'Pajak belum diisi', aksi:'Isi pajak',
+   ket:'Kategori pajaknya belum ditetapkan, jadi PPh dan PPN-nya belum terhitung sama sekali.',
+   st:'Kategori pajak kosong'},
+  {k:'nota', n:'PUM belum bernota', aksi:'Catat nota',
+   ket:'Uang muka yang sudah diserahkan belum tertutup nota. Selama belum, nilainya masih dihitung sebagai uang yang dipegang pemegang uang muka.',
+   st:'Uang muka belum tertutup'},
+  {k:'foto', n:'Foto belum dikaitkan', aksi:'Kaitkan foto',
+   ket:'Berkas di kotak masuk scan ini belum menempel ke transaksi mana pun, jadi ia tidak akan ikut tercetak di berkas SPJ.',
+   st:'Belum menempel ke transaksi'},
+  {k:'rekon', n:'Rekon selisih', aksi:'Periksa',
+   ket:'Nilai di aplikasi berbeda dengan nilai yang tercatat di SAKTI. Selisihnya perlu ditelusuri sebelum GUP diajukan.',
+   st:'Nilai berbeda dari SAKTI'}
+];
+function _pkDef(k){ for(var i=0;i<PK_ANTREAN.length;i++) if(PK_ANTREAN[i].k===k) return PK_ANTREAN[i]; return PK_ANTREAN[0]; }
+
+var _PK_HARI=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+var _PK_ANGKA=['nol','satu','dua','tiga','empat','lima','enam','tujuh','delapan','sembilan','sepuluh'];
+function _pkHuruf(n){ return (n>=0&&n<_PK_ANGKA.length)?_PK_ANGKA[n]:String(n); }
+function _pkTanggalPanjang(d){
+  return _PK_HARI[d.getDay()]+', '+d.getDate()+' '+_PK_BULAN[d.getMonth()]+' '+d.getFullYear();
+}
+function _pkSalam(d){
+  var j=d.getHours();
+  if(j<11) return 'Selamat pagi';
+  if(j<15) return 'Selamat siang';
+  if(j<18) return 'Selamat sore';
+  return 'Selamat malam';
+}
+
+/* ---------- Menyusun isi antrean ---------- */
+/**
+ * Item satu antrean, dalam bentuk seragam supaya baris & blok fokus bisa
+ * memakai satu perender. Berkas scan tidak punya transaksi, jadi field
+ * transaksinya dikosongkan -- BUKAN dipaksa jadi transaksi palsu.
+ */
+function _pkItem(kunci){
+  var res=pkData||{}, out=[], i;
+  if(kunci==='foto'){
+    var sc=res.scanBelumKait||[];
+    for(i=0;i<sc.length;i++){
+      out.push({jenis:'foto', id:String(sc[i].fileId), t:null, scan:sc[i],
+                judul:sc[i].nama||'(tanpa nama)', meta:String(sc[i].waktu||''),
+                tanggal:String(sc[i].waktu||''), nilai:null, drpp:''});
+    }
+    return out;
+  }
+  var tx=res.transaksi||[];
+  for(i=0;i<tx.length;i++){
+    var t=tx[i], al=_pkKriteriaTindakan(t);
+    var cocok=false, a;
+    for(a=0;a<al.length;a++){
+      if(kunci==='spby'  && al[a]==='Belum SPBY') cocok=true;
+      if(kunci==='pajak' && al[a]==='Pajak belum diisi') cocok=true;
+      if(kunci==='nota'  && al[a]==='PUM belum bernota') cocok=true;
+      if(kunci==='rekon' && al[a]==='Rekon selisih') cocok=true;
+    }
+    if(!cocok) continue;
+    out.push({jenis:kunci, id:String(t.no), t:t, scan:null,
+              judul:t.kegiatan||'(tanpa keterangan)',
+              meta:'No '+String(t.no||'-')+(t.penjab?(' · '+t.penjab):'')
+                   +(t.tanggal?(' · '+String(t.tanggal)):''),
+              tanggal:String(t.tanggal||''), nilai:(+t.kredit||0),
+              drpp:String(t.noDrpp||'').trim()});
+  }
+  return out;
+}
+
+/** Kalimat penuh yang menjelaskan kenapa item ini perlu dikerjakan. */
+function _pkAlasan(it){
+  var batas=+((pkData||{}).batasSetorTanggal)||0;
+  if(it.jenis==='spby')  return 'Belanja ini belum punya nomor SPBY, jadi belum bisa masuk ke berkas GUP berikutnya.';
+  if(it.jenis==='pajak') return 'Kategori pajaknya belum diisi'+(batas?(', padahal batas setornya tanggal '+batas):'')+'.';
+  if(it.jenis==='nota'){
+    var t=it.t||{}, um=(+t.uangDiserahkan>0)?(+t.uangDiserahkan):(+t.kredit||0);
+    var sisa=um-(+t.notaTotal||0)-(+t.kembalianTotal||0);
+    return 'Uang mukanya belum tertutup nota sebesar '+rupiah(sisa)
+      +' — nilai itu masih dihitung sebagai uang yang dipegang pemegang uang muka.';
+  }
+  if(it.jenis==='foto')  return 'Berkas scan ini belum menempel ke transaksi mana pun.';
+  return 'Nilai di aplikasi berbeda dengan nilai di SAKTI; selisihnya perlu ditelusuri.';
+}
+
+/**
+ * Lima hal hari ini: seluruh antrean digabung, diurutkan nilai menurun, ambil
+ * PK_FOKUS_N teratas. Berkas scan tidak bernilai, jadi ia selalu di ekor --
+ * itu memang benar, mengaitkan foto lebih murah daripada menyelesaikan belanja
+ * puluhan juta yang belum ber-SPBY.
+ */
+function _pkFokusHariIni(){
+  var semua=[], i, k;
+  for(k=0;k<PK_ANTREAN.length;k++) semua=semua.concat(_pkItem(PK_ANTREAN[k].k));
+  // Satu transaksi bisa muncul di beberapa antrean sekaligus. Ambil kemunculan
+  // PERTAMA saja -- kalau tidak, satu transaksi bisa memenuhi kelima slot fokus.
+  var ada={}, unik=[];
+  for(i=0;i<semua.length;i++){
+    var kunci=semua[i].jenis==='foto'?('f'+semua[i].id):('t'+semua[i].id);
+    if(ada[kunci]) continue;
+    ada[kunci]=1; unik.push(semua[i]);
+  }
+  unik.sort(function(a,b){ return (+b.nilai||0)-(+a.nilai||0); });
+  return {fokus:unik.slice(0,PK_FOKUS_N), total:unik.length};
+}
+
+/* ---------- Perender ---------- */
 function muatPapanKerja(){
-  document.getElementById('pkTindakan').innerHTML='<div class="pk-kosong">Memuat…</div>';
+  document.getElementById('pkFokus').innerHTML='<div class="pk-kosong">Memuat…</div>';
   google.script.run
     .withSuccessHandler(function(res){
       pkData=res;
-      _pkRenderKartu(res); _pkRenderTindakan(res); _pkRenderPagu(res);
-      _pkRenderAntrean(res); _pkRenderScan(res); _pkRenderRekon(res);
+      _pkRenderSemua();
     })
     .withFailureHandler(function(e){
-      document.getElementById('pkTindakan').innerHTML=
+      document.getElementById('pkFokus').innerHTML=
         '<div class="pk-kosong">Gagal memuat: '+esc(e&&e.message?e.message:String(e))+'</div>';
     })
     .serverGetPapanKerja(_tok);
 }
-
-function _pkRenderKartu(res){
-  var tx=res.transaksi||[], i, nSpby=0, rpSpby=0;
-  var nTarik=0, rpTarik=0, nSetor=0, rpSetor=0;
-  for(i=0;i<tx.length;i++){
-    var t=tx[i];
-    if((+t.kredit||0)<=0) continue;
-    // Pindah dana dihitung TERPISAH, bukan sebagai belanja yang belum di-SPBY.
-    // Ikut menghitungnya membuat kartu "Belum di-SPBY" menggelembung puluhan
-    // juta oleh uang yang sebenarnya hanya berpindah kantong.
-    //
-    // Hanya baris KREDIT yang dihitung: tiap pindah dana membuat sepasang baris
-    // (kredit di asal, debet di tujuan) dengan REF_TRANSFER sama, jadi menghitung
-    // keduanya akan melipatduakan nilainya.
-    if(!_notTransfer(t)){
-      if(String(t.sumber||'').toUpperCase()==='BANK'){ nTarik++; rpTarik+=(+t.kredit||0); }
-      else { nSetor++; rpSetor+=(+t.kredit||0); }
-      continue;
-    }
-    if(!t.noSpby){ nSpby++; rpSpby+=(+t.kredit||0); }
-  }
-  // Status setor pajak ada di baris NOTA (sheet Multi Nota), bukan di transaksi --
-  // jadi angkanya dihitung di server dan dikirim jadi. Jangan menghitungnya dari
-  // field transaksi: t.pajakTotal TIDAK ADA.
-  var nPajak=+res.pajakBelumSetor||0;
-  var hariIni=new Date().getDate(), batas=+res.batasSetorTanggal||0;
-  var lewat=(batas>0 && hariIni>batas);
-  // Peran viewer: saldo diredaksi jadi null oleh server -- tampilkan placeholder,
-  // BUKAN angka 0 (itu menyesatkan, seolah kasnya kosong).
-  var s=res.saldo, adaSaldo=!!s;
-  document.getElementById('pkKartu').innerHTML=
-     '<div class="pk-card utama"><div class="lbl">Saldo kas tunai</div>'
-    +'<div class="num">'+(adaSaldo?rupiah(s.saldoTunai):'—')+'</div>'
-    +'<div class="sub">'+(adaSaldo?'per '+esc(todayISO()):'Tidak ditampilkan untuk peran ini')+'</div></div>'
-    +'<div class="pk-card"><div class="lbl">Bank / UP</div>'
-    +'<div class="num">'+(adaSaldo?rupiah(s.saldoBank):'—')+'</div></div>'
-    +'<div class="pk-card"><div class="lbl">Belum di-SPBY</div>'
-    +'<div class="num">'+nSpby+'</div><div class="sub">'+rupiah(rpSpby)+'</div></div>'
-    +'<div class="pk-card"><div class="lbl">Pajak belum disetor</div>'
-    +'<div class="num">'+nPajak+'</div>'
-    +'<div class="sub'+(lewat?' lewat':'')+'">batas setor tanggal '+batas
-    +(lewat?' — sudah lewat':'')+'</div></div>'
-    // Pindah dana: akumulasinya saja. Barisnya tidak muncul di daftar tindakan
-    // karena tidak ada yang bisa dikerjakan atasnya.
-    +'<div class="pk-card"><div class="lbl">Pindah dana (bank &harr; tunai)</div>'
-    +'<div class="num">'+rupiah(rpTarik)+'</div>'
-    +'<div class="sub">'+nTarik+'&times; tarik tunai'
-    +(nSetor?(' &middot; '+nSetor+'&times; setor balik '+rupiah(rpSetor)):'')+'</div></div>';
+function _pkRenderSemua(){
+  _pkRenderSapaan(); _pkRenderAngka(); _pkRenderFokus();
+  _pkRenderPil(); _pkRenderTindakan(pkData); _pkRenderRekon(pkData);
 }
 
-/* Kunci bulan 'YYYY-MM' dari tanggal transaksi; '' bila tanggalnya tidak terbaca. */
-function _pkBulanKey(t){
-  var s=String(t.tanggal||'');
-  var m=/^(\d{4})-(\d{2})/.exec(s);
+function _pkRenderSapaan(){
+  var d=new Date(), f=_pkFokusHariIni();
+  document.getElementById('pkTgl').textContent=_pkTanggalPanjang(d);
+  var n=f.fokus.length;
+  document.getElementById('pkJudul').textContent = n
+    ? (_pkSalam(d)+'. Ada '+_pkHuruf(n)+' hal yang sebaiknya Anda selesaikan hari ini.')
+    : (_pkSalam(d)+'. Tidak ada yang mendesak hari ini.');
+  var sisa=Math.max(0,f.total-n);
+  document.getElementById('pkLead').textContent = n
+    ? ('Sisanya' + (sisa?(' — '+sisa+' berkas lagi'):'') + ' menunggu di antrean di bawah dan tidak akan hilang. '
+       + 'Kerjakan yang di atas dulu; penggantinya naik sendiri setiap satu selesai.')
+    : 'Antrean di bawah sudah bersih. Tidak ada yang perlu dikejar hari ini.';
+}
+
+function _pkRenderAngka(){
+  var res=pkData||{}, s=res.saldo, ada=!!s;
+  var j=res.jumlahAntrean||{}, rek=(res.rekon&&res.rekon.counts)||{};
+  // Nilai rupiah "Belum di-SPBY" dihitung dari daftarnya sendiri supaya angka
+  // dan isinya tidak mungkin berbeda.
+  var spby=_pkItem('spby'), rp=0, i;
+  for(i=0;i<spby.length;i++) rp+=(+spby[i].nilai||0);
+  var batas=+res.batasSetorTanggal||0, hariIni=new Date().getDate();
+  var lewat=(batas>0 && hariIni>batas), sisaHari=batas-hariIni;
+  var nPajak=+res.pajakBelumSetor||0, beda=+rek.nilaiBeda||0;
+
+  function blok(lbl,num,sub,perlu){
+    return '<div class="pk3-a"><div class="lbl">'+lbl+'</div>'
+      +'<div class="num'+(perlu?' perlu':'')+'">'+num+'</div>'
+      +'<div class="sub">'+sub+'</div></div>';
+  }
+  document.getElementById('pkAngka').innerHTML=
+     blok('Saldo kas tunai', (ada?rupiah(s.saldoTunai):'&mdash;'),
+          ada?'Terhitung sampai hari ini':'Tidak ditampilkan untuk peran ini', false)
+    +blok('Belum di-SPBY', (+j.spby||spby.length), 'Senilai '+rupiah(rp), false)
+    +blok('Pajak belum disetor', nPajak,
+          batas?('Batas setor tanggal '+batas+(lewat?' — sudah lewat'
+                 :(sisaHari>0?(' — '+sisaHari+' hari lagi'):' — hari ini')))
+               :'Batas setor belum diatur',
+          (nPajak>0||lewat))
+    +blok('Rekonsiliasi', (+rek.belum||0),
+          'Belum dicocokkan'+(beda?(' · '+beda+' selisih nilai'):''), beda>0);
+}
+
+function _pkRenderFokus(){
+  var f=_pkFokusHariIni(), box=document.getElementById('pkFokus'), i;
+  var sisa=Math.max(0,f.total-f.fokus.length);
+  document.getElementById('pkFokusSisa').textContent =
+    sisa ? (sisa+' lainnya menunggu di antrean') : 'Ini semua yang tersisa';
+  if(!f.fokus.length){
+    box.innerHTML='<div class="pk3-tenang">Lima hal itu sudah beres. Silakan lanjut ke '
+      +'antrean di bawah, atau tutup layar ini dengan tenang.</div>';
+    return;
+  }
+  var h='';
+  for(i=0;i<f.fokus.length;i++){
+    var it=f.fokus[i], def=_pkDef(it.jenis);
+    var q='\''+esc(it.jenis)+'\',\''+esc(it.id)+'\'';
+    h+='<div class="pk3-f">'
+      +'<div class="urut">'+(i<9?'0':'')+(i+1)+'</div>'
+      +'<div><div class="jd">'+esc(it.judul)+'</div>'
+      +'<div class="mt">'+esc(it.meta)+'</div>'
+      +'<div class="al">'+esc(_pkAlasan(it))+'</div>'
+      +'<div id="pkAksiF_'+esc(it.jenis)+'_'+esc(it.id)+'"></div></div>'
+      +'<div class="nom">'+(it.nilai===null?'&mdash;':rupiah(it.nilai))+'</div>'
+      +'<div class="aksi"><button class="pk3-btn" onclick="_pkBukaAksi('+q+',\'F\')">'
+      +esc(def.aksi)+'</button></div></div>';
+  }
+  box.innerHTML=h;
+}
+
+function _pkRenderPil(){
+  var j=(pkData&&pkData.jumlahAntrean)||{}, h='', i;
+  for(i=0;i<PK_ANTREAN.length;i++){
+    var d=PK_ANTREAN[i], n=+j[d.k]||0;
+    h+='<button class="'+(pkAntreanAktif===d.k?'on':'')+'" onclick="_pkGantiAntrean(\''+esc(d.k)+'\')">'
+      +esc(d.n)+' <span class="bdg">'+n+'</span></button>';
+  }
+  document.getElementById('pkPil').innerHTML=h;
+  document.getElementById('pkKet').textContent=_pkDef(pkAntreanAktif).ket;
+}
+function _pkGantiAntrean(k){ pkAntreanAktif=k; _pkRenderPil(); _pkRenderTindakan(pkData); }
+
+/* ---------- Pengelompokan bulan -> DRPP (dipertahankan dari v2) ---------- */
+var _PK_BULAN=['Januari','Februari','Maret','April','Mei','Juni',
+               'Juli','Agustus','September','Oktober','November','Desember'];
+/** Kunci bulan 'YYYY-MM' dari tanggal; '' bila tanggalnya tidak terbaca. */
+function _pkBulanKey(tgl){
+  var s2=String(tgl||'');
+  var m=/^(\d{4})-(\d{2})/.exec(s2);
   if(m) return m[1]+'-'+m[2];
-  var d=new Date(s);
+  var d=new Date(s2);
   if(isNaN(d.getTime())) return '';
   var mm=d.getMonth()+1;
   return d.getFullYear()+'-'+(mm<10?'0':'')+mm;
 }
-
-var _PK_BULAN=['Januari','Februari','Maret','April','Mei','Juni',
-               'Juli','Agustus','September','Oktober','November','Desember'];
 function _pkNamaBulan(key){
   if(!key) return 'Tanpa tanggal';
   var p=key.split('-');
   return _PK_BULAN[(+p[1]||1)-1]+' '+p[0];
 }
-
-/* Simpan grup mana yang sedang terbuka supaya tidak tertutup ulang saat data disegarkan. */
+/* Simpan grup mana yang terbuka supaya tidak tertutup ulang saat disegarkan. */
 var pkGrupTutup={};
 function _pkToggleGrup(key){
   // Keadaan bawaan dihitung dari bulan berjalan, BUKAN dari undefined. Menulis
   // pkGrupTutup[key]=!pkGrupTutup[key] akan salah untuk bulan lama: nilainya masih
   // undefined, !undefined = true, sehingga klik pertama justru menyetelnya tertutup
   // lagi padahal ia memang sudah tertutup -- tampak seperti tombol yang mati.
-  var kini=_pkBulanKey({tanggal:todayISO()});
-  var sedangTutup = (pkGrupTutup[key]===undefined) ? (key!==kini) : pkGrupTutup[key];
+  var kini=_pkBulanKey(todayISO());
+  var sedangTutup=(pkGrupTutup[key]===undefined)?(key!==kini):pkGrupTutup[key];
   pkGrupTutup[key]=!sedangTutup;
   _pkRenderTindakan(pkData);
 }
-
-/* Cara mengurut baris di dalam grup. Bawaan: nilai terbesar dulu -- yang paling
-   besar biasanya yang paling perlu dikenali dan diselesaikan lebih dulu. */
 var pkUrut='nilai-desc';
 function _pkGantiUrut(v){ pkUrut=v; _pkRenderTindakan(pkData); }
-
 function _pkPembanding(){
-  if(pkUrut==='nilai-asc')  return function(a,b){ return (+a.t.kredit||0)-(+b.t.kredit||0); };
-  if(pkUrut==='tgl-desc')   return function(a,b){ return String(b.t.tanggal||'').localeCompare(String(a.t.tanggal||'')); };
-  if(pkUrut==='tgl-asc')    return function(a,b){ return String(a.t.tanggal||'').localeCompare(String(b.t.tanggal||'')); };
-  return function(a,b){ return (+b.t.kredit||0)-(+a.t.kredit||0); };   // nilai-desc
+  if(pkUrut==='nilai-asc')  return function(a,b){ return (+a.nilai||0)-(+b.nilai||0); };
+  if(pkUrut==='tgl-desc')   return function(a,b){ return String(b.tanggal||'').localeCompare(String(a.tanggal||'')); };
+  if(pkUrut==='tgl-asc')    return function(a,b){ return String(a.tanggal||'').localeCompare(String(b.tanggal||'')); };
+  return function(a,b){ return (+b.nilai||0)-(+a.nilai||0); };
 }
 
 /**
- * Daftar "menunggu tindakan", dikelompokkan dua tingkat: bulan lalu DRPP.
+ * Isi antrean yang sedang dipilih, dikelompokkan dua tingkat: bulan lalu DRPP.
  *
  * Transaksi tanpa DRPP sengaja ditaruh PALING ATAS dalam tiap bulan -- itu yang
- * belum diproses sama sekali, jadi justru yang paling perlu dikerjakan. Menaruhnya
- * di bawah (mengikuti urutan abjad nomor DRPP) akan menyembunyikannya di ekor daftar.
- *
+ * belum diproses sama sekali, jadi justru yang paling perlu dikerjakan.
  * Bulan berjalan terbuka, bulan lama tertutup tapi judul + jumlahnya tetap terlihat.
  */
 function _pkRenderTindakan(res){
   if(!res) return;
-  var tx=res.transaksi||[], i, n=0;
-  var bulan={}, urutBulan=[];
-  for(i=0;i<tx.length;i++){
-    var t=tx[i], al=_pkKriteriaTindakan(t);
-    if(!al.length) continue;
-    n++;
-    var bk=_pkBulanKey(t);
-    if(!bulan[bk]){ bulan[bk]={drpp:{}, urutDrpp:[], nilaiDrpp:{}, jml:0, nilai:0}; urutBulan.push(bk); }
-    var g=bulan[bk];
-    var dk=String(t.noDrpp||'').trim();
-    if(!g.drpp[dk]){ g.drpp[dk]=[]; g.urutDrpp.push(dk); }
-    g.drpp[dk].push({t:t, al:al});
-    g.nilaiDrpp[dk]=(g.nilaiDrpp[dk]||0)+(+t.kredit||0);
-    g.jml++; g.nilai+=(+t.kredit||0);
-  }
-  if(!n){
-    document.getElementById('pkTindakan').innerHTML=
-      '<div class="pk-kosong">Tidak ada yang menunggu tindakan.</div>';
-    return;
-  }
-  urutBulan.sort(function(a,b){ return a<b?1:(a>b?-1:0); });   // terbaru dulu
-  var kini=_pkBulanKey({tanggal:todayISO()});
-  var h='', bi, di;
-  for(bi=0;bi<urutBulan.length;bi++){
-    var bk2=urutBulan[bi], g2=bulan[bk2];
-    // Bulan lama tertutup secara bawaan; pilihan pengguna (pkGrupTutup) menang.
-    var tutup = (pkGrupTutup[bk2]===undefined) ? (bk2!==kini) : pkGrupTutup[bk2];
-    h+='<div class="pk-grup">'
-      // Kunci bulan selalu 'YYYY-MM' atau '' -- tapi tetap di-esc dan dikutip
-      // mengikuti pola editTransaksi() di berkas ini, supaya tidak ada jalan
-      // masuk bug kutip bila suatu saat kuncinya berubah bentuk.
-      +'<div class="pk-grup-h" onclick="_pkToggleGrup(\''+esc(bk2)+'\')">'
-      +'<span class="pk-kar">'+(tutup?'&#9656;':'&#9662;')+'</span>'
-      +'<span class="pk-grup-n">'+esc(_pkNamaBulan(bk2))+'</span>'
-      +'<span class="pk-grup-x">'+g2.jml+' transaksi &middot; '+rupiah(g2.nilai)+'</span></div>';
-    if(!tutup){
-      // '' (tanpa DRPP) SELALU pertama apa pun urutannya -- itu yang belum diproses
-      // sama sekali. Sisanya mengikuti pilihan: bila mengurut nilai, DRPP dengan
-      // total terbesar/terkecil dulu; bila mengurut tanggal, tetap urut nomor DRPP.
-      var urutNilai=(pkUrut==='nilai-desc'||pkUrut==='nilai-asc');
-      g2.urutDrpp.sort(function(a,b){
-        if(a==='') return -1; if(b==='') return 1;
-        if(urutNilai){
-          var d=(g2.nilaiDrpp[b]||0)-(g2.nilaiDrpp[a]||0);
-          if(pkUrut==='nilai-asc') d=-d;
-          if(d) return d;
-        }
-        return a<b?-1:(a>b?1:0);
-      });
-      var cmp=_pkPembanding();
-      for(di=0;di<g2.urutDrpp.length;di++){
-        var dk2=g2.urutDrpp[di], baris=g2.drpp[dk2].slice(0).sort(cmp), j;
-        h+='<div class="pk-drpp">'+(dk2?('DRPP '+esc(dk2)):'Belum masuk DRPP')
-          +' <span class="pk-drpp-x">'+baris.length+'</span>'
-          +'<span class="pk-drpp-n">'+rupiah(g2.nilaiDrpp[dk2]||0)+'</span></div>';
-        for(j=0;j<baris.length;j++){
-          var b=baris[j], t2=b.t;
-          h+='<div class="pk-row tindakan" onclick="_pkBukaTransaksi('+(+t2.no||0)+')">'
-            +'<div><div class="t1">'+esc(t2.kegiatan||'(tanpa keterangan)')+'</div>'
-            +'<div class="t2">No '+esc(String(t2.no||'-'))
-            +(t2.penjab?(' &middot; '+esc(t2.penjab)):'')
-            +(t2.tanggal?(' &middot; '+esc(String(t2.tanggal))):'')+'</div></div>'
-            +'<div>'+(b.al[0]==='Belum SPBY'
-                ? ('<span class="chip no pk-isi" title="Klik untuk mencatat SPBY di sini"'
-                   +' onclick="event.stopPropagation();_pkBukaSpby('+(+t2.no||0)+')">'
-                   +esc(b.al[0])+' &#9998;</span>')
-                : ('<span class="chip no">'+esc(b.al[0])+'</span>'))+'</div>'
-            +'<div class="nom">'+rupiah(+t2.kredit||0)+'</div></div>'
-            +'<div class="pk-spby hidden" id="pkSpby'+(+t2.no||0)+'"></div>';
-        }
-      }
-    }
-    h+='</div>';
-  }
+  var def=_pkDef(pkAntreanAktif), items=_pkItem(pkAntreanAktif);
+  var jmlPenuh=((res.jumlahAntrean||{})[pkAntreanAktif]);
+  if(jmlPenuh===undefined||jmlPenuh===null) jmlPenuh=items.length;
   var bar='<div class="pk-urut">Urutkan'
     +' <select onchange="_pkGantiUrut(this.value)">'
     +'<option value="nilai-desc">Nilai terbesar</option>'
@@ -6717,75 +6833,76 @@ function _pkRenderTindakan(res){
     +'<option value="tgl-desc">Tanggal terbaru</option>'
     +'<option value="tgl-asc">Tanggal terlama</option>'
     +'</select></div>';
+  if(!items.length){
+    document.getElementById('pkTindakan').innerHTML=bar
+      +'<div class="pk-kosong">Antrean &ldquo;'+esc(def.n)+'&rdquo; kosong. '
+      +'Tidak ada yang perlu dikerjakan di sini.</div>';
+    return;
+  }
+  var bulan={}, urutBulan=[], i;
+  for(i=0;i<items.length;i++){
+    var it=items[i], bk=_pkBulanKey(it.tanggal);
+    if(!bulan[bk]){ bulan[bk]={drpp:{}, urutDrpp:[], nilaiDrpp:{}, jml:0, nilai:0}; urutBulan.push(bk); }
+    var g=bulan[bk], dk=it.drpp;
+    if(!g.drpp[dk]){ g.drpp[dk]=[]; g.urutDrpp.push(dk); }
+    g.drpp[dk].push(it);
+    g.nilaiDrpp[dk]=(g.nilaiDrpp[dk]||0)+(+it.nilai||0);
+    g.jml++; g.nilai+=(+it.nilai||0);
+  }
+  urutBulan.sort(function(a,b){ return a<b?1:(a>b?-1:0); });   // terbaru dulu
+  var kini=_pkBulanKey(todayISO()), h='', bi, di, j;
+  for(bi=0;bi<urutBulan.length;bi++){
+    var bk2=urutBulan[bi], g2=bulan[bk2];
+    var tutup=(pkGrupTutup[bk2]===undefined)?(bk2!==kini):pkGrupTutup[bk2];
+    h+='<div class="pk-grup">'
+      +'<div class="pk-grup-h" onclick="_pkToggleGrup(\''+esc(bk2)+'\')">'
+      +'<span class="pk-kar">'+(tutup?'&#9656;':'&#9662;')+'</span>'
+      +'<span class="pk-grup-n">'+esc(_pkNamaBulan(bk2))+'</span>'
+      +'<span class="pk-grup-x">'+g2.jml+' berkas &middot; '+rupiah(g2.nilai)+'</span></div>';
+    if(!tutup){
+      var urutNilai=(pkUrut==='nilai-desc'||pkUrut==='nilai-asc');
+      g2.urutDrpp.sort(function(a,b){
+        if(a==='') return -1; if(b==='') return 1;
+        if(urutNilai){
+          var d2=(g2.nilaiDrpp[b]||0)-(g2.nilaiDrpp[a]||0);
+          if(pkUrut==='nilai-asc') d2=-d2;
+          if(d2) return d2;
+        }
+        return a<b?-1:(a>b?1:0);
+      });
+      var cmp=_pkPembanding();
+      for(di=0;di<g2.urutDrpp.length;di++){
+        var dk2=g2.urutDrpp[di], baris=g2.drpp[dk2].slice(0).sort(cmp);
+        h+='<div class="pk-drpp">'+(dk2?('DRPP '+esc(dk2)):'Belum masuk DRPP')
+          +' <span class="pk-drpp-x">'+baris.length+'</span>'
+          +'<span class="pk-drpp-n">'+rupiah(g2.nilaiDrpp[dk2]||0)+'</span></div>';
+        for(j=0;j<baris.length;j++){
+          var b2=baris[j], q='\''+esc(b2.jenis)+'\',\''+esc(b2.id)+'\'';
+          h+='<div class="pk-row"'+(b2.t?(' onclick="_pkBukaTransaksi('+(+b2.id||0)+')"'):'')+'>'
+            +'<div><div class="t1">'+esc(b2.judul)+'</div>'
+            +'<div class="t2">'+esc(b2.meta)+'</div></div>'
+            +'<div class="st">'+esc(def.st)+'</div>'
+            +'<div class="nom">'+(b2.nilai===null?'&mdash;':rupiah(b2.nilai))+'</div>'
+            +'<div class="aksi"><button class="pk3-btn garis" '
+            +'onclick="event.stopPropagation();_pkBukaAksi('+q+',\'A\')">'+esc(def.aksi)+'</button></div>'
+            +'</div>'
+            +'<div id="pkAksiA_'+esc(b2.jenis)+'_'+esc(b2.id)+'"></div>';
+        }
+      }
+      h+='<div class="pk-grup-kaki">Menampilkan '+g2.jml+' dari '+jmlPenuh
+        +' berkas di antrean ini.</div>';
+    }
+    h+='</div>';
+  }
   document.getElementById('pkTindakan').innerHTML=bar+h;
   // Kembalikan pilihan yang sedang aktif -- innerHTML menulis ulang select-nya.
   var sel=document.querySelector('#pkTindakan .pk-urut select');
   if(sel) sel.value=pkUrut;
 }
 
-/* ===== Catat SPBY langsung dari daftar tindakan =====
- * Tidak perlu membuka transaksi. rowIndex sudah ikut di objek transaksi, jadi
- * serverSimpanSpby bisa dipanggil apa adanya.
- */
-function _pkDaftarSpby(){
-  var L=(pkData&&pkData.transaksi)||[], ada={}, out=[], i;
-  for(i=0;i<L.length;i++){
-    var v=String(L[i].noSpby||'').trim();
-    if(v && !ada[v]){ ada[v]=1; out.push(v); }
-  }
-  out.sort(function(a,b){ return a<b?1:(a>b?-1:0); });   // terbaru dulu
-  return out;
-}
-
-function _pkBukaSpby(no){
-  var box=document.getElementById('pkSpby'+no); if(!box) return;
-  if(!box.classList.contains('hidden')){ box.classList.add('hidden'); box.innerHTML=''; return; }
-  var t=null, L=(pkData&&pkData.transaksi)||[], i;
-  for(i=0;i<L.length;i++) if(String(L[i].no)===String(no)){ t=L[i]; break; }
-  if(!t) return;
-  var daftar=_pkDaftarSpby(), dl='', j;
-  for(j=0;j<daftar.length;j++) dl+='<option value="'+esc(daftar[j])+'"></option>';
-  box.innerHTML=
-     '<label>No. SPBY</label>'
-    +'<input type="text" id="pkSpbyNo'+no+'" list="pkSpbyList'+no+'" autocomplete="off"'
-    +' placeholder="ketik nomor baru atau pilih yang sudah ada">'
-    +'<datalist id="pkSpbyList'+no+'">'+dl+'</datalist>'
-    +'<label>Tanggal</label>'
-    +'<input type="date" id="pkSpbyTgl'+no+'" value="'+esc(String(t.tanggal||todayISO()))+'">'
-    +'<button class="btn" onclick="event.stopPropagation();_pkSimpanSpby('+no+')">Simpan</button>'
-    +'<button class="btn ghost" onclick="event.stopPropagation();_pkBukaSpby('+no+')">Batal</button>'
-    +(daftar.length?('<div class="pk-spby-t">'+daftar.length+' nomor SPBY sudah pernah dipakai &mdash; '
-      +'ketik untuk menyaringnya.</div>'):'');
-  box.classList.remove('hidden');
-  var el=document.getElementById('pkSpbyNo'+no); if(el) el.focus();
-}
-
-function _pkSimpanSpby(no){
-  var elNo=document.getElementById('pkSpbyNo'+no), elTg=document.getElementById('pkSpbyTgl'+no);
-  var nomor=elNo?String(elNo.value||'').trim():'';
-  if(!nomor){ toast('Nomor SPBY belum diisi.','error'); if(elNo) elNo.focus(); return; }
-  var t=null, L=(pkData&&pkData.transaksi)||[], i;
-  for(i=0;i<L.length;i++) if(String(L[i].no)===String(no)){ t=L[i]; break; }
-  if(!t || t.rowIndex===undefined){ toast('Baris transaksi tidak ditemukan.','error'); return; }
-  google.script.run
-    .withSuccessHandler(function(){
-      // Perbarui salinan di memori supaya baris langsung hilang dari daftar
-      // tindakan tanpa memuat ulang seluruh papan.
-      t.noSpby=nomor; t.tglSpby=elTg?elTg.value:'';
-      toast('SPBY '+nomor+' tersimpan.','ok');
-      _pkRenderTindakan(pkData); _pkRenderKartu(pkData);
-    })
-    .withFailureHandler(function(e){ toast(e&&e.message?e.message:String(e),'error'); })
-    // nilaiSpby dikirim APA ADANYA, bukan 0 -- mengirim 0 akan menghapus nilai
-    // SPBY yang mungkin sudah pernah diisi lewat layar Transaksi.
-    .serverSimpanSpby(_tok, t.rowIndex, nomor, (elTg?elTg.value:''), (+t.nilaiSpby||0));
-}
-
 /**
  * Buka layar Transaksi lalu sorot kartunya. TIDAK ada fungsi "buka detail" di
- * desktop -- layar Transaksi adalah daftar kartu, bukan master-detail. Jadi
- * penanda data-no ditambahkan ke _cardHtml (Step 3b) supaya kartunya bisa
- * ditemukan dan digulir ke tengah layar.
+ * desktop -- layar Transaksi adalah daftar kartu, bukan master-detail.
  */
 function _pkBukaTransaksi(no){
   switchTab('transaksi');
@@ -6798,70 +6915,182 @@ function _pkBukaTransaksi(no){
   }, 60);
 }
 
-function _pkRenderPagu(res){
-  var top=(res.serapan&&res.serapan.top5)||[], h='', i;
-  if(!top.length){
-    document.getElementById('pkPagu').innerHTML='<div class="pk-kosong">Belum ada data pagu.</div>';
-    return;
+/* ---------- Panel aksi inline: satu komponen, empat jenis ---------- */
+/** Nomor SPBY yang sudah pernah dipakai, untuk datalist. */
+function _pkDaftarSpby(){
+  var L=(pkData&&pkData.transaksi)||[], ada={}, out=[], i;
+  for(i=0;i<L.length;i++){
+    var v=String(L[i].noSpby||'').trim();
+    if(v && !ada[v]){ ada[v]=1; out.push(v); }
   }
-  for(i=0;i<top.length;i++){
-    var a=top[i], pct=Math.round((+a.persen||0)*100);
-    // Ambang '>' bukan '>=': 90% pas TIDAK tersorot.
-    var tipis=((+a.persen||0)>0.9);
-    h+='<div class="pk-row pagu'+(tipis?' tipis':'')+'" onclick="switchTab(\'dana\')">'
-      +'<div><div class="t1">'+esc(a.akun)+(a.uraian?(' · '+esc(a.uraian)):'')+'</div>'
-      +'<div class="t2">sisa '+rupiah(+a.sisa||0)+'</div></div>'
-      +'<div><span class="pk-bar'+(tipis?' tipis':'')+'"><i style="width:'
-      +Math.min(100,Math.max(0,pct))+'%"></i></span>'
-      +'<span class="pk-pct">'+pct+'%</span></div></div>';
+  out.sort(function(a,b){ return a<b?1:(a>b?-1:0); });
+  return out;
+}
+function _pkCariItem(jenis,id){
+  var L=_pkItem(jenis), i;
+  for(i=0;i<L.length;i++) if(String(L[i].id)===String(id)) return L[i];
+  return null;
+}
+/**
+ * @param tempat 'F' = blok fokus, 'A' = antrean. Dua tempat bisa menampilkan
+ * item yang SAMA sekaligus, jadi panelnya berkunci tempat + jenis + id --
+ * id yang sama di dua tempat tanpa pembeda akan saling menimpa.
+ */
+function _pkBukaAksi(jenis,id,tempat){
+  var box=document.getElementById('pkAksi'+tempat+'_'+jenis+'_'+id); if(!box) return;
+  if(box.innerHTML){ box.innerHTML=''; return; }
+  var it=_pkCariItem(jenis,id); if(!it) return;
+  var t=it.t||{}, q='\''+esc(jenis)+'\',\''+esc(id)+'\',\''+esc(tempat)+'\'';
+  var p='pk'+tempat+jenis+id, h='';
+
+  if(jenis==='spby'){
+    var daftar=_pkDaftarSpby(), dl='', j;
+    for(j=0;j<daftar.length;j++) dl+='<option value="'+esc(daftar[j])+'"></option>';
+    h='<div class="pandu">Ketik nomor SPBY baru, atau nomor yang sudah pernah dipakai '
+      +'bila belanja ini digabung ke SPBY yang sama.</div>'
+      +'<div class="baris"><div class="lebar"><label>No. SPBY</label>'
+      +'<input type="text" id="'+p+'No" list="'+p+'L" autocomplete="off" style="width:100%" '
+      +'placeholder="mis. 045/SPBY/2026"><datalist id="'+p+'L">'+dl+'</datalist></div>'
+      +'<div><label>Tanggal</label><input type="date" id="'+p+'Tgl" value="'
+      +esc(String(t.tanggal||todayISO()))+'"></div></div>';
+  } else if(jenis==='pajak'){
+    var op='<option value="">— pilih kategori —</option>', k;
+    for(k=0;k<PAJAK_REF.length;k++) op+='<option value="'+k+'">'+esc(PAJAK_REF[k].label)+'</option>';
+    h='<div class="pandu">Pilih kategori pajak yang sesuai; nilai PPh dan PPN dihitung '
+      +'otomatis dari nilai transaksinya memakai tabel pajak yang sama dengan layar Nota.</div>'
+      +'<div class="baris"><div class="lebar"><label>Kategori pajak</label>'
+      +'<select id="'+p+'Kat" style="width:100%">'+op+'</select></div></div>';
+  } else if(jenis==='nota'){
+    var um=(+t.uangDiserahkan>0)?(+t.uangDiserahkan):(+t.kredit||0);
+    var sisa=um-(+t.notaTotal||0)-(+t.kembalianTotal||0);
+    h='<div class="pandu">Catat nota yang sudah diterima. Sisa uang muka yang belum '
+      +'tertutup saat ini '+rupiah(sisa)+'. Nota ini ditambahkan sebagai baris nota '
+      +'sungguhan, bukan sekadar angka total.</div>'
+      +'<div class="baris"><div class="lebar"><label>Nama penyedia / toko</label>'
+      +'<input type="text" id="'+p+'Nm" style="width:100%" placeholder="mis. Toko Sinar Jaya"></div>'
+      +'<div><label>Nilai nota</label><input type="text" class="numfmt" inputmode="numeric" '
+      +'id="'+p+'Nl" value="'+esc(_grp(sisa>0?sisa:0))+'"></div>'
+      +'<div><label>Tanggal nota</label><input type="date" id="'+p+'Tgl" value="'
+      +esc(String(t.tanggal||todayISO()))+'"></div></div>';
+  } else if(jenis==='foto'){
+    h='<div class="pandu">Pilih transaksi tujuan lalu beri label singkat. Berkasnya '
+      +'ditempelkan sebagai foto pada nota terakhir transaksi itu, lalu dipindahkan '
+      +'dari kotak masuk supaya tidak muncul lagi.</div>'
+      +'<div class="baris"><div><label>Kaitkan ke transaksi No.</label>'
+      +'<input type="text" id="'+p+'No" inputmode="numeric" placeholder="mis. 401"></div>'
+      +'<div class="lebar"><label>Label berkas</label>'
+      +'<input type="text" id="'+p+'Lb" style="width:100%" value="'+esc(String(it.judul||''))+'"></div></div>';
+  } else {
+    // Rekon selisih tidak punya isian: penelusurannya di layar Rekonsiliasi.
+    h='<div class="pandu">Selisih nilai ditelusuri di layar Rekonsiliasi, tempat nilai '
+      +'aplikasi dan nilai SAKTI ditampilkan berdampingan.</div>'
+      +'<div class="tombol"><button class="pk3-btn" onclick="switchTab(\'rekon\')">Buka Rekonsiliasi</button>'
+      +'<button class="pk3-btn netral" onclick="_pkBukaAksi('+q+')">Tutup</button></div>';
+    box.className='pk3-aksi-p'; box.innerHTML=h; return;
   }
-  document.getElementById('pkPagu').innerHTML=h;
+  h+='<div class="tombol"><button class="pk3-btn" onclick="_pkSimpanAksi('+q+')">Simpan</button>'
+    +'<button class="pk3-btn netral" onclick="_pkBukaAksi('+q+')">Nanti saja</button></div>';
+  box.className='pk3-aksi-p'; box.innerHTML=h;
+  var f=document.getElementById(p+'No')||document.getElementById(p+'Kat')||document.getElementById(p+'Nm');
+  if(f) f.focus();
 }
 
-function _pkRenderAntrean(res){
-  var a=res.antreanSemua||[], h='', i;
-  if(!a.length){
-    // BUKAN angka 0 per staf -- itu menyesatkan, seolah semua sudah sinkron
-    // padahal sebenarnya cuma belum melapor.
-    document.getElementById('pkAntrean').innerHTML=
-      '<div class="pk-antre"><div class="pk-h">Antrean HP</div>'
-      +'<div class="pk-kosong" style="color:inherit;opacity:.9">Belum ada laporan terbaru dari HP.</div></div>';
-    return;
+function _pkSimpanAksi(jenis,id,tempat){
+  var it=_pkCariItem(jenis,id); if(!it) return;
+  var t=it.t||{}, p='pk'+tempat+jenis+id;
+  function nilai(sfx){ var e=document.getElementById(p+sfx); return e?String(e.value||'').trim():''; }
+  // Setelah simpan: perbarui salinan pkData di memori dan render ulang. JANGAN
+  // panggil serverGetPapanKerja lagi -- muat ulang penuh membuat layar berkedip
+  // dan mengembalikan grup bulan yang sedang dibuka ke keadaan bawaan.
+  function beres(pesan){
+    toast(pesan,'ok');
+    _pkRenderSemua();
   }
-  for(i=0;i<a.length;i++){
-    h+='<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0">'
-      +'<span>'+esc(a[i].email)+'</span><span><b>'+(+a[i].jumlahDraft||0)+'</b> draft'
-      +((+a[i].jumlahGagal||0)>0?(' · <b>'+(+a[i].jumlahGagal)+'</b> gagal'):'')+'</span></div>';
+  function gagal(e){ toast(e&&e.message?e.message:String(e),'error'); }
+
+  if(jenis==='spby'){
+    var no=nilai('No');
+    if(!no){ toast('Nomor SPBY belum diisi.','error'); return; }
+    if(t.rowIndex===undefined){ toast('Baris transaksi tidak ditemukan.','error'); return; }
+    google.script.run.withSuccessHandler(function(){
+        t.noSpby=no; t.tglSpby=nilai('Tgl');
+        if(pkData.jumlahAntrean) pkData.jumlahAntrean.spby=Math.max(0,(+pkData.jumlahAntrean.spby||1)-1);
+        beres('SPBY '+no+' tersimpan.');
+      }).withFailureHandler(gagal)
+      // nilaiSpby dikirim APA ADANYA, bukan 0 -- mengirim 0 akan menghapus nilai
+      // yang mungkin sudah pernah diisi lewat layar Transaksi.
+      .serverSimpanSpby(_tok, t.rowIndex, no, nilai('Tgl'), (+t.nilaiSpby||0));
+
+  } else if(jenis==='pajak'){
+    var kat=nilai('Kat');
+    if(kat===''){ toast('Kategori pajak belum dipilih.','error'); return; }
+    var ki=+kat, ref=PAJAK_REF[ki];
+    if(!ref){ toast('Kategori pajak tidak dikenal.','error'); return; }
+    // Angkanya dihitung memakai tabel yang sama dengan layar Nota; TIDAK ada
+    // rumus pajak baru yang ditulis di sini.
+    var dpp=+t.kredit||0;
+    var pph=Math.round((+ref.pph||0)*dpp);
+    var ppn=(ref.ppn && (!ref.minPPN || dpp>=ref.minPPN)) ? Math.round(ref.ppn*dpp) : 0;
+    google.script.run.withSuccessHandler(function(){
+        t.pajakKatIdx=ki; t.pajakPph=pph; t.pajakPpn=ppn; t.pajakDpp=dpp;
+        if(pkData.jumlahAntrean) pkData.jumlahAntrean.pajak=Math.max(0,(+pkData.jumlahAntrean.pajak||1)-1);
+        beres('Pajak tersimpan: PPh '+rupiah(pph)+', PPN '+rupiah(ppn)+'.');
+      }).withFailureHandler(gagal)
+      .serverSimpanPajak(_tok, t.no, {katIdx:ki, pph:pph, ppn:ppn, dpp:dpp});
+
+  } else if(jenis==='nota'){
+    var nm=nilai('Nm'), nl=unfmt(nilai('Nl'));
+    if(!nm){ toast('Nama penyedia belum diisi.','error'); return; }
+    if(nl<=0){ toast('Nilai nota harus lebih dari 0.','error'); return; }
+    google.script.run.withSuccessHandler(function(){
+        t.notaTotal=(+t.notaTotal||0)+nl;
+        t.notaJml=(+t.notaJml||0)+1;
+        var um2=(+t.uangDiserahkan>0)?(+t.uangDiserahkan):(+t.kredit||0);
+        if(um2-(+t.notaTotal||0)-(+t.kembalianTotal||0)<=0 && pkData.jumlahAntrean)
+          pkData.jumlahAntrean.nota=Math.max(0,(+pkData.jumlahAntrean.nota||1)-1);
+        beres('Nota '+nm+' '+rupiah(nl)+' tersimpan.');
+      }).withFailureHandler(gagal)
+      .serverTambahNota(_tok, t.no, {namaPenyedia:nm, nilai:nl, tglNota:nilai('Tgl')});
+
+  } else if(jenis==='foto'){
+    var noTx=nilai('No');
+    if(!noTx){ toast('Nomor transaksi tujuan belum diisi.','error'); return; }
+    google.script.run.withSuccessHandler(function(){
+        var sc=pkData.scanBelumKait||[], i;
+        for(i=0;i<sc.length;i++) if(String(sc[i].fileId)===String(id)){ sc.splice(i,1); break; }
+        if(pkData.jumlahAntrean) pkData.jumlahAntrean.foto=sc.length;
+        beres('Berkas dikaitkan ke transaksi No '+noTx+'.');
+      }).withFailureHandler(gagal)
+      .serverKaitkanScan(_tok, id, noTx, nilai('Lb'));
   }
-  document.getElementById('pkAntrean').innerHTML=
-    '<div class="pk-antre"><div class="pk-h">Antrean HP</div>'+h+'</div>';
 }
 
-function _pkRenderScan(res){
-  var s=res.scanTerbaru||[], h='', i;
-  if(!s.length){
-    document.getElementById('pkScan').innerHTML='<div class="pk-kosong">Tidak ada berkas scan terbaru.</div>';
-    return;
-  }
-  for(i=0;i<s.length;i++){
-    h+='<div class="pk-row" style="grid-template-columns:1fr auto">'
-      +'<div><div class="t1">'+esc(s[i].nama||s[i].name||'(tanpa nama)')+'</div>'
-      +'<div class="t2">'+esc(String(s[i].tanggal||s[i].updated||''))+'</div></div>'
-      +'<div><span class="chip no">Belum dikaitkan</span></div></div>';
-  }
-  document.getElementById('pkScan').innerHTML=h;
-}
-
+/* ---------- Kaki halaman: kartu ketenangan ---------- */
 function _pkRenderRekon(res){
-  var r=res.rekon||{}, c=r.counts||{};
-  var beda=+c.nilaiBeda||0;
+  var r=(res&&res.rekon)||{}, c=r.counts||{}, beda=+c.nilaiBeda||0;
+  // lastImport BUKAN string: Rekonsiliasi._parseBatch() mengembalikan
+  // {tanggal, hariLalu} atau null. Merangkainya langsung menghasilkan
+  // "[object Object]" -- itu bug yang tampil di layar sebelum perbaikan ini.
+  var li=r.lastImport, teksImpor;
+  if(li && li.tanggal){
+    teksImpor='Data SAKTI terakhir diimpor '+esc(_tglPanjang(li.tanggal))
+      +((li.hariLalu!==null&&li.hariLalu!==undefined)
+        ? (' — '+(li.hariLalu<=0?'hari ini':(li.hariLalu+' hari lalu'))) : '')+'.';
+  } else {
+    teksImpor='Belum ada impor data SAKTI.';
+  }
   document.getElementById('pkRekon').innerHTML=
-     '<div class="pk-tenang" onclick="switchTab(\'rekon\')"><div class="pk-h">Kartu ketenangan</div>'
-    +'<div class="t2" style="margin-top:6px">'
-    +(+c.cocok||0)+' cocok · '+(+c.belum||0)+' belum · '
-    +'<b'+(beda>0?' style="color:var(--bs-a2)"':'')+'>'+beda+'</b> selisih nilai</div>'
-    +'<div class="t2">'+(r.lastImport?('Impor terakhir: '+esc(String(r.lastImport)))
-                                     :'Belum ada impor rekening koran')+'</div></div>';
+     '<div class="lbl">Kartu ketenangan</div>'
+    +'<div class="baris">'+(+c.cocok||0)+' cocok &middot; '+(+c.belum||0)+' belum dicocokkan &middot; '
+    +'<b'+(beda>0?' class="perlu"':'')+'>'+beda+'</b> selisih nilai</div>'
+    +'<div class="baris">'+teksImpor+'</div>'
+    +'<a onclick="switchTab(\'rekon\')">Buka layar Rekonsiliasi</a>';
+}
+/** 'YYYY-MM-DD' -> '31 Juli 2026'. Kembalikan apa adanya bila tak terbaca. */
+function _tglPanjang(iso){
+  var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso||''));
+  if(!m) return String(iso||'');
+  return (+m[3])+' '+_PK_BULAN[(+m[2]||1)-1]+' '+m[1];
 }
 
 /* ============== Ketersediaan Dana ============== */
