@@ -93,6 +93,27 @@ itu mencatat perbedaan v1→v2 baris per baris.
 
 ---
 
+## 0f. Pindah dana keluar dari daftar tindakan Papan kerja — 3 Agu 2026
+
+`_pkKriteriaTindakan()` sekarang mengembalikan `[]` untuk pindah dana (`REF_TRANSFER`
+diawali `TF-`). Pindah dana bank↔tunai **tidak punya siklus pertanggungjawaban sama
+sekali**: tidak perlu SPBY, tidak kena pajak, tidak ada uang muka yang harus bernota.
+Sebelumnya ia memenuhi daftar dengan puluhan baris "Belum SPBY" yang tidak akan
+pernah bisa diselesaikan.
+
+**Bukan hanya kekacauan tampilan — angkanya juga salah.** Kartu "Belum di-SPBY" ikut
+menghitung pindah dana, jadi nilainya menggelembung oleh uang yang sebenarnya hanya
+berpindah kantong. Pada data uji: Rp 32.000.000 → Rp 4.500.000 yang benar.
+
+Gantinya kartu ke-5 **Pindah dana (bank ↔ tunai)**, berisi akumulasinya saja. Hanya
+baris **KREDIT** yang dihitung — tiap pindah dana membuat sepasang baris (kredit di
+asal, debet di tujuan) dengan `REF_TRANSFER` sama, jadi menghitung keduanya
+melipatduakan nilainya. `.pk-stats` diubah jadi `auto-fit` supaya kartu kelima tidak
+tertinggal sendirian di baris kedua.
+
+Uji: `uji-pk-tf.js` (12 asersi), dibuktikan bisa gagal — melepas penjagaannya
+mengembalikan 14 baris pindah dana dan membuat 5 asersi GAGAL.
+
 ## 0e. Berkas pertanggungjawaban GUP — 3 Agu 2026 (🟡 belum diuji manual)
 
 `BerkasGup.gs` + tombol **Berkas GUP** di toolbar beranda.

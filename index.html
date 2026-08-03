@@ -96,7 +96,10 @@
   .pk-grid{display:flex;gap:18px;align-items:flex-start}
   .pk-main{flex:1;min-width:0}
   .pk-side{flex:0 0 404px;display:flex;flex-direction:column;gap:14px}
-  .pk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+  /* Lima kartu: saldo tunai, bank, belum SPBY, pajak, pindah dana. Dibuat
+     mengalir (auto-fit) alih-alih jumlah kolom tetap supaya penambahan kartu
+     berikutnya tidak meninggalkan satu kartu sendirian di baris kedua. */
+  .pk-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:18px}
   .pk-card{border-radius:20px;padding:20px 22px;background:var(--bs-n200)}
   .pk-card.utama{background:var(--bs-ac);color:var(--bs-paper)}
   .pk-card .lbl{font-size:12px;font-weight:700;opacity:.85;margin-bottom:6px}
@@ -6495,9 +6498,15 @@ function submitPagu(){
  */
 function _pkKriteriaTindakan(t){
   var alasan=[];
+  // Pindah dana bank<->tunai TIDAK punya siklus pertanggungjawaban sama sekali:
+  // tidak perlu SPBY, tidak kena pajak, tidak ada uang muka yang harus bernota.
+  // Sebelum penjagaan ini ia memenuhi daftar tindakan dengan puluhan baris
+  // "Belum SPBY" yang tidak akan pernah bisa diselesaikan. Akumulasinya saja
+  // yang ditampilkan, lewat kartu di _pkRenderKartu().
+  if(!_notTransfer(t)) return alasan;
   if((+t.kredit||0)>0 && !t.noSpby) alasan.push('Belum SPBY');
   if((+t.kredit||0)>0 && (t.pajakKatIdx===null||t.pajakKatIdx===undefined)) alasan.push('Pajak belum diisi');
-  if((+t.kredit||0)>0 && _notTransfer(t)){
+  if((+t.kredit||0)>0){
     var um=(+t.uangDiserahkan>0)?(+t.uangDiserahkan):(+t.kredit||0);
     var sisaPUM=um-(+t.notaTotal||0)-(+t.kembalianTotal||0);
     if(sisaPUM>0) alasan.push('PUM belum bernota');
@@ -6525,9 +6534,23 @@ function muatPapanKerja(){
 
 function _pkRenderKartu(res){
   var tx=res.transaksi||[], i, nSpby=0, rpSpby=0;
+  var nTarik=0, rpTarik=0, nSetor=0, rpSetor=0;
   for(i=0;i<tx.length;i++){
     var t=tx[i];
-    if((+t.kredit||0)>0 && !t.noSpby){ nSpby++; rpSpby+=(+t.kredit||0); }
+    if((+t.kredit||0)<=0) continue;
+    // Pindah dana dihitung TERPISAH, bukan sebagai belanja yang belum di-SPBY.
+    // Ikut menghitungnya membuat kartu "Belum di-SPBY" menggelembung puluhan
+    // juta oleh uang yang sebenarnya hanya berpindah kantong.
+    //
+    // Hanya baris KREDIT yang dihitung: tiap pindah dana membuat sepasang baris
+    // (kredit di asal, debet di tujuan) dengan REF_TRANSFER sama, jadi menghitung
+    // keduanya akan melipatduakan nilainya.
+    if(!_notTransfer(t)){
+      if(String(t.sumber||'').toUpperCase()==='BANK'){ nTarik++; rpTarik+=(+t.kredit||0); }
+      else { nSetor++; rpSetor+=(+t.kredit||0); }
+      continue;
+    }
+    if(!t.noSpby){ nSpby++; rpSpby+=(+t.kredit||0); }
   }
   // Status setor pajak ada di baris NOTA (sheet Multi Nota), bukan di transaksi --
   // jadi angkanya dihitung di server dan dikirim jadi. Jangan menghitungnya dari
@@ -6549,7 +6572,13 @@ function _pkRenderKartu(res){
     +'<div class="pk-card"><div class="lbl">Pajak belum disetor</div>'
     +'<div class="num">'+nPajak+'</div>'
     +'<div class="sub'+(lewat?' lewat':'')+'">batas setor tanggal '+batas
-    +(lewat?' — sudah lewat':'')+'</div></div>';
+    +(lewat?' — sudah lewat':'')+'</div></div>'
+    // Pindah dana: akumulasinya saja. Barisnya tidak muncul di daftar tindakan
+    // karena tidak ada yang bisa dikerjakan atasnya.
+    +'<div class="pk-card"><div class="lbl">Pindah dana (bank &harr; tunai)</div>'
+    +'<div class="num">'+rupiah(rpTarik)+'</div>'
+    +'<div class="sub">'+nTarik+'&times; tarik tunai'
+    +(nSetor?(' &middot; '+nSetor+'&times; setor balik '+rupiah(rpSetor)):'')+'</div></div>';
 }
 
 /* Kunci bulan 'YYYY-MM' dari tanggal transaksi; '' bila tanggalnya tidak terbaca. */
