@@ -438,6 +438,21 @@
 
   @media (prefers-reduced-motion:reduce){ *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important} }
   /* Blok bukti terpisah pada form nota: A = scan nota, B = foto barang */
+  /* Ubin foto ala layar nota HP — pola yang sama dipakai di modal nota desktop.
+     Menghapus lewat tombol X, BUKAN klik gambarnya: versi lama menghapus foto
+     pada klik pertama tanpa konfirmasi, dan klik untuk melihat malah membuang. */
+  .tgrid{display:flex;flex-wrap:wrap;gap:8px}
+  .tileD{width:84px;height:84px;border-radius:14px;overflow:hidden;position:relative;
+    border:1px solid var(--bs-n300);background:var(--bs-n200);padding:0;flex:none}
+  .tileD img{width:100%;height:100%;object-fit:cover;display:block}
+  .tileD .x{position:absolute;top:4px;right:4px;width:22px;height:22px;border:none;
+    border-radius:999px;background:rgba(32,30,29,.72);color:var(--bs-paper);
+    font-size:13px;line-height:22px;text-align:center;cursor:pointer;padding:0}
+  .tileD.add{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;background:var(--bs-paper);border:1.5px dashed var(--bs-n400);
+    color:var(--bs-ac7);font-size:11px;font-weight:600;cursor:pointer}
+  .tileD.add span{font-size:20px;line-height:1}
+  .tileD.add:hover{background:var(--bs-ac1);border-color:var(--bs-ac)}
   .bukti-blok{border:1px solid var(--bs-n300);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:var(--bs-paper)}
   .bukti-judul{font-size:13px;font-weight:800;color:var(--bs-ac);margin-bottom:2px}
   .bukti-ket{font-size:11.5px;color:var(--bs-n600);margin-bottom:8px}
@@ -1013,8 +1028,9 @@
     <!-- ===== BUKTI A: scan nota / kuitansi ===== -->
     <div class="bukti-blok">
       <div class="bukti-judul">&#129534; Bukti A &mdash; Foto Nota / Kuitansi</div>
-      <div class="bukti-ket">Berkas nota asli dari penyedia. Cukup satu per nota.</div>
-      <input type="file" id="ntFile" accept="image/*" capture="environment" onchange="_showPastePreview(this)">
+      <div class="bukti-ket">Berkas nota asli dari penyedia. Cukup satu per nota &mdash; boleh juga tempel <b>Ctrl+V</b>.</div>
+      <input type="file" id="ntFile" accept="image/*" capture="environment" style="display:none" onchange="_ntRenderTileA()">
+      <div class="tgrid" id="ntTileA"></div>
       <button class="btn ghost scan-imp" style="display:none;margin:6px 0 0" onclick="importScanNota()">&#128247; Impor dari Folder Scan</button>
       <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-top:8px;color:var(--bs-n600)">
         <input type="checkbox" id="ntAsFotoBarang"> Salin juga foto nota ini ke Bukti B (biasanya <b>tidak perlu</b>)
@@ -1025,13 +1041,9 @@
     <div class="bukti-blok">
       <div class="bukti-judul">&#128247; Bukti B &mdash; Foto Barang Diterima</div>
       <div class="bukti-ket">Foto fisik barang/jasa yang diterima (boleh beberapa &mdash; atau tempel <b>Ctrl+V</b>).</div>
-      <div style="display:flex;gap:6px;margin-bottom:6px">
-        <button type="button" class="btn ghost" style="padding:5px 10px;font-size:12px;margin:0" onclick="document.getElementById('ntBarangCam').click()">&#128247; Kamera</button>
-        <button type="button" class="btn ghost" style="padding:5px 10px;font-size:12px;margin:0" onclick="document.getElementById('ntBarangFiles').click()">&#128444; Galeri</button>
-      </div>
       <input type="file" id="ntBarangCam" accept="image/*" capture="environment" multiple style="display:none" onchange="_ntAddBarangFiles(this.files)">
       <input type="file" id="ntBarangFiles" accept="image/*" multiple style="display:none" onchange="_ntAddBarangFiles(this.files)">
-      <div id="ntBarangPp" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      <div class="tgrid" id="ntTileB"></div>
       <div id="ntGps" class="tgl" style="margin-top:6px"></div>
     </div>
     <button class="btn" id="ntSubmitBtn" onclick="submitNota()">Tambah Nota</button>
@@ -3351,11 +3363,7 @@ function _pickScan(idx){
 function importScanNota(){
   openScanPicker(function(file){
     _ntScanFile=file;
-    var box=document.getElementById('ntFile_pp');
-    if(!box){ box=document.createElement('div'); box.id='ntFile_pp'; box.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-top:6px'; document.getElementById('ntFile').parentNode.appendChild(box); }
-    box.innerHTML='';
-    if(/^image\//.test(file.mimeType)){ var img=document.createElement('img'); img.src='data:'+file.mimeType+';base64,'+file.base64; img.style.cssText='width:56px;height:56px;object-fit:cover;border:1px solid var(--bs-n300);border-radius:6px'; box.appendChild(img); }
-    else { var s=document.createElement('span'); s.textContent='📄 '+file.namaFile; s.style.cssText='font-size:11px;color:var(--bs-n700)'; box.appendChild(s); }
+    _ntRenderTileA();
     toast('Scan dipilih. Lengkapi data nota lalu Tambah Nota','success');
   });
 }
@@ -4582,7 +4590,7 @@ function editNota(urutan){
   document.getElementById('ntAlamat').value=n.alamat||'';
   document.getElementById('ntNilai').value=_grp(n.nilai||0);
   document.getElementById('ntTgl').value=_toISODate(n.tglNota);
-  document.getElementById('ntFile').value=''; _clearPastePreview('ntFile');
+  document.getElementById('ntFile').value='';
   if(_ntPersediaan){
     document.getElementById('ntItemList').innerHTML='';
     var det=n.detail||[];
@@ -4609,24 +4617,62 @@ function _cancelEditNota(){
   document.getElementById('ntDetailWrap').style.display=_ntPersediaan?'':'none';
   document.getElementById('ntNilai').readOnly=_ntPersediaan;
   if(_ntPersediaan){ document.getElementById('ntItemList').innerHTML=''; ntAddItem(); _ntRecalc(); }
-  _ntBarangFiles=[]; var bp=document.getElementById('ntBarangPp'); if(bp) bp.innerHTML='';
+  _ntBarangFiles=[];
+  _ntRenderTileA(); _ntRenderTileB();
 }
-/** Kompres & simpan foto barang dari pilih/paste; tampilkan thumbnail (klik → hapus). */
+/* ===== Ubin foto ala HP di modal nota =====
+ * Sumber datanya TIDAK berubah: Bukti A tetap input #ntFile / _ntScanFile,
+ * Bukti B tetap _ntBarangFiles. Yang diganti hanya tampilannya -- pratinjau
+ * besar, ubin "+" untuk menambah, dan tombol X per foto.
+ */
+function _ntTileFotoHtml(src, onX){
+  return '<div class="tileD"><img src="'+src+'" alt="">'
+    +'<button type="button" class="x" title="Hapus foto" onclick="'+onX+'">&times;</button></div>';
+}
+function _ntTileAddHtml(onClick, ikon, label){
+  return '<button type="button" class="tileD add" onclick="'+onClick+'">'
+    +'<span>'+ikon+'</span>'+label+'</button>';
+}
+function _ntRenderTileA(){
+  var box=document.getElementById('ntTileA'); if(!box) return;
+  var inp=document.getElementById('ntFile'), h='';
+  if(inp && inp.files && inp.files[0]){
+    h+=_ntTileFotoHtml(URL.createObjectURL(inp.files[0]),'_ntHapusFileA()');
+  } else if(_ntScanFile && _ntScanFile.base64){
+    var pre=_ntScanFile.base64;
+    if(pre.indexOf('data:')!==0) pre='data:'+(_ntScanFile.mimeType||'image/jpeg')+';base64,'+pre;
+    h+=_ntTileFotoHtml(pre,'_ntHapusFileA()');
+  } else {
+    h+=_ntTileAddHtml("document.getElementById('ntFile').click()",'&#128247;','Pilih / Foto');
+  }
+  box.innerHTML=h;
+}
+function _ntHapusFileA(){
+  var inp=document.getElementById('ntFile'); if(inp) inp.value='';
+  _ntScanFile=null;
+  _ntRenderTileA();
+}
+function _ntRenderTileB(){
+  var box=document.getElementById('ntTileB'); if(!box) return;
+  var h='', i;
+  for(i=0;i<_ntBarangFiles.length;i++)
+    h+=_ntTileFotoHtml(_ntBarangFiles[i].base64,'_ntHapusBarang('+i+')');
+  h+=_ntTileAddHtml("document.getElementById('ntBarangCam').click()",'&#128247;','Kamera')
+    +_ntTileAddHtml("document.getElementById('ntBarangFiles').click()",'&#128444;','Galeri');
+  box.innerHTML=h;
+}
+function _ntHapusBarang(idx){
+  _ntBarangFiles.splice(idx,1);
+  _ntRenderTileB();
+}
+/** Kompres & simpan foto barang dari pilih/paste, lalu render ulang ubinnya. */
 function _ntAddBarangFiles(files){
   if(!files||!files.length) return;
-  var pp=document.getElementById('ntBarangPp');
   for(var i=0;i<files.length;i++){
-    (function(f){
-      compressImage(f,function(c){
-        _ntBarangFiles.push(c);
-        var img=document.createElement('img');
-        img.src=c.base64;
-        img.style.cssText='width:56px;height:56px;object-fit:cover;border:1px solid var(--bs-n300);border-radius:6px;cursor:pointer';
-        img.title='Klik untuk hapus';
-        img.onclick=function(){ var idx=_ntBarangFiles.indexOf(c); if(idx>-1) _ntBarangFiles.splice(idx,1); img.remove(); };
-        if(pp) pp.appendChild(img);
-      });
-    })(files[i]);
+    compressImage(files[i],function(c){
+      _ntBarangFiles.push(c);
+      _ntRenderTileB();
+    });
   }
 }
 /* ----- Rincian Barang (persediaan): baris item + foto per item ----- */
