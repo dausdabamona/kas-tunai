@@ -509,9 +509,20 @@
   </div>
 
   <div class="prow">
-    <div class="kiri"><div class="nm">Nilai nota</div></div>
+    <div class="kiri"><div class="nm">Nilai nota</div>
+      <div class="sub" id="pjNilaiSub"></div></div>
     <div class="val" id="pjNilai">—</div>
   </div>
+
+  <details style="margin:6px 0 10px">
+    <summary style="min-height:44px;display:flex;align-items:center;font-size:13.5px;color:var(--ac7);font-weight:600;cursor:pointer">&#8645; Gross-up — toko harus terima bersih</summary>
+    <div class="f" style="margin-top:8px"><label>Jumlah bersih yang harus diterima toko (Rp)</label>
+      <input id="pjNettoTarget" inputmode="numeric" placeholder="mis. 7.400.000">
+      <div class="hint">Nilai nota dinaikkan supaya setelah dipotong pajak, toko menerima persis jumlah ini. Nilai nota tersimpan ikut diubah saat disimpan.</div>
+    </div>
+    <button class="btn full" onclick="pjGrossUp()">Hitung nilai nota dari jumlah bersih</button>
+    <div class="hint" id="pjGuInfo"></div>
+  </details>
 
   <div class="prow">
     <div class="kiri"><div class="nm">Nilai sudah termasuk PPN</div>
@@ -2496,6 +2507,9 @@ function bukaPajak(no, urutan){
     ? klasifikasiPajak(pjTeksKlasifikasi(t, n))
     : +n.pajakKatIdx;
   PJ.mode = (String(n.modeBayar||'NETTO').toUpperCase()==='BRUTO') ? 'BRUTO' : 'NETTO';
+  // Gross-up milik nota SEBELUMNYA tidak boleh terbawa ke nota ini.
+  PJ.nilaiBaru = 0;
+  $('pjNettoTarget').value = ''; $('pjGuInfo').textContent = '';
   $('pjMode').value = PJ.mode;
   $('pjNota').textContent = 'Nota ' + urutan + ' — ' + (n.namaPenyedia||'(tanpa nama)') + (n.npwp?' · PKP':'');
   pjIsiKategori();
@@ -2511,9 +2525,58 @@ function pjIsiKategori(){
 function pjPilihKategori(){ PJ.kat = parseInt($('pjKat').value,10); hitungPajakUI(); }
 function pjPilihMode(){ PJ.mode = ($('pjMode').value==='BRUTO') ? 'BRUTO' : 'NETTO'; hitungPajakUI(); }
 function pjToggle(k){ PJ[k] = !PJ[k]; hitungPajakUI(); }
+
+/* ===== Gross-up: cari nilai nota (bruto) dari netto yang harus diterima toko.
+ * Salinan pendekatan hitungGrossUpRinci() desktop, memakai hitungPajak() versi
+ * layar ini sebagai pemeriksa. JANGAN diganti rumus tertutup: nilai yang
+ * diterima toko MELOMPAT di ambang pajak, dan rumus yang menganggap pajak
+ * selalu berlaku meleset ratusan ribu di dekat ambang (bukti di desktop:
+ * target 1,9 jt meleset Rp 212.182). */
+function pjCariBruto(netto, ref, inc, npwp){
+  netto = Math.round(+netto || 0);
+  if (netto <= 0) return { bruto:0, netto:0, tepat:true };
+  var kenaPPN = ref.ppn > 0;
+  var tarif = ref.tarifPPh || 0;
+  var x2 = (ref.jenisPPh==='PPh Pasal 22' || ref.jenisPPh==='PPh Pasal 23');
+  if (!npwp && tarif > 0 && x2) tarif = tarif * 2;
+  var bagi = (kenaPPN && inc);
+  var kand = [], a, b, sisa, i, j;
+  for (a=0;a<2;a++) for (b=0;b<2;b++){
+    var tp = a ? tarif : 0, tn = (b && kenaPPN) ? ref.ppn : 0;
+    sisa = bagi ? ((1.11 - tp - tn) / 1.11) : (1 - tp - tn);
+    if (sisa > 0) kand.push(Math.round(netto / sisa));
+  }
+  var lihat = {}, uji = [];
+  for (i=0;i<kand.length;i++) for (j=-3;j<=3;j++){
+    var v = kand[i]+j; if (v>0 && !lihat[v]){ lihat[v]=1; uji.push(v); }
+  }
+  uji.sort(function(x,y){ return x-y; });
+  var lebih = null, nettoLebih = 0;
+  for (i=0;i<uji.length;i++){
+    var r = hitungPajak(uji[i], ref, inc, npwp);
+    var nt = uji[i] - r.pph - r.ppn;
+    if (nt === netto) return { bruto:uji[i], netto:netto, tepat:true };
+    if (nt > netto && lebih === null){ lebih = uji[i]; nettoLebih = nt; }
+  }
+  if (lebih !== null) return { bruto:lebih, netto:nettoLebih, tepat:false };
+  var ak = uji[uji.length-1], rr = hitungPajak(ak, ref, inc, npwp);
+  return { bruto:ak, netto:ak-rr.pph-rr.ppn, tepat:false };
+}
+function pjGrossUp(){
+  var target = angka($('pjNettoTarget').value);
+  if (!target){ toast('Isi dulu jumlah bersih yang harus diterima toko', true); return; }
+  var h = pjCariBruto(target, pjRef(PJ.kat), PJ.inc, PJ.npwp);
+  PJ.nilaiBaru = h.bruto;
+  $('pjGuInfo').textContent = 'Nilai nota menjadi ' + rp(h.bruto) + ' — toko menerima '
+    + (h.tepat ? 'tepat ' : '') + rp(h.netto)
+    + (h.tepat ? '' : ' (target tidak bisa tepat karena ambang pajak; dipilih yang tidak merugikan toko)');
+  hitungPajakUI();
+}
 function hitungPajakUI(){
   var n = PJ.nota; if (!n) return;
-  var nilai = +n.nilai || 0;
+  // nilaiBaru = hasil gross-up yang BELUM tersimpan; dipakai untuk seluruh
+  // perhitungan di layar ini dan ditulis ke nota saat disimpan (dikonfirmasi).
+  var nilai = (+PJ.nilaiBaru > 0) ? +PJ.nilaiBaru : (+n.nilai || 0);
   var ref = pjRef(PJ.kat);
   var r = hitungPajak(nilai, ref, PJ.inc, PJ.npwp);
   var total = r.pph + r.ppn, netto = nilai - total;
@@ -2521,6 +2584,8 @@ function hitungPajakUI(){
   $('pjSwInc').className  = 'sw' + (PJ.inc ?' on':'');
   $('pjSwNpwp').className = 'sw' + (PJ.npwp?' on':'');
   $('pjNilai').textContent = rp(nilai);
+  $('pjNilaiSub').textContent = (+PJ.nilaiBaru > 0 && +PJ.nilaiBaru !== (+n.nilai||0))
+    ? ('Hasil gross-up — nilai tersimpan ' + rp(+n.nilai||0) + ' ikut diubah saat disimpan') : '';
   $('pjKatHint').textContent = ref.catatan || 'Menentukan jenis PPh, PPN, dan ambang batasnya.';
   $('pjDppSub').textContent = (r.kenaPPN && PJ.inc) ? 'Nilai nota ÷ 1,11' : 'Sama dengan nilai nota';
   $('pjDpp').textContent = rp(r.dpp);
@@ -2556,20 +2621,33 @@ function hitungPajakUI(){
 function simpanPajak(){
   if (!PJ.no || PJ.urutan===null){ toast('Nota belum dipilih', true); return; }
   var h = PJ._hasil || {dpp:0,ppn:0,pph:0};
+  var d = {
+    katIdx: PJ.kat,               // kategori asli — sama dengan yang dipakai desktop
+    dpp: h.dpp, pph: h.pph, ppn: h.ppn,
+    termasukPPN: PJ.inc, adaNpwp: PJ.npwp,
+    modeBayar: PJ.mode
+  };
+  // Gross-up mengubah nilai nota itu sendiri. Pajak di atas dihitung dari
+  // nilai baru, jadi notanya wajib ikut -- kalau tidak, angka tersimpan saling
+  // bertentangan dan kuitansi menghitung netto dari pasangan yang salah
+  // (pelajaran dari desktop: netto tercetak Rp 6.460.914 padahal Rp 7.400.000).
+  // Dikonfirmasi karena ΣNota dan sisa uang muka ikut berubah.
+  var lama = +((PJ.nota||{}).nilai) || 0;
+  if (+PJ.nilaiBaru > 0 && +PJ.nilaiBaru !== lama){
+    if (!confirm('Nilai nota diubah dari ' + rp(lama) + ' menjadi ' + rp(+PJ.nilaiBaru)
+      + ' (hasil gross-up).\n\nLanjut simpan?')) return;
+    d.nilaiBaru = +PJ.nilaiBaru;
+  }
   loading(true,'Menyimpan potongan…');
   google.script.run
     .withSuccessHandler(function(){
       loading(false); toast('Potongan pajak tersimpan');
+      PJ.nilaiBaru = 0;
       muat();                       // segarkan angka pajak di daftar
       bukaDetail(PJ.no);
     })
     .withFailureHandler(gagal)
-    .serverSimpanPajakNota(_tok, PJ.no, PJ.urutan, {
-      katIdx: PJ.kat,               // kategori asli — sama dengan yang dipakai desktop
-      dpp: h.dpp, pph: h.pph, ppn: h.ppn,
-      termasukPPN: PJ.inc, adaNpwp: PJ.npwp,
-      modeBayar: PJ.mode
-    });
+    .serverSimpanPajakNota(_tok, PJ.no, PJ.urutan, d);
 }
 
 /* ===================== Pengembalian uang =====================
