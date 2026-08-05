@@ -5401,7 +5401,7 @@ function _renderKuitansiPajakHtml(t, pj, nota){
   +'<h3>Rincian Pemotongan Pajak</h3>'
   +rincian
   +'<div class="tot"><span class="tk">Total Pemotongan Pajak</span><span class="tv">'+rupiah(pj.totalPajak)+'</span></div>'
-  +'<div class="netto"><div><div class="nlbl">Netto Dibayarkan ke Rekanan</div><div class="nterb">'+esc(_terbilangTitle(netto))+' Rupiah</div></div><div class="nval">'+rupiah(netto)+'</div></div>'
+  +'<div class="netto"><div><div class="nlbl">Netto Dibayarkan ke Rekanan</div><div class="nterb">'+esc(_terbilangTitle(netto))+'</div></div><div class="nval">'+rupiah(netto)+'</div></div>'
   +'<div style="font-size:10px;color:var(--mut);margin-top:6px;font-style:italic">Pajak di atas disetor ke Kas Negara melalui SSP/e-Billing pada MAP/KJS tercantum. Netto = nilai nota dikurangi total pemotongan pajak.</div>'
   +'<div class="sign">'
   +'<div><div style="font-size:11px">Rekanan / Penerima,<br>'+esc(INST.kota||'Sorong')+', '+_tglPanjang(t.tanggal)+'</div><div style="height:56px"></div><div class="nm">'+esc(penerima)+'</div></div>'
