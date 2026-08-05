@@ -1545,7 +1545,14 @@ function hitungPajak(kegiatan, nominal, termasukPPN, adaNpwp, refOverride){
   if(!adaNpwp && tarif>0 && npwpX2) tarif=tarif*2;
 
   var pph=0;
-  if(ref.jenisPPh && tarif>0 && (!ref.minPPh || nominal>=ref.minPPh)) pph=Math.round(tarif*dpp);
+  // Ambang PPh dibandingkan terhadap DPP, SAMA seperti ambang PPN di bawah.
+  // PMK 59/2022 menyebut PPh 22 tidak dipungut atas pembayaran "paling banyak
+  // Rp2.000.000,00 TIDAK TERMASUK PPN" -- kata-kata yang persis sama dengan
+  // aturan PPN. Sebelumnya baris ini membandingkan `nominal` (bruto), sehingga
+  // nota Rp 2.000.000 termasuk PPN (DPP Rp 1.801.802) tetap dipotong PPh 22
+  // padahal DPP-nya masih di bawah ambang -- PPN-nya sendiri sudah benar
+  // dikecualikan, jadi satu nota bisa bebas PPN tapi kena PPh. Itu janggal.
+  if(ref.jenisPPh && tarif>0 && (!ref.minPPh || dpp>=ref.minPPh)) pph=Math.round(tarif*dpp);
 
   var ppn=0;
   // Ambang PPN dibandingkan terhadap DPP (nilai TANPA PPN), bukan nilai bruto
@@ -1568,36 +1575,88 @@ function hitungPajak(kegiatan, nominal, termasukPPN, adaNpwp, refOverride){
  * G = netto / faktor_sisa; faktor tergantung apakah termasukPPN dan kenaPPN.
  */
 function hitungGrossUp(netto, ref, termasukPPN, adaNpwp) {
-  netto = parseFloat(netto) || 0;
+  var h = hitungGrossUpRinci(netto, ref, termasukPPN, adaNpwp);
+  return h.bruto;
+}
+
+/**
+ * Versi rinci: mengembalikan {bruto, netto, tepat}.
+ *
+ * KENAPA TIDAK CUKUP SATU RUMUS TERTUTUP. Nilai yang diterima rekanan
+ * TIDAK naik mulus mengikuti bruto: pada ambang PPh/PPN ia MELOMPAT TURUN,
+ * karena tepat di atas ambang pajaknya mulai dipotong. Rumus tertutup versi
+ * lama menganggap pajak selalu berlaku, lalu dikoreksi ±1 untuk pembulatan.
+ * Koreksi satu langkah itu tidak bisa menyeberangi lompatan: pada target
+ * netto Rp 1.900.000 ia menghasilkan bruto Rp 2.141.116 yang membuat rekanan
+ * menerima Rp 2.112.182 -- meleset Rp 212.182, dan anggaran membayar
+ * kelebihan sebesar itu. Pada target Rp 1.500.000 (jauh di bawah ambang,
+ * mestinya tanpa pajak sama sekali) ia menghasilkan Rp 1.690.354.
+ *
+ * Karena itu: hitung kandidat untuk SETIAP kemungkinan (pajak berlaku atau
+ * tidak), lalu VERIFIKASI tiap kandidat lewat hitungPajak() -- satu-satunya
+ * sumber kebenaran -- dan ambil bruto TERKECIL yang benar-benar menghasilkan
+ * netto yang diminta. Bila tidak ada yang tepat (target jatuh di dalam
+ * lompatan ambang), ambil yang netto-nya >= target supaya rekanan tidak
+ * pernah menerima kurang, dan tandai tepat:false supaya layar bisa jujur.
+ */
+function hitungGrossUpRinci(netto, ref, termasukPPN, adaNpwp) {
+  netto = Math.round(parseFloat(netto) || 0);
+  if (netto <= 0) return { bruto:0, netto:0, tepat:true };
   var kenaPPN = ref.ppn > 0;
   var tarif = ref.tarifPPh || 0;
   var npwpX2 = (ref.jenisPPh === 'PPh Pasal 22' || ref.jenisPPh === 'PPh Pasal 23');
   if (!adaNpwp && tarif > 0 && npwpX2) tarif = tarif * 2;
-  var gross;
-  if (kenaPPN && termasukPPN)       gross = (1 - tarif) > 0 ? netto * 1.11 / (1 - tarif) : netto;
-  else if (kenaPPN && !termasukPPN) gross = (1 - tarif - 0.11) > 0 ? netto / (1 - tarif - 0.11) : netto;
-  else                              gross = tarif > 0 && (1 - tarif) > 0 ? netto / (1 - tarif) : netto;
-  gross = Math.round(gross);
-  // Koreksi ±1 akibat pembulatan bertingkat agar netto tepat
-  var chk = hitungPajak('', gross, termasukPPN, adaNpwp, ref);
-  if(chk.nettoRekanan < netto) gross++;
-  else if(chk.nettoRekanan > netto) gross--;
-  return gross;
+  var ppnPakaiPembagi = (kenaPPN && termasukPPN);   // DPP = bruto / 1,11
+
+  // Kandidat untuk tiap kombinasi (PPh berlaku?, PPN berlaku?).
+  var kandidat = [], a, b, sisa;
+  for (a = 0; a < 2; a++) {
+    for (b = 0; b < 2; b++) {
+      var tp = a ? tarif : 0;                       // tarif PPh yang dianggap berlaku
+      var tn = (b && kenaPPN) ? ref.ppn : 0;        // tarif PPN yang dianggap berlaku
+      if (ppnPakaiPembagi) {
+        // netto = B - tp*(B/1,11) - tn*(B/1,11) = B*(1,11 - tp - tn)/1,11
+        sisa = (1.11 - tp - tn) / 1.11;
+      } else {
+        sisa = 1 - tp - tn;
+      }
+      if (sisa <= 0) continue;
+      kandidat.push(Math.round(netto / sisa));
+    }
+  }
+  // Sapu ±3 di sekitar tiap kandidat: pembulatan bertingkat bisa menggeser
+  // hasilnya satu-dua rupiah dari rumus.
+  var lihat = {}, uji = [], i, j;
+  for (i = 0; i < kandidat.length; i++)
+    for (j = -3; j <= 3; j++) { var v = kandidat[i] + j; if (v > 0 && !lihat[v]) { lihat[v] = 1; uji.push(v); } }
+  uji.sort(function (x, y) { return x - y; });
+
+  var tepatKecil = null, lebihKecil = null, nettoLebih = 0;
+  for (i = 0; i < uji.length; i++) {
+    var n = hitungPajak('', uji[i], termasukPPN, adaNpwp, ref).nettoRekanan;
+    if (n === netto) { tepatKecil = uji[i]; break; }        // uji[] sudah terurut naik
+    if (n > netto && lebihKecil === null) { lebihKecil = uji[i]; nettoLebih = n; }
+  }
+  if (tepatKecil !== null) return { bruto:tepatKecil, netto:netto, tepat:true };
+  if (lebihKecil !== null) return { bruto:lebihKecil, netto:nettoLebih, tepat:false };
+  var akhir = uji[uji.length - 1];
+  return { bruto:akhir, netto:hitungPajak('', akhir, termasukPPN, adaNpwp, ref).nettoRekanan, tepat:false };
 }
 
 function hitungGrossUpUI() {
   var netto = unfmt(document.getElementById('pjNettoTarget').value);
   if (!netto) { toast('Isi jumlah netto rekanan terlebih dahulu', 'info'); return; }
-  var gross = hitungGrossUp(netto, _pjSelectedRef(),
+  var h = hitungGrossUpRinci(netto, _pjSelectedRef(),
     document.getElementById('pjTermasukPPN').checked,
     document.getElementById('pjAdaNpwp').checked);
-  document.getElementById('pjNilaiDasar').value = _grp(gross);
+  document.getElementById('pjNilaiDasar').value = _grp(h.bruto);
   // Bersihkan override manual agar hasil gross-up yang dipakai (bukan nilai lama)
   document.getElementById('pjPphManual').value = '';
   document.getElementById('pjPpnManual').value = '';
-  var pjChk = hitungPajak('', gross, document.getElementById('pjTermasukPPN').checked, document.getElementById('pjAdaNpwp').checked, _pjSelectedRef());
-  document.getElementById('pjGrossUpInfo').textContent =
-    'Nilai kontrak/bruto: ' + rupiah(gross) + ' → rekanan menerima tepat ' + rupiah(pjChk.nettoRekanan);
+  document.getElementById('pjGrossUpInfo').textContent = h.tepat
+    ? ('Nilai kontrak/bruto: ' + rupiah(h.bruto) + ' → rekanan menerima tepat ' + rupiah(h.netto))
+    : ('Nilai kontrak/bruto: ' + rupiah(h.bruto) + ' → rekanan menerima ' + rupiah(h.netto)
+       + ' (target ' + rupiah(netto) + ' tidak bisa tepat karena ambang pajak; dipilih yang tidak merugikan rekanan)');
   recalcPajak();
 }
 
@@ -5159,10 +5218,15 @@ function recalcPajak(){
   if(elGu&&elGuInfo){
     var nettoTgt=unfmt(elGu.value||'0');
     if(nettoTgt>0){
-      var gross=hitungGrossUp(nettoTgt,_pjSelectedRef(),
+      var hGu=hitungGrossUpRinci(nettoTgt,_pjSelectedRef(),
         document.getElementById('pjTermasukPPN').checked,
         document.getElementById('pjAdaNpwp').checked);
-      elGuInfo.textContent='Nilai kontrak/bruto: '+rupiah(gross)+' → rekanan menerima ≈ '+rupiah(nettoTgt);
+      // Tampilkan netto HASIL VERIFIKASI, bukan menggemakan targetnya --
+      // gema membuat layar berkata "menerima 7.400.000" walau hitungannya
+      // sebenarnya menghasilkan angka lain.
+      elGuInfo.textContent='Nilai kontrak/bruto: '+rupiah(hGu.bruto)
+        +' → rekanan menerima '+(hGu.tepat?'tepat ':'')+rupiah(hGu.netto)
+        +(hGu.tepat?'':' (target tidak bisa tepat karena ambang pajak)');
     } else { elGuInfo.textContent=''; }
   }
 }

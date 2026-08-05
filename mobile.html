@@ -2469,7 +2469,10 @@ function hitungPajak(nominal, ref, termasukPPN, adaNpwp){
   // Tarif dua kali lipat untuk non-NPWP hanya berlaku pada PPh 22 & 23.
   var x2 = (ref.jenisPPh==='PPh Pasal 22' || ref.jenisPPh==='PPh Pasal 23');
   if (!adaNpwp && tarif > 0 && x2) tarif = tarif * 2;
-  var pph = (ref.jenisPPh && tarif > 0 && (!ref.minPPh || nominal >= ref.minPPh))
+  // Ambang PPh dibandingkan terhadap DPP, sama seperti ambang PPN di bawah --
+  // PMK memakai kata yang sama untuk keduanya: "tidak termasuk PPN".
+  // Salinan persis dari hitungPajak() desktop; ubah bersama-sama.
+  var pph = (ref.jenisPPh && tarif > 0 && (!ref.minPPh || dpp >= ref.minPPh))
     ? Math.round(tarif * dpp) : 0;
   // Ambang PPN dibandingkan terhadap DPP (tanpa PPN), bukan bruto nota --
   // sama persis dengan desktop. Lihat komentar di hitungPajak() index.html.
