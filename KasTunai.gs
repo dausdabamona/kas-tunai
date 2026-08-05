@@ -686,19 +686,32 @@ var KasTunai = (function () {
     if (!hit) throw new Error('Nota tidak ditemukan');
     var n = NC();
     SheetRepo.ensureMinCols(CONFIG.SHEETS.MULTI_NOTA, CONFIG.HEADERS.MULTI_NOTA.length);
-    SheetRepo.setCells(CONFIG.SHEETS.MULTI_NOTA, hit.rowIndex, Util.set(
+    var isi = Util.set(
       n.PAJAK_KATEGORI_IDX,  (d.katIdx != null ? d.katIdx : ''),
       n.PAJAK_DPP,           Util.num(d.dpp),
       n.PAJAK_PPH,           Util.num(d.pph),
       n.PAJAK_PPN,           Util.num(d.ppn),
       n.PAJAK_TERMASUK_PPN,  (d.termasukPPN === false ? 'N' : 'Y'),
       n.PAJAK_ADA_NPWP,      (d.adaNpwp === false ? 'N' : 'Y'),
-      n.MODE_BAYAR,          (String(d.modeBayar||'NETTO').toUpperCase()==='BRUTO' ? 'BRUTO' : 'NETTO')));
+      n.MODE_BAYAR,          (String(d.modeBayar||'NETTO').toUpperCase()==='BRUTO' ? 'BRUTO' : 'NETTO'));
+    // Gross-up mengubah NILAI KONTRAK nota itu sendiri (bruto dinaikkan supaya
+    // rekanan menerima netto yang diminta). Tanpa penulisan ini, pajak yang
+    // tersimpan dihitung dari bruto besar sementara nota tetap bernilai lama --
+    // kuitansi lalu mengurangkan pajak-bruto dari nominal-kecil dan nettonya
+    // salah. Hanya ditulis bila klien MENGIRIMKANNYA (sesudah konfirmasi
+    // pengguna); simpan pajak biasa tidak menyentuh nilai nota.
+    var nilaiBaru = Util.num(d.nilaiBaru);
+    if (nilaiBaru > 0) isi[n.NOMINAL] = nilaiBaru;
+    SheetRepo.setCells(CONFIG.SHEETS.MULTI_NOTA, hit.rowIndex, isi);
     DeferredFlush.mark();
     // Pajak berubah -> nilai yang boleh diserahkan ke penyedia ikut berubah.
     _recalcDibayarNota(transactionId, urutan);
+    // Nilai nota berubah -> ΣNota transaksi (NOTA_TOTAL) wajib ikut dihitung
+    // ulang; kalau tidak, neraca dan sisa PUM membaca angka lama.
+    if (nilaiBaru > 0) _recalcNota(transactionId);
     AuditLog.write('SIMPAN_PAJAK_NOTA', CONFIG.SHEETS.MULTI_NOTA, transactionId + '#' + urutan,
-      'katIdx=' + d.katIdx + ' pph=' + d.pph + ' ppn=' + d.ppn + ' dpp=' + d.dpp);
+      'katIdx=' + d.katIdx + ' pph=' + d.pph + ' ppn=' + d.ppn + ' dpp=' + d.dpp
+      + (nilaiBaru > 0 ? (' nilaiBaru=' + nilaiBaru) : ''));
     var tot = _recalcPajakTransaksi(transactionId);
     return { success: true, total: tot };
   }

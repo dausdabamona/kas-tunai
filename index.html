@@ -5240,6 +5240,23 @@ function simpanPajakModal(){
   var d={ katIdx:katIdx, pph:pj.pph, ppn:pj.ppn, dpp:pj.dpp,
           termasukPPN:document.getElementById('pjTermasukPPN').checked,
           adaNpwp:document.getElementById('pjAdaNpwp').checked };
+  // Gross-up (atau nilai dasar yang diketik ulang) membuat dasar pajak berbeda
+  // dari nilai nota tersimpan. Pajaknya dihitung dari dasar baru, jadi nilai
+  // notanya juga harus ikut -- kalau tidak, angka yang tersimpan saling
+  // bertentangan dan kuitansi menghitung netto dari pasangan yang salah.
+  // Dikonfirmasi dulu karena ΣNota dan sisa uang muka ikut berubah.
+  if(_pjNotaUrutan!=null && _pjNota){
+    var dasarKetik=unfmt(document.getElementById('pjNilaiDasar').value)||0;
+    if(dasarKetik>0 && dasarKetik!==(+_pjNota.nilai||0)){
+      if(!confirm('Nilai dasar pajak ('+rupiah(dasarKetik)+') berbeda dari nilai nota tersimpan ('
+        +rupiah(+_pjNota.nilai||0)+').\n\nUbah nilai nota menjadi '+rupiah(dasarKetik)
+        +' supaya pajak dan notanya konsisten?\n\nOK = ubah nilai nota · Batal = nota tetap, hanya pajak yang disimpan')){
+        // pengguna memilih tidak mengubah nota -- pajak tetap disimpan apa adanya
+      } else {
+        d.nilaiBaru=dasarKetik;
+      }
+    }
+  }
   showLoading(true,'Menyimpan pajak...');
   var ok=function(){ showLoading(false); toast('Pajak tersimpan','success'); closeModal('modalPajak');
     if(_pjNotaUrutan!=null && _notaTarget==no) openModalNota(no);   // segarkan daftar nota
@@ -5293,7 +5310,16 @@ function _notaPajakObj(n){
   var pj=hitungPajak('', n.nilai, n.pajakTermasukPPN!==false, n.pajakAdaNpwp!==false, ref);
   pj.pph=+n.pajakPph||0; pj.ppn=+n.pajakPpn||0;
   if(+n.pajakDpp>0) pj.dpp=+n.pajakDpp;
-  pj.nominal=n.nilai;
+  // Nilai kontrak yang menjadi dasar pajak TIDAK selalu sama dengan nilai nota:
+  // pada gross-up, pajak dihitung dari bruto yang lebih besar (DPP+PPN) supaya
+  // rekanan menerima netto yang diminta. Memakai nilai nota apa adanya membuat
+  // kuitansi mengurangkan pajak-bruto dari nominal-kecil -- netto tercetak
+  // Rp 6.460.914 padahal di modal Rp 7.400.000, dan DPP di kuitansi tampak
+  // LEBIH BESAR dari nilai kontraknya sendiri. Rekonstruksi hanya bila
+  // DPP+PPN >= nilai nota; bila lebih kecil (data lama: DPP dibagi 1,11 tapi
+  // PPN batal dipungut karena ambang), nilai nota tetap dipakai.
+  var bruto=(+n.pajakDpp>0)?(+n.pajakDpp)+pj.ppn:0;
+  pj.nominal=(bruto>=+n.nilai)?bruto:+n.nilai;
   pj.totalPajak=pj.pph+pj.ppn;
   pj.nettoRekanan=pj.nominal-pj.pph-pj.ppn;
   pj.isSaved=true;
