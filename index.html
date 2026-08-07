@@ -1356,9 +1356,10 @@
   <div class="sheet" style="max-width:380px;width:100%;padding-bottom:28px">
     <div style="text-align:center;margin-bottom:6px;font-size:28px">&#128176;</div>
     <h2 style="text-align:center;margin-bottom:4px">Kas Tunai</h2>
-    <div style="text-align:center;color:var(--bs-n600);font-size:13px;margin-bottom:20px">
+    <div style="text-align:center;color:var(--bs-n600);font-size:13px;margin-bottom:4px">
       Politeknik Kelautan dan Perikanan Sorong
     </div>
+    <div id="loginVersi" style="text-align:center;color:var(--bs-n400);font-size:10.5px;margin-bottom:16px"></div>
     <div class="field"><label>Email</label>
       <input type="email" id="loginEmail" placeholder="nama@email.com" autocomplete="username"
         onkeydown="if(event.key==='Enter')document.getElementById('loginPassword').focus()">
@@ -1431,6 +1432,11 @@ var isViewer      = (ROLE_USER==='viewer'); // peninjau: saldo disembunyikan
 var _notaTarget   = null;    // noTransaksi yang sedang dikelola notanya
 var _kbTarget     = null;    // noTransaksi yang sedang dikelola pengembaliannya
 var _allPenyedia  = null;
+
+/* Penanda rilis. Tampil di layar masuk dan di kaki cetakan SPJ, supaya
+   "kode versi mana yang sedang berjalan" bisa dijawab dengan MELIHAT, bukan
+   menebak-nebak jalur deploy. Naikkan tanggalnya tiap perubahan berarti. */
+var KT_VERSI='v3 — 7 Agu 2026 (SPJ dua kolom)';
 
 /* ============== Data institusi (hardcoded) ============== */
 var INST = {
@@ -2782,7 +2788,7 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
   +'<div style="margin-top:12px;font-size:10.5px;font-style:italic;color:#6f6b67;max-width:70%">Bukti-bukti belanja di atas benar, lengkap, dan dapat dipertanggungjawabkan sesuai peruntukan uang muka.</div>'
   +'<div class="sign"><div><div style="font-size:11px">Diverifikasi,<br>Bendahara Pengeluaran,</div><div style="height:52px"></div><div class="nm">'+(INST.bendahara?esc(INST.bendahara):'(&nbsp;&nbsp;.......................................&nbsp;&nbsp;)')+(INST.nipBendahara?('<br><span class="mut" style="font-size:10px;font-weight:400">NIP. '+esc(INST.nipBendahara)+'</span>'):'')+'</div></div>'
   +'<div style="text-align:right"><div style="font-size:11px">'+esc(INST.kota||'Sorong')+', '+_tglPanjang(t.tanggal)+'<br>Pemegang Uang Muka,</div><div style="height:52px"></div><div class="nm">'+esc(t.penjab||'-')+'</div></div></div>'
-  +'<div class="foot"><span>Dokumen dihasilkan oleh Aplikasi Kas Tunai &mdash; Poltek KP Sorong</span><span>'+noKt+'</span></div>'
+  +'<div class="foot"><span>Dokumen dihasilkan oleh Aplikasi Kas Tunai &mdash; Poltek KP Sorong &middot; '+esc(KT_VERSI)+'</span><span>'+noKt+'</span></div>'
   +'</body></html>';
 }
 
@@ -7609,6 +7615,7 @@ function _cekTawaranMobile(){
       renderList();
     });
   }
+  var elV=document.getElementById('loginVersi'); if(elV) elV.textContent=KT_VERSI;
   document.addEventListener('paste', _onPasteUpload);
   _applyRoleUI();
   _checkAuth();   // bila token valid → loadAll() → _refreshScanAktif()
