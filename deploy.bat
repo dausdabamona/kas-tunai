@@ -50,7 +50,13 @@ echo(
 echo === 1/%LANGKAH%  Menarik kode terbaru dari GitHub ===
 git pull origin %BRANCH%
 if errorlevel 1 (
-  echo [PERINGATAN] git pull gagal / dilewati. Lanjut memakai kode lokal.
+  echo(
+  echo [GAGAL] git pull tidak berhasil - KODE BARU TIDAK IKUT.
+  echo         Melanjutkan unggah sekarang hanya mengunggah kode LAMA,
+  echo         dan hasil di aplikasi PASTI tidak berubah.
+  echo         Perbaiki dulu penyebabnya ^(lihat pesan git di atas^),
+  echo         atau bila memang sengaja mau memakai kode lokal: deploy nopull
+  goto :akhir
 )
 :lewatipull
 
@@ -72,8 +78,14 @@ if errorlevel 1 (
 REM --- 2) clasp push ---
 echo(
 echo === 2/%LANGKAH%  Mengunggah kode ke Apps Script ===
+echo   Versi kode yang akan diunggah:
+findstr /C:"var KT_VERSI=" index.html
 call clasp push --force
 if errorlevel 1 goto :gagalclasp
+echo(
+echo   COCOKKAN: buka aplikasi, layar masuk harus menampilkan versi di atas.
+echo   Bila memakai URL biasa, versi baru TAMPIL SETELAH "deploy rilis".
+echo   URL /dev (Deploy ^> Test deployments) menampilkannya SEKARANG juga.
 
 if "%MODE%"=="rilis" goto :buatversi
 
