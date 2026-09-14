@@ -132,6 +132,43 @@ sungguhan.**
 Belum dikerjakan dari spec: tombol "Catat transaksi" dibiarkan di `.topbar-v2`
 (spec §2.1 mengizinkan bila memindahkannya mengganggu tab lain).
 
+## 0h. "Tambah nota" tersedia di semua antrean — 14 Sep 2026 (🟡 belum diuji manual)
+
+Nota bisa muncul kapan saja untuk transaksi mana pun. Sebelum ini pintunya hanya ada di
+antrean "PUM belum bernota", sehingga belanja yang sedang menunggu nomor SPBY harus
+dibawa dulu ke layar Transaksi hanya untuk mencatat satu nota.
+
+Sekarang tiap baris **yang punya transaksi** mendapat tombol kedua "Tambah nota", baik di
+blok "lima hal hari ini" maupun di daftar antrean. Berkas scan (antrean `foto`) tidak
+punya transaksi induk, jadi ia tidak diberi tombol itu; antrean `nota` juga tidak, karena
+aksi utamanya sudah "Catat nota".
+
+**`panel` dipisah dari `jenis`.** `_pkBukaAksi(jenis,id,tempat,panel)` dan
+`_pkSimpanAksi(jenis,id,tempat,panel)`: `jenis` tetap dipakai **mencari item** di antrean
+yang sedang aktif, `panel` menentukan **isian mana** yang ditampilkan. Tanpa pemisahan
+ini, membuka panel nota untuk baris di antrean `spby` akan membuat `_pkCariItem('nota',id)`
+gagal — transaksinya memang bukan anggota antrean nota.
+
+**Satu kotak, dua tombol.** Kotak panel per baris tetap satu. Kotaknya menyimpan
+`data-panel`; klik tombol yang sama menutup, klik tombol yang lain mengganti isinya.
+Tanpa penanda itu tombol kedua hanya menutup panel pertama dan **tampak seperti tombol
+mati**.
+
+**Dua perbaikan yang ikut terbawa**, keduanya hanya muncul karena panel nota kini bisa
+dibuka dari antrean lain:
+
+- Nilai bawaan tidak lagi `0` ketika uang mukanya sudah tertutup penuh (`sisa <= 0`).
+  Kolomnya dikosongkan; "0" terbaca sebagai nota bernilai nol.
+- Hitungan badge "PUM belum bernota" hanya diturunkan bila transaksi itu **memang** ada
+  di antrean tersebut sebelum disimpan (`sisaSebelum > 0`). Tanpa penjagaan ini, mencatat
+  nota dari antrean "Belum di-SPBY" ikut menurunkan angka antrean yang tidak
+  bersangkutan.
+
+Uji: `uji-tambah-nota.js` — 23 asersi lewat klik sungguhan di `index.html` yang dirender
+`file://`. Dibuktikan bisa gagal lewat empat kerusakan sengaja (tombol dihapus, penanda
+`data-panel` dihapus, penjaga `sisaSebelum` dihapus, nilai bawaan dikembalikan ke `0`).
+**Belum dibuka pengguna di browser sungguhan.**
+
 ## 0f. Pindah dana keluar dari daftar tindakan Papan kerja — 3 Agu 2026
 
 `_pkKriteriaTindakan()` sekarang mengembalikan `[]` untuk pindah dana (`REF_TRANSFER`

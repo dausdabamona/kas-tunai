@@ -128,7 +128,7 @@
   .pk3-f .al{font-size:14px;color:var(--bs-n700);margin-top:8px;max-width:58ch;line-height:1.45}
   .pk3-f .nom{text-align:right;font-family:var(--bs-fh);font-size:19px;font-weight:600;
     font-variant-numeric:tabular-nums;color:var(--bs-ink)}
-  .pk3-f .aksi{text-align:right}
+  .pk3-f .aksi{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
   .pk3-tenang{font-size:15px;color:var(--bs-n600);font-style:italic;padding:20px 0;max-width:58ch}
 
   /* Tombol pil aksi utama & outline -- target sentuh >= 40px. */
@@ -227,7 +227,7 @@
     padding:1px 7px;font-size:11px;letter-spacing:0}
   .pk-drpp-n{margin-left:auto;font-family:var(--bs-fh);font-weight:600;font-size:13px;
     letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums;color:var(--bs-n800)}
-  .pk-row{display:grid;grid-template-columns:1fr 190px 150px 132px;gap:14px;
+  .pk-row{display:grid;grid-template-columns:1fr 170px 140px 234px;gap:14px;
     align-items:center;min-height:44px;padding:7px 0;
     border-bottom:1px solid var(--bs-n200);cursor:pointer}
   .pk-row:hover{background:#f7f6f6}
@@ -239,7 +239,7 @@
   .pk-row .st{font-size:13px;color:var(--bs-n700)}
   .pk-row .nom{text-align:right;font-family:var(--bs-fh);font-weight:600;
     font-variant-numeric:tabular-nums}
-  .pk-row .aksi{text-align:right}
+  .pk-row .aksi{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
   .pk-grup-kaki{font-size:12.5px;color:var(--bs-n600);padding:10px 0 0}
   .pk-kosong{font-size:15px;color:var(--bs-n600);padding:18px 0;max-width:58ch}
 
@@ -258,8 +258,8 @@
     /* Kolom aksi & nominal dilipat ke bawah judul, bukan dipersempit sampai
        tombolnya terpotong. */
     .pk3-f{grid-template-columns:38px 1fr 150px;gap:14px}
-    .pk3-f .aksi{grid-column:2/-1;text-align:left;margin-top:8px}
-    .pk-row{grid-template-columns:1fr 150px 120px 118px;gap:10px}
+    .pk3-f .aksi{grid-column:2/-1;justify-content:flex-start;margin-top:8px}
+    .pk-row{grid-template-columns:1fr 130px 110px 210px;gap:10px}
   }
 
   /* Saldo summary */
@@ -6907,9 +6907,22 @@ function _pkRenderFokus(){
       +'<div id="pkAksiF_'+esc(it.jenis)+'_'+esc(it.id)+'"></div></div>'
       +'<div class="nom">'+(it.nilai===null?'&mdash;':rupiah(it.nilai))+'</div>'
       +'<div class="aksi"><button class="pk3-btn" onclick="_pkBukaAksi('+q+',\'F\')">'
-      +esc(def.aksi)+'</button></div></div>';
+      +esc(def.aksi)+'</button>'+_pkTombolNota(it,'F')+'</div></div>';
   }
   box.innerHTML=h;
+}
+
+/**
+ * Tombol kedua "Tambah nota". Nota bisa muncul kapan saja untuk transaksi mana
+ * pun, jadi pintunya tidak boleh hanya ada di antrean "PUM belum bernota" --
+ * belanja yang sedang ditunggu nomor SPBY-nya pun sering baru dapat notanya.
+ * Berkas scan tidak punya transaksi induk, jadi ia tidak dapat tombol ini.
+ */
+function _pkTombolNota(it,tempat){
+  if(!it.t || it.jenis==='nota') return '';
+  var q='\''+esc(it.jenis)+'\',\''+esc(it.id)+'\',\''+esc(tempat)+'\',\'nota\'';
+  return '<button class="pk3-btn netral" '
+    +'onclick="event.stopPropagation();_pkBukaAksi('+q+')">Tambah nota</button>';
 }
 
 function _pkRenderPil(){
@@ -7033,7 +7046,8 @@ function _pkRenderTindakan(res){
             +'<div class="st">'+esc(def.st)+'</div>'
             +'<div class="nom">'+(b2.nilai===null?'&mdash;':rupiah(b2.nilai))+'</div>'
             +'<div class="aksi"><button class="pk3-btn garis" '
-            +'onclick="event.stopPropagation();_pkBukaAksi('+q+',\'A\')">'+esc(def.aksi)+'</button></div>'
+            +'onclick="event.stopPropagation();_pkBukaAksi('+q+',\'A\')">'+esc(def.aksi)+'</button>'
+            +_pkTombolNota(b2,'A')+'</div>'
             +'</div>'
             +'<div id="pkAksiA_'+esc(b2.jenis)+'_'+esc(b2.id)+'"></div>';
         }
@@ -7084,15 +7098,27 @@ function _pkCariItem(jenis,id){
  * @param tempat 'F' = blok fokus, 'A' = antrean. Dua tempat bisa menampilkan
  * item yang SAMA sekaligus, jadi panelnya berkunci tempat + jenis + id --
  * id yang sama di dua tempat tanpa pembeda akan saling menimpa.
+ * @param panel isian mana yang ditampilkan; bawaannya = aksi antreannya sendiri.
+ * Dipisah dari `jenis` supaya satu baris bisa membuka panel nota sekalipun ia
+ * sedang berdiri di antrean lain. `jenis` tetap dipakai mencari itemnya.
  */
-function _pkBukaAksi(jenis,id,tempat){
+function _pkBukaAksi(jenis,id,tempat,panel){
   var box=document.getElementById('pkAksi'+tempat+'_'+jenis+'_'+id); if(!box) return;
-  if(box.innerHTML){ box.innerHTML=''; return; }
+  panel=panel||jenis;
+  // Satu baris punya SATU kotak panel tetapi dua tombol. Klik tombol yang sama
+  // menutup panelnya; klik tombol yang lain menggantinya. Tanpa penanda ini,
+  // tombol kedua hanya menutup panel pertama dan tampak seperti tombol mati.
+  if(box.innerHTML){
+    var panelLama=box.getAttribute('data-panel')||'';
+    box.innerHTML=''; box.removeAttribute('data-panel');
+    if(panelLama===panel) return;
+  }
   var it=_pkCariItem(jenis,id); if(!it) return;
-  var t=it.t||{}, q='\''+esc(jenis)+'\',\''+esc(id)+'\',\''+esc(tempat)+'\'';
-  var p='pk'+tempat+jenis+id, h='';
+  var t=it.t||{};
+  var q='\''+esc(jenis)+'\',\''+esc(id)+'\',\''+esc(tempat)+'\',\''+esc(panel)+'\'';
+  var p='pk'+tempat+jenis+panel+id, h='';
 
-  if(jenis==='spby'){
+  if(panel==='spby'){
     var daftar=_pkDaftarSpby(), dl='', j;
     for(j=0;j<daftar.length;j++) dl+='<option value="'+esc(daftar[j])+'"></option>';
     h='<div class="pandu">Ketik nomor SPBY baru, atau nomor yang sudah pernah dipakai '
@@ -7102,26 +7128,33 @@ function _pkBukaAksi(jenis,id,tempat){
       +'placeholder="mis. 045/SPBY/2026"><datalist id="'+p+'L">'+dl+'</datalist></div>'
       +'<div><label>Tanggal</label><input type="date" id="'+p+'Tgl" value="'
       +esc(String(t.tanggal||todayISO()))+'"></div></div>';
-  } else if(jenis==='pajak'){
+  } else if(panel==='pajak'){
     var op='<option value="">— pilih kategori —</option>', k;
     for(k=0;k<PAJAK_REF.length;k++) op+='<option value="'+k+'">'+esc(PAJAK_REF[k].label)+'</option>';
     h='<div class="pandu">Pilih kategori pajak yang sesuai; nilai PPh dan PPN dihitung '
       +'otomatis dari nilai transaksinya memakai tabel pajak yang sama dengan layar Nota.</div>'
       +'<div class="baris"><div class="lebar"><label>Kategori pajak</label>'
       +'<select id="'+p+'Kat" style="width:100%">'+op+'</select></div></div>';
-  } else if(jenis==='nota'){
+  } else if(panel==='nota'){
     var um=(+t.uangDiserahkan>0)?(+t.uangDiserahkan):(+t.kredit||0);
     var sisa=um-(+t.notaTotal||0)-(+t.kembalianTotal||0);
-    h='<div class="pandu">Catat nota yang sudah diterima. Sisa uang muka yang belum '
-      +'tertutup saat ini '+rupiah(sisa)+'. Nota ini ditambahkan sebagai baris nota '
+    // Dibuka dari antrean lain, uang mukanya bisa saja sudah tertutup penuh.
+    // Jangan mengisi nilai bawaan 0 -- itu terbaca sebagai nota bernilai nol.
+    var pandu=(sisa>0)
+      ? ('Catat nota yang sudah diterima. Sisa uang muka yang belum tertutup saat ini '
+         +rupiah(sisa)+'.')
+      : ('Uang muka transaksi ini sudah tertutup nota'
+         +(sisa<0?(' dan malah kelebihan '+rupiah(-sisa)):'')
+         +'. Nota tambahan tetap bisa dicatat bila memang ada.');
+    h='<div class="pandu">'+pandu+' Nota ini ditambahkan sebagai baris nota '
       +'sungguhan, bukan sekadar angka total.</div>'
       +'<div class="baris"><div class="lebar"><label>Nama penyedia / toko</label>'
       +'<input type="text" id="'+p+'Nm" style="width:100%" placeholder="mis. Toko Sinar Jaya"></div>'
       +'<div><label>Nilai nota</label><input type="text" class="numfmt" inputmode="numeric" '
-      +'id="'+p+'Nl" value="'+esc(_grp(sisa>0?sisa:0))+'"></div>'
+      +'id="'+p+'Nl" value="'+esc(sisa>0?_grp(sisa):'')+'"></div>'
       +'<div><label>Tanggal nota</label><input type="date" id="'+p+'Tgl" value="'
       +esc(String(t.tanggal||todayISO()))+'"></div></div>';
-  } else if(jenis==='foto'){
+  } else if(panel==='foto'){
     h='<div class="pandu">Pilih transaksi tujuan lalu beri label singkat. Berkasnya '
       +'ditempelkan sebagai foto pada nota terakhir transaksi itu, lalu dipindahkan '
       +'dari kotak masuk supaya tidak muncul lagi.</div>'
@@ -7135,18 +7168,21 @@ function _pkBukaAksi(jenis,id,tempat){
       +'aplikasi dan nilai SAKTI ditampilkan berdampingan.</div>'
       +'<div class="tombol"><button class="pk3-btn" onclick="switchTab(\'rekon\')">Buka Rekonsiliasi</button>'
       +'<button class="pk3-btn netral" onclick="_pkBukaAksi('+q+')">Tutup</button></div>';
-    box.className='pk3-aksi-p'; box.innerHTML=h; return;
+    box.className='pk3-aksi-p'; box.innerHTML=h;
+    box.setAttribute('data-panel',panel); return;
   }
   h+='<div class="tombol"><button class="pk3-btn" onclick="_pkSimpanAksi('+q+')">Simpan</button>'
     +'<button class="pk3-btn netral" onclick="_pkBukaAksi('+q+')">Nanti saja</button></div>';
   box.className='pk3-aksi-p'; box.innerHTML=h;
+  box.setAttribute('data-panel',panel);
   var f=document.getElementById(p+'No')||document.getElementById(p+'Kat')||document.getElementById(p+'Nm');
   if(f) f.focus();
 }
 
-function _pkSimpanAksi(jenis,id,tempat){
+function _pkSimpanAksi(jenis,id,tempat,panel){
   var it=_pkCariItem(jenis,id); if(!it) return;
-  var t=it.t||{}, p='pk'+tempat+jenis+id;
+  panel=panel||jenis;
+  var t=it.t||{}, p='pk'+tempat+jenis+panel+id;
   function nilai(sfx){ var e=document.getElementById(p+sfx); return e?String(e.value||'').trim():''; }
   // Setelah simpan: perbarui salinan pkData di memori dan render ulang. JANGAN
   // panggil serverGetPapanKerja lagi -- muat ulang penuh membuat layar berkedip
@@ -7157,7 +7193,7 @@ function _pkSimpanAksi(jenis,id,tempat){
   }
   function gagal(e){ toast(e&&e.message?e.message:String(e),'error'); }
 
-  if(jenis==='spby'){
+  if(panel==='spby'){
     var no=nilai('No');
     if(!no){ toast('Nomor SPBY belum diisi.','error'); return; }
     if(t.rowIndex===undefined){ toast('Baris transaksi tidak ditemukan.','error'); return; }
@@ -7170,7 +7206,7 @@ function _pkSimpanAksi(jenis,id,tempat){
       // yang mungkin sudah pernah diisi lewat layar Transaksi.
       .serverSimpanSpby(_tok, t.rowIndex, no, nilai('Tgl'), (+t.nilaiSpby||0));
 
-  } else if(jenis==='pajak'){
+  } else if(panel==='pajak'){
     var kat=nilai('Kat');
     if(kat===''){ toast('Kategori pajak belum dipilih.','error'); return; }
     var ki=+kat, ref=PAJAK_REF[ki];
@@ -7187,21 +7223,26 @@ function _pkSimpanAksi(jenis,id,tempat){
       }).withFailureHandler(gagal)
       .serverSimpanPajak(_tok, t.no, {katIdx:ki, pph:pph, ppn:ppn, dpp:dpp});
 
-  } else if(jenis==='nota'){
+  } else if(panel==='nota'){
     var nm=nilai('Nm'), nl=unfmt(nilai('Nl'));
     if(!nm){ toast('Nama penyedia belum diisi.','error'); return; }
     if(nl<=0){ toast('Nilai nota harus lebih dari 0.','error'); return; }
+    var um1=(+t.uangDiserahkan>0)?(+t.uangDiserahkan):(+t.kredit||0);
+    var sisaSebelum=um1-(+t.notaTotal||0)-(+t.kembalianTotal||0);
     google.script.run.withSuccessHandler(function(){
         t.notaTotal=(+t.notaTotal||0)+nl;
         t.notaJml=(+t.notaJml||0)+1;
         var um2=(+t.uangDiserahkan>0)?(+t.uangDiserahkan):(+t.kredit||0);
-        if(um2-(+t.notaTotal||0)-(+t.kembalianTotal||0)<=0 && pkData.jumlahAntrean)
+        // Kurangi hitungan antrean "PUM belum bernota" HANYA bila transaksi ini
+        // memang ada di antrean itu sebelumnya. Nota yang dicatat dari antrean
+        // lain (mis. "Belum di-SPBY") tidak boleh ikut menurunkan angkanya.
+        if(sisaSebelum>0 && um2-(+t.notaTotal||0)-(+t.kembalianTotal||0)<=0 && pkData.jumlahAntrean)
           pkData.jumlahAntrean.nota=Math.max(0,(+pkData.jumlahAntrean.nota||1)-1);
         beres('Nota '+nm+' '+rupiah(nl)+' tersimpan.');
       }).withFailureHandler(gagal)
       .serverTambahNota(_tok, t.no, {namaPenyedia:nm, nilai:nl, tglNota:nilai('Tgl')});
 
-  } else if(jenis==='foto'){
+  } else if(panel==='foto'){
     var noTx=nilai('No');
     if(!noTx){ toast('Nomor transaksi tujuan belum diisi.','error'); return; }
     google.script.run.withSuccessHandler(function(){
