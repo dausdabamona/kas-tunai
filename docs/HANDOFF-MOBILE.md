@@ -245,6 +245,24 @@ salah input.
 
 ---
 
+## 8b. Item POK di Tanda Terima Uang Muka — 21 Sep 2026 (🟡 belum diuji manual)
+
+`cetakTandaTerima()` sekarang mengambil `serverGetPembebanan(token, no)` setelah
+`muatInstansi()`, lalu `_htmlTandaTerima(t, rincian)` mencetak baris **"Detail
+kegiatan (item POK)"**: kode, uraian, akun, nilai per item.
+
+Sebelumnya item POK hanya satu baris miring di dalam sel "Untuk pembayaran" dan hanya
+menampilkan `t.kodeItem` — transaksi yang dibebankan ke beberapa item (dibuat dari
+desktop, lihat HANDOFF-DESKTOP 0d) kehilangan rinciannya saat dicetak dari HP.
+
+Aturan dan jebakannya **sama persis dengan desktop** dan diuraikan di
+**HANDOFF-DESKTOP bagian 0i** — termasuk kenapa `rincian` kosong harus jatuh ke
+`KODE_ITEM` + nilai penuh, kenapa gagal baca tidak boleh menahan cetakan, dan batas
+tinggi `.half` 148mm yang memotong isi tanpa pesan. Bila salah satu sisi diubah,
+ubah keduanya: `_pokRincian()`/`_pokBarisHtml()` ada dua salinan, satu per berkas.
+
+---
+
 ## 9. Kartu transaksi interaktif — Fase 1 dari 4 (🟡 kode selesai — siap uji manual di HP)
 
 Permintaan pengguna 28 Jul 2026: *"aplikasi mobile agar dibuat interaktif bukan hanya

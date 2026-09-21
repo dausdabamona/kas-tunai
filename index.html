@@ -5497,7 +5497,16 @@ function bukaPdfKuitansi(noTransaksi){
     }));
     return;
   }
-  _bukaPopup(_renderKuitansiHtml(t));
+  // Pembebanan POK disimpan di sheet terpisah (Pembebanan Item), tidak ikut di
+  // baris transaksi, jadi harus diambil dulu. Gagal membacanya BUKAN alasan
+  // menahan tanda terima: cetak saja dengan item tunggal dari transaksinya.
+  showLoading(true,'Memuat detail kegiatan...');
+  google.script.run
+    .withSuccessHandler(function(rinc){ showLoading(false);
+      _bukaPopup(_renderKuitansiHtml(t, null, rinc||[])); })
+    .withFailureHandler(function(){ showLoading(false);
+      _bukaPopup(_renderKuitansiHtml(t, null, [])); })
+    .serverGetPembebanan(_tok, noTransaksi);
 }
 /** Dokumen transaksi bank: KUITANSI/BUKTI PEMBAYARAN + SURAT PERINTAH PENDEBITAN REKENING (SPPR). */
 function _renderBuktiTransferHtml(t, o){
@@ -5711,7 +5720,7 @@ function hapusKuitansiTtd(){
     .withFailureHandler(fail)
     .serverHapusKuitansi(_tok, _kwTarget);
 }
-function _renderKuitansiHtml(t, list){
+function _renderKuitansiHtml(t, list, rincian){
   var thn=(String(t.tanggal||'').split('-')[0])||(''+new Date().getFullYear());
   var noBase='KT-'+('00'+t.no).slice(-3);
   var pages, docTitle;
@@ -5731,11 +5740,11 @@ function _renderKuitansiHtml(t, list){
   } else if(t.sumber==='BANK'){
     // Transaksi via bank: Bukti Transfer
     docTitle='Bukti Transfer '+noBase+'/'+thn;
-    pages=_kuitansiDua(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'BUKTI TRANSFER', mode:'transfer', noPpk:true });
+    pages=_kuitansiDua(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'BUKTI TRANSFER', mode:'transfer', noPpk:true, rincian:rincian });
   } else {
     // Transaksi tunai (uang muka PUM): Tanda Terima Uang Muka
     docTitle='Tanda Terima Uang Muka '+noBase+'/'+thn;
-    pages=_kuitansiDua(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'TANDA TERIMA UANG MUKA', noPpk:true });
+    pages=_kuitansiDua(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'TANDA TERIMA UANG MUKA', noPpk:true, rincian:rincian });
   }
   return ''
   +'<html><head><meta charset="utf-8"><title>'+esc(docTitle)+'</title><style>'+_kuitansiCss()+_docCss()
@@ -5756,6 +5765,14 @@ function _kuitansiCss(){
   +'.b{border-collapse:collapse;width:100%} .b td{border:1px solid #000;padding:9px 11px;vertical-align:top}'
   +'.b .l{width:32%;font-weight:bold} .b .c{width:14px;text-align:center}'
   +'.b .us{font-weight:bold;font-size:15px} .b .it{font-style:italic;color:#333}'
+  +'.b .l .sub{font-weight:normal;font-style:italic;font-size:10.5px;color:#444}'
+  // Daftar item POK di dalam sel: tabel polos tanpa garis. Selektor dibuat
+  // lebih spesifik dari ".b td" supaya border & padding sel luar tidak menular.
+  +'.b .pok{border-collapse:collapse;width:100%;font-size:11.5px}'
+  +'.b .pok td{border:0;padding:1px 6px 1px 0;vertical-align:top;line-height:1.35}'
+  +'.b .pok .k{width:44px;font-weight:bold;white-space:nowrap}'
+  +'.b .pok .a{width:52px;color:#333;white-space:nowrap}'
+  +'.b .pok .n{width:88px;text-align:right;white-space:nowrap;padding-right:0}'
   +'.terb{background:#dcdcdc;font-style:italic}'
   +'.sig{width:100%;border-collapse:collapse;margin-top:18px;font-size:12px;text-align:center}'
   +'.sig td{width:33.33%;padding:6px 8px;vertical-align:top}'
@@ -5774,11 +5791,58 @@ function _kuitansiCss(){
   +'.page.dua .sig{margin-top:14px;font-size:11.5px}'
   +'.page.dua .sig td{padding:4px 8px} .page.dua .sig .nm{margin-top:44px}'
   +'.page.dua .sig .nip{font-size:10px}'
+  // Setengah halaman: daftar item dirapatkan supaya banyak item tetap muat.
+  +'.page.dua .b .pok{font-size:10.5px}'
+  +'.page.dua .b .pok td{padding:0 5px 0 0;line-height:1.3}'
   // Garis potong: tinggi 0 supaya tidak menambah tinggi halaman.
   +'.cut{height:0;border-top:1px dashed #666;position:relative}'
   +'.cut span{position:absolute;top:-7px;left:50%;transform:translateX(-50%);'
   +'background:#fff;padding:0 8px;font-size:9px;color:#666;letter-spacing:1px}'
   +'@media print{.noprint{display:none}}';
+}
+/**
+ * Daftar pembebanan POK satu transaksi, untuk dicetak di tanda terima.
+ *
+ * `rincian` = hasil serverGetPembebanan (pembebanan ke beberapa item POK).
+ * Kosong BUKAN berarti tidak ada pembebanan: itu transaksi beritem tunggal,
+ * dan pembebanan sesungguhnya ada di KODE_ITEM transaksinya dengan nilai
+ * penuh -- persis aturan yang dipakai Anggaran.ketersediaan() di server.
+ */
+function _pokRincian(t, rincian){
+  var L=[], i;
+  if(rincian && rincian.length){
+    for(i=0;i<rincian.length;i++) L.push({
+      kode:  String(rincian[i].kodeItem||''),
+      uraian:String(rincian[i].uraianItem||''),
+      akun:  String(rincian[i].akun||''),
+      nilai: (+rincian[i].nilai||0) });
+  } else if(t.kodeItem){
+    L.push({ kode:String(t.kodeItem), uraian:String(t.uraianItem||''),
+             akun:String(t.akun||''), nilai:(+t.kredit||0) });
+  }
+  return L;
+}
+/**
+ * Baris "Detail kegiatan (item POK)"; '' bila transaksinya memang tanpa item.
+ *
+ * Hanya dicetak bila pemanggil memang meminta, yaitu mengirim array (boleh
+ * kosong). Dokumen lain yang ikut memakai _kuitansiIsi -- kuitansi perjalanan
+ * dinas dan lampiran kuitansi di SPJ PD -- tidak mengirimnya, jadi bentuknya
+ * tidak berubah.
+ */
+function _pokBarisHtml(t, rincian){
+  if(!rincian) return '';
+  var L=_pokRincian(t, rincian); if(!L.length) return '';
+  var h='<table class="pok">', i;
+  for(i=0;i<L.length;i++){
+    h+='<tr><td class="k">'+esc(L[i].kode)+'</td>'
+      +'<td class="u">'+esc(L[i].uraian||'-')+'</td>'
+      +'<td class="a">'+esc(L[i].akun)+'</td>'
+      +'<td class="n">'+rupiah(L[i].nilai)+'</td></tr>';
+  }
+  h+='</table>';
+  return '<tr><td class="l">Detail kegiatan<br><span class="sub">(item POK)</span></td>'
+    +'<td class="c">:</td><td>'+h+'</td></tr>';
 }
 function _kuitansiPage(t, o){
   return '<div class="page">'+_kuitansiIsi(t,o)+'</div>';
@@ -5809,6 +5873,7 @@ function _kuitansiIsi(t, o){
         +'<td>Bendahara Pengeluaran '+esc(INST.namaWP)+'<br><span class="it">('+esc(INST.bendahara)+')</span></td></tr>'))
   +'<tr><td class="l">Uang sejumlah</td><td class="c">:</td><td class="us">'+rupiah(o.jumlah)+'</td></tr>'
   +'<tr><td class="l">Untuk pembayaran</td><td class="c">:</td><td>'+esc(o.untuk||t.kegiatan)+'</td></tr>'
+  +_pokBarisHtml(t, o.rincian)
   +'<tr><td class="terb" colspan="3">Terbilang : <i>'+_terbilangTitle(o.jumlah)+'</i></td></tr>'
   +'</table>'
 

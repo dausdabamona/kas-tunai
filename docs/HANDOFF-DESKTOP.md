@@ -132,6 +132,50 @@ sungguhan.**
 Belum dikerjakan dari spec: tombol "Catat transaksi" dibiarkan di `.topbar-v2`
 (spec §2.1 mengizinkan bila memindahkannya mengganggu tab lain).
 
+## 0i. Item POK ikut tercetak di Tanda Terima Uang Muka — 21 Sep 2026 (🟡 belum diuji manual)
+
+Baris baru **"Detail kegiatan (item POK)"** pada tanda terima, di antara "Untuk
+pembayaran" dan "Terbilang". Berisi tabel polos: kode item, uraian, akun, nilai.
+Dikerjakan di **dua layar sekaligus** (`_kuitansiIsi` di `index.html`,
+`_htmlTandaTerima` di `mobile.html`) supaya berkasnya seragam dari mana pun dicetak.
+
+**Datanya harus diambil dulu.** Pembebanan multi-item tersimpan di sheet terpisah
+(`Pembebanan Item`), **tidak** ikut di baris transaksi, jadi `rowToObj()` tidak
+membawanya. Keduanya memanggil `serverGetPembebanan(token, no)` sebelum membuka
+jendela cetak. Endpoint-nya sudah ada sejak 0d — tidak ada kode server baru.
+
+**Kosong bukan berarti tidak ada pembebanan.** `getPembebanan()` mengembalikan `[]`
+untuk transaksi beritem tunggal, dan pembebanan sesungguhnya ada di
+`KAS_TUNAI.KODE_ITEM` dengan nilai penuh. `_pokRincian()` memakai aturan yang sama
+dengan `Anggaran.ketersediaan()` di server: rincian kalau ada, kalau tidak
+`KODE_ITEM` + `kredit` penuh. Mencetak "—" untuk kasus ini akan salah.
+
+**Gagal baca tidak menahan cetakan.** `withFailureHandler` tetap mencetak dengan
+item tunggal. Tanda terima adalah dokumen yang ditandatangani saat uang diserahkan;
+menahannya karena satu sheet pendukung tidak terbaca menghentikan pekerjaan kas.
+
+**`_pokBarisHtml()` harus di-opt-in.** `if(!rincian) return ''` — array kosong lolos,
+`undefined` tidak. `_kuitansiIsi()` juga dipakai kuitansi perjalanan dinas
+(`_renderKuitansiHtml` dengan `list`) dan lampiran kuitansi di SPJ PD
+(`_kuitansiPage`); keduanya tidak mengirim `rincian`, jadi bentuknya tidak berubah.
+Tanpa penjagaan itu, dua dokumen yang tidak diminta ikut berubah diam-diam.
+
+**Selektor CSS-nya `.b .pok td`, bukan `.pok td`.** Sel luar memakai
+`.b td{border:1px solid #000;padding:9px 11px}` dengan kekhususan yang sama, jadi
+`.pok td` hanya menang karena urutan — rapuh. Kekhususan yang lebih tinggi membuatnya
+tidak bergantung pada urutan penulisan.
+
+Ruang: setengah halaman `.half` tingginya **dipatok 148mm dengan `overflow:hidden`**,
+jadi kelebihan isi **hilang tanpa pesan**. Diukur di browser: 7 item masih muat (0px
+lebih). Bila suatu saat item per transaksi jauh lebih banyak, yang perlu diubah adalah
+`.page.dua .b .pok` (font & `line-height`), bukan tinggi `.half`.
+
+Uji: `uji-pok-tandaterima.js` — 28 asersi, desktop + mobile, memeriksa jendela cetak
+sungguhan (`waitForEvent('popup')`) **pada lebar A4**, bukan lebar jendela pemanggil:
+mengukur luberan di lebar HP membuat teks membungkus jauh lebih banyak daripada
+kenyataannya di kertas, dan itu sempat memunculkan kegagalan palsu. Dibuktikan bisa
+gagal lewat empat kerusakan sengaja. **Belum dicetak pengguna di printer sungguhan.**
+
 ## 0h. "Tambah nota" tersedia di semua antrean — 14 Sep 2026 (🟡 belum diuji manual)
 
 Nota bisa muncul kapan saja untuk transaksi mana pun. Sebelum ini pintunya hanya ada di
