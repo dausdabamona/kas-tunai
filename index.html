@@ -1487,7 +1487,7 @@ var _allPenyedia  = null;
 /* Penanda rilis. Tampil di layar masuk dan di kaki cetakan SPJ, supaya
    "kode versi mana yang sedang berjalan" bisa dijawab dengan MELIHAT, bukan
    menebak-nebak jalur deploy. Naikkan tanggalnya tiap perubahan berarti. */
-var KT_VERSI='v4.6 — 29 Sep 2026 (status 7 tahap)';
+var KT_VERSI='v4.7 — 29 Sep 2026 (SPJ lengkap ikut tahap)';
 
 /* ============== Data institusi (hardcoded) ============== */
 var INST = {
@@ -2503,7 +2503,10 @@ function _cardHtml(t, mode){
       +'<button class="mini b-dark" onclick="openModalPajak('+t.no+')">Pajak</button></div>';
   }
   // chips
-  var spjChip=lunas?'<span class="chip ok">&#9989; SPJ Lengkap</span>':'<span class="chip warn">&#8987; Belum SPJ</span>';
+  // "SPJ Lengkap" = tahap 1-6 selesai (keputusan pengguna 29 Sep 2026, pilihan A),
+  // bukan sekadar Σnota menutup uang muka. Perjalanan Dinas (tanpa t.tahap) tetap aturan lama.
+  var spjSiap=_spjSiap(t, lunas);
+  var spjChip=spjSiap?'<span class="chip ok">&#9989; SPJ Lengkap</span>':'<span class="chip warn">&#8987; Belum SPJ</span>';
   var notaChip=lunas
     ?'<span class="chip ok">&#9989; '+(kembali>0?'Nota+Kembali':('Nota '+rupiah(t.notaTotal)))+' (100%)</span>'
     :'<span class="chip warn">&#9888; Nota Belum Lunas</span>';
@@ -2532,7 +2535,7 @@ function _cardHtml(t, mode){
       +'<button class="b-orange" onclick="openModalNota('+t.no+')">Nota &amp; Foto</button>'
       +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">'+(t.sumber==='BANK'?'Bukti Transfer':'Tanda Terima')+'</button>'
       +'<button class="b-spby" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+(t.noSpby?'SPBY &#10003;':'SPBY')+'</button>';
-    h+='<button class="b-dark" onclick="cetakSPJ('+t.no+')">'+(lunas?'Cetak SPJ':'SPJ Sementara')+'</button>';
+    h+='<button class="b-dark" onclick="cetakSPJ('+t.no+')">'+(spjSiap?'Cetak SPJ':'SPJ Sementara')+'</button>';
     // Tindakan yang jarang dipakai masuk menu "Lainnya" (handoff desktop 0j,
     // usulan 5). Fungsinya tidak berubah -- tetap tercatat di AuditLog seperti biasa.
     var lain='<button onclick="konversiKePd('+t.no+')" title="Jadikan transaksi ini Perjalanan Dinas">&#9992; Jadikan PD</button>'
@@ -2584,6 +2587,17 @@ function _tahapAksi(t, kode){
     case 'spby': return 'openModalSpby('+t.no+','+t.rowIndex+')';
     default: return '';
   }
+}
+/**
+ * SPJ boleh disebut lengkap/final hanya bila tahap 1-6 (catat s.d. SPBy) selesai.
+ * Tanpa status tahap (Perjalanan Dinas, data lama) -> aturan lama: nota lunas.
+ */
+function _spjSiap(t, lunasLama){
+  var s=t&&t.tahap;
+  if(!s) return !!lunasLama;
+  var k=['catat','serahkan','nota','pajak','kembali','spby'];
+  for(var i=0;i<k.length;i++) if(!s.tahap[k[i]]) return false;
+  return true;
 }
 /** Menu "⋯ Lainnya" di kartu transaksi (elemen <details> bawaan, tanpa pustaka). */
 function _menuLainnya(isi){
@@ -2864,6 +2878,13 @@ function _renderSpjHtml(t, notas, fotoPerNota, imgB64){
   +'.noprint{margin-bottom:10px;text-align:right}@media print{.noprint{display:none}}'
   +'</style></head><body>'
   +'<div class="noprint"><button onclick="window.print()">Cetak / Simpan PDF</button> <span style="font-size:11px;color:#7a756f">Tunggu semua foto termuat sebelum mencetak</span></div>'
+  // Pita SEMENTARA IKUT TERCETAK (bukan noprint): kertas yang belum lengkap tidak
+  // boleh bisa terbaca sebagai SPJ final. Isinya kekurangan tahap 1-6 dari StatusTahap.
+  +(_spjSiap(t, isNotaLunas(t)) ? '' :
+    ('<div class="spj-sementara" style="border:2px solid #b00050;color:#b00050;padding:6px 10px;margin:8px 0;font:bold 12px Arial">'
+     +'SPJ SEMENTARA &mdash; belum lengkap'
+     +((t.tahap&&t.tahap.kurang&&t.tahap.kurang.length)?(': '+esc(t.tahap.kurang.filter(function(x){return x.indexOf('DRPP')<0;}).join('; '))):'')
+     +'</div>'))
   // KOP
   +'<div class="kh1">Kementerian Kelautan dan Perikanan &middot; Badan PPSDM Kelautan dan Perikanan</div>'
   +'<div class="kh2">'+esc(INST.namaWP||'Politeknik Kelautan dan Perikanan Sorong')+'</div>'

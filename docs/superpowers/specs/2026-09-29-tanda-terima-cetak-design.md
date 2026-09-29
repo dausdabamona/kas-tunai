@@ -14,7 +14,7 @@ dan SPJ **tidak** disentuh kecuali lewat fungsi bersama yang disebut eksplisit.
 | # | Temuan | Lokasi | Akibat |
 |---|--------|--------|--------|
 | T-1 | Tiap salinan dikunci `height:148mm; overflow:hidden`. | `index.html` `_kuitansiCss` (`.page.dua .half`), `mobile.html` `_htmlTandaTerima` (`.half`) | Transaksi dengan banyak item POK / uraian panjang → **blok tanda tangan terpotong tanpa peringatan**. Dokumen tanpa TTD tidak sah. |
-| T-2 | Nomor = `'KT-' + ('00'+t.no).slice(-3) + '/' + thn`. | kedua file | Transaksi ≥ 1000 kehilangan digit depan → **nomor kembar** (1234 dan 234 sama-sama `KT-234`). |
+| T-2 | Nomor = `'KT-' + ('00'+t.no).slice(-3) + '/' + thn`. | kedua file; juga `_renderSpjHtml` (nomor di cetakan SPJ) | Transaksi ≥ 1000 kehilangan digit depan → **nomor kembar** (1234 dan 234 sama-sama `KT-234`). |
 | T-3 | Dua implementasi terpisah untuk dokumen yang sama. | `index.html` `_kuitansiIsi`/`_kuitansiDua`/`_kuitansiCss`; `mobile.html` `_htmlTandaTerima` | Sudah menyimpang: kop desktop bertabel + logo, kop HP teks saja; terbilang beda fungsi (`_terbilangTitle` vs `terbilang()+' Rupiah'`); CSS digandakan. Setiap perubahan dikerjakan dua kali (contoh: `7486fa5`). |
 | T-4 | Identitas institusi punya dua sumber: `INST` hardcoded di `index.html:1441` dan `CONFIG.INSTANSI` di `_Config.gs:351`. | | Ganti Bendahara/PPK harus diubah di dua tempat; lupa satu → cetakan desktop dan HP beda nama. |
 | T-5 | Logo kop (`INST.logoGaruda`) disimpan di `localStorage` per browser. | `index.html:1478` | Logo hanya tampil di komputer yang pernah mengunggahnya; HP tidak pernah punya logo. |
