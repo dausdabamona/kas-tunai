@@ -1,6 +1,7 @@
 # Spesifikasi — Perbaikan Cetakan Tanda Terima Uang Muka / Bukti Transfer
 
 Tanggal: 29 Sep 2026 · Status: **DRAFT — menunggu keputusan pengguna (bagian 6)**
+Urutan: dikerjakan **setelah** `2026-09-29-pasangan-foto-nota-design.md`.
 Cakupan: dokumen yang dicetak dari tombol **Tanda Terima** / **Bukti Transfer**
 (desktop `bukaModalKuitansi` → `_renderKuitansiHtml`; HP `cetakTandaTerima` →
 `_htmlTandaTerima`). Kuitansi perjalanan dinas, kuitansi pajak, bukti pengembalian,
@@ -114,6 +115,7 @@ Satu fungsi `terbilang` di `TandaTerima.gs`, keluaran Title Case diakhiri
 | A-3 | **Blok "Mengetahui, PPK"** | `CONFIG.INSTANSI.ppk/nipPpk` | Sebagai opsi saat cetak (K-3), bukan tetap. |
 | A-4 | **Kotak meterai** di atas nama penerima | `jumlah` vs ambang | Lihat K-4. Kotak kosong bertulisan "Meterai Rp10.000", bukan meterai elektronik. |
 | A-5 | **Batas pertanggungjawaban** di Lembar 2 (PUM) | tanggal transaksi + N hari | Lihat K-5. Hanya teks pengingat, tidak mengubah status transaksi. |
+| A-6 | **MAK lengkap** per item POK (diminta pengguna 29 Sep 2026 — **pasti dikerjakan**) | sheet `Pagu`: `KODE_KEGIATAN`, `KODE_RO`, `KODE_KOMPONEN`, `AKUN`, dicari lewat `KODE_ITEM` | Dicetak di baris "Detail kegiatan (item POK)" menggantikan kolom akun saja, mis. `2376.QDB.001.051.521211`. Lihat K-7 dan K-8. Item tak ketemu di Pagu → cetak akun saja (perilaku sekarang), tanpa galat. |
 
 ---
 
@@ -146,6 +148,8 @@ GAS tidak bisa di-unit-test otomatis (CLAUDE.md), jadi:
 | K-4 | Bila A-4 dipakai: apakah tanda terima uang muka kepada pegawai sendiri di satker ini **diperlakukan sebagai objek bea meterai**? Ambangnya **> Rp5.000.000** (UU 10/2020), bukan ≥. | Perlu konfirmasi Bendahara/praktik satker — tidak diasumsikan oleh aplikasi |
 | K-5 | Bila A-5 dipakai: berapa hari batas pertanggungjawaban uang muka yang berlaku di satker? | Diisi pengguna; disimpan di `Settings`, bukan hardcode |
 | K-6 | Apakah nomor `KT-0234/2026` (4 digit) diterima, atau ada format penomoran resmi dari Bendahara? | 4 digit |
+| K-7 | MAK perlu sampai **subkomponen** (A, B, …)? Impor pagu sekarang **tidak** menyimpan subkomponen, jadi perlu menambah kolom + impor ulang. | Berhenti di komponen dulu; subkomponen menyusul bila diminta |
+| K-8 | Transaksi hanya menyimpan `KODE_ITEM` (tanpa RO). Bila satu kode item muncul di lebih dari satu RO/komponen, MAK-nya ambigu. | Diperiksa pada data asli sebelum kode ditulis; bila ambigu, cetak akun saja dan catat di log (menebak MAK lebih berbahaya daripada tidak mencetaknya) |
 
 ---
 
