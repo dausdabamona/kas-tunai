@@ -372,6 +372,7 @@ Yang berubah: kolom **Urutan** dan tambahan tugas 12–14.
 | 4 | 13 | Layar Perjalanan dinas (redesain) | ⬜ belum |
 | 5 | 14 | Layar Rekonsiliasi (redesain) | ⬜ belum |
 | 6 | 15 | Layar Laporan & cetakan (redesain) | ⬜ belum |
+| 16 | — | **Pasangan nota ↔ foto barang** (spec `docs/superpowers/specs/2026-09-29-pasangan-foto-nota-design.md`) | 🟡 kode selesai 29 Sep 2026 (branch `claude/tanda-terima-cetak`). Uji klik nyata Playwright + server tiruan 19/19 lulus. **Belum diuji di Apps Script dengan data asli** — jalankan `deploy.bat` (tanpa rilis), uji di URL `/dev`, jalankan `cekPasanganNota_()`, baru `deploy.bat rilis`. |
 
 Status: ⬜ belum · 🟡 jalan/kode selesai · ✅ selesai (sudah diuji) · ⛔ terblokir
 

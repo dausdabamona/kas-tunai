@@ -442,6 +442,16 @@
      Menghapus lewat tombol X, BUKAN klik gambarnya: versi lama menghapus foto
      pada klik pertama tanpa konfirmasi, dan klik untuk melihat malah membuang. */
   .tgrid{display:flex;flex-wrap:wrap;gap:8px}
+  /* Kartu nota: Bukti A & Bukti B milik nota itu berdampingan */
+  .nt-bukti{display:grid;grid-template-columns:auto 1fr;gap:14px;margin-top:8px}
+  .nt-lbl{font-size:11.5px;font-weight:600;color:var(--bs-n600);margin-bottom:4px}
+  .nt-no{font-size:11.5px;font-weight:700;background:var(--bs-n200);border-radius:6px;padding:1px 6px;margin-right:4px}
+  .nt-warn{font-size:11px;color:var(--bs-a2);margin-top:3px}
+  .tileD.add.warn{border-color:var(--bs-a2);color:var(--bs-a2)}
+  .nt-fb{display:flex;flex-direction:column;gap:3px;width:84px}
+  .nt-pindah{width:84px;font-size:11px;padding:2px;min-height:28px}
+  .nt-gagal{background:#fff4e5;border:1px solid #f0b95b;border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:13px}
+  .nt-yatim{border-color:var(--bs-a2)}
   .tileD{width:84px;height:84px;border-radius:14px;overflow:hidden;position:relative;
     border:1px solid var(--bs-n300);background:var(--bs-n200);padding:0;flex:none}
   .tileD img{width:100%;height:100%;object-fit:cover;display:block}
@@ -1003,6 +1013,7 @@
   <div class="sheet">
     <h2>Nota Transaksi <span id="notaTxLabel"></span></h2>
     <div id="notaList"></div>
+    <input type="file" id="ntKartuFile" accept="image/*" multiple style="display:none" onchange="_ntKartuFileDipilih(this)">
     <hr>
     <h2 style="font-size:14px" id="ntFormTitle">Tambah Nota</h2>
     <div class="field"><label>Nama Nota / Penyedia</label>
@@ -1032,9 +1043,6 @@
       <input type="file" id="ntFile" accept="image/*" capture="environment" style="display:none" onchange="_ntRenderTileA()">
       <div class="tgrid" id="ntTileA"></div>
       <button class="btn ghost scan-imp" style="display:none;margin:6px 0 0" onclick="importScanNota()">&#128247; Impor dari Folder Scan</button>
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-top:8px;color:var(--bs-n600)">
-        <input type="checkbox" id="ntAsFotoBarang"> Salin juga foto nota ini ke Bukti B (biasanya <b>tidak perlu</b>)
-      </label>
     </div>
 
     <!-- ===== BUKTI B: foto barang diterima ===== -->
@@ -1179,6 +1187,8 @@
     <div id="ftGaleri"></div>
     <hr>
     <h2 style="font-size:14px">Tambah Foto (dengan lokasi GPS)</h2>
+    <div class="field" id="ftNotaWrap" style="display:none"><label>Foto ini untuk nota</label>
+      <select id="ftNota" onchange="_fotoNotaId=this.value||null"></select></div>
     <div class="field"><label>Keterangan (opsional, isi sebelum ambil foto)</label><input type="text" id="ftKet"></div>
     <div id="ftGps" class="tgl" style="font-size:12px;color:var(--bs-n600);margin-bottom:8px"></div>
     <div class="row2">
@@ -3771,7 +3781,9 @@ function _riilPage(data, peg){
 /* ============== Foto nota (geotagging) ============== */
 var _fotoTarget=null, _fotoNotaId=1, _fotoGps=null;
 function openFoto(no){
-  _fotoTarget=no; _fotoNotaId=1; _fotoGps=null;
+  // Nota pilihan dipertahankan selama transaksinya sama (unggah beruntun).
+  _fotoNotaId=(String(no)===String(_fotoTarget))?_fotoNotaId:null;
+  _fotoTarget=no; _fotoGps=null;
   document.getElementById('ftTxLabel').textContent='No '+no;
   document.getElementById('ftKet').value='';
   document.getElementById('ftFile').value='';
@@ -3797,30 +3809,65 @@ function _captureGps(elId, cb){
   }, function(){ if(el) el.textContent='⚠ Lokasi GPS tidak tersedia (foto tetap tersimpan).'; },
   {enableHighAccuracy:true,timeout:10000});
 }
+/**
+ * Galeri foto transaksi, dikelompokkan per nota.
+ *
+ * Dulu modal ini selalu membaca & mengunggah ke Nota 1. Sekarang:
+ *  - belum ada nota (termasuk Perjalanan Dinas) -> Nota 1, seperti sebelumnya;
+ *  - satu nota  -> nota itu (nomornya belum tentu 1 bila nota lama dihapus);
+ *  - lebih dari satu -> pengguna WAJIB memilih nota tujuan sebelum unggah.
+ */
 function renderFotoGaleri(res){
-  var fotos=(res&&res.fotoPerNota&&res.fotoPerNota['1'])||[];
-  var box=document.getElementById('ftGaleri');
-  if(!fotos.length){ box.innerHTML='<div class="empty">Belum ada foto.</div>'; return; }
-  var h='<div class="ftgrid">';
-  for(var i=0;i<fotos.length;i++){
-    var f=fotos[i];
-    var viewUrl=f.urlFile||('https://drive.google.com/file/d/'+f.fileId+'/view');
-    h+='<div class="ftitem">'
-      +'<a href="'+esc(viewUrl)+'" target="_blank" title="Klik untuk lihat foto">'
-      +'<img loading="lazy" src="https://drive.google.com/thumbnail?id='+esc(f.fileId)+'&sz=w400"></a>'
-      +'<div class="ftmeta">'+esc(f.waktu||'')
-      +(f.mapsUrl?(' &middot; <a href="'+esc(f.mapsUrl)+'" target="_blank">&#128205; lokasi</a>'):'')
-      +(f.keterangan?('<br>'+esc(f.keterangan)):'')+'</div>'
-      +'<button class="mini b-gray" style="color:var(--bs-n800)" onclick="hapusFoto('+f.urutan+')">Hapus</button>'
-      +'</div>';
+  var notas=(res&&res.notas)||[], fpn=(res&&res.fotoPerNota)||{}, i, k;
+  var wrap=document.getElementById('ftNotaWrap'), sel=document.getElementById('ftNota');
+  if(notas.length>1){
+    var o='<option value="">&mdash; pilih nota &mdash;</option>';
+    for(i=0;i<notas.length;i++) o+='<option value="'+esc(notas[i].urutan)+'">Nota #'+esc(notas[i].urutan)+' '
+      +esc(notas[i].namaPenyedia||'')+' &middot; '+rupiah(notas[i].nilai)+'</option>';
+    sel.innerHTML=o; wrap.style.display='';
+    if(_fotoNotaId!=null) sel.value=String(_fotoNotaId);
+  } else {
+    wrap.style.display='none';
+    _fotoNotaId=notas.length?notas[0].urutan:1;
   }
-  box.innerHTML=h+'</div>';
+  var nama={};
+  for(i=0;i<notas.length;i++) nama[String(notas[i].urutan)]=notas[i].namaPenyedia||'';
+  var box=document.getElementById('ftGaleri'), h='', ada=false;
+  for(k in fpn){
+    var fotos=fpn[k]||[]; if(!fotos.length) continue;
+    ada=true;
+    h+='<div class="nt-lbl" style="margin-top:6px">'+(notas.length
+        ?('Nota #'+esc(k)+' '+esc(nama[k]!==undefined?nama[k]:'(nota sudah tidak ada)'))
+        :'Foto bukti')+' &middot; '+fotos.length+' foto</div><div class="ftgrid">';
+    for(i=0;i<fotos.length;i++){
+      var f=fotos[i];
+      var viewUrl=f.urlFile||('https://drive.google.com/file/d/'+f.fileId+'/view');
+      h+='<div class="ftitem">'
+        +'<a href="'+esc(viewUrl)+'" target="_blank" title="Klik untuk lihat foto">'
+        +'<img loading="lazy" src="https://drive.google.com/thumbnail?id='+esc(f.fileId)+'&sz=w400"></a>'
+        +'<div class="ftmeta">'+esc(f.waktu||'')
+        +(f.mapsUrl?(' &middot; <a href="'+esc(f.mapsUrl)+'" target="_blank">&#128205; lokasi</a>'):'')
+        +(f.keterangan?('<br>'+esc(f.keterangan)):'')+'</div>'
+        +'<button class="mini b-gray" style="color:var(--bs-n800)" onclick="hapusFoto('+aqd(k)+','+aqd(f.urutan)+')">Hapus</button>'
+        +'</div>';
+    }
+    h+='</div>';
+  }
+  box.innerHTML=ada?h:'<div class="empty">Belum ada foto.</div>';
 }
 function submitFoto(){ _uploadFotoFiles(document.getElementById('ftFile').files); }
 
 /** Kompres semua file (File/Blob) lalu unggah dalam satu panggilan. */
 function _uploadFotoFiles(files){
   if(!files||!files.length){ toast('Pilih atau tempel foto dulu','error'); return; }
+  if(_fotoNotaId==null||_fotoNotaId===''){
+    // Kosongkan input supaya memilih berkas yang SAMA setelah nota dipilih
+    // tetap memicu onchange (browser tidak memicunya bila nilainya tidak berubah).
+    document.getElementById('ftFile').value=''; document.getElementById('ftCam').value='';
+    toast('Pilih dulu foto ini untuk nota yang mana','error');
+    var sel=document.getElementById('ftNota'); if(sel) sel.focus();
+    return;
+  }
   var ket=document.getElementById('ftKet').value.trim();
   var arr=[], done=0, n=files.length;
   showLoading(true,'Memproses '+n+' foto...');
@@ -3894,14 +3941,14 @@ function _showPastePreview(input){
   }
 }
 function _clearPastePreview(inpId){ var b=document.getElementById(inpId+'_pp'); if(b) b.innerHTML=''; }
-function hapusFoto(urutan){
+function hapusFoto(notaId, urutan){
   if(!confirm('Hapus foto ini?')) return;
   showLoading(true,'Menghapus...');
   google.script.run
     .withSuccessHandler(function(){ showLoading(false); toast('Foto dihapus','success');
       openFoto(_fotoTarget); loadAll(); })
     .withFailureHandler(fail)
-    .serverHapusFotoNota(_tok, _fotoTarget,_fotoNotaId,urutan);
+    .serverHapusFotoNota(_tok, _fotoTarget,notaId,urutan);
 }
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
@@ -4515,15 +4562,22 @@ function openModalNota(no){
   document.getElementById('notaTxLabel').textContent='No '+no+(_ntPersediaan?' · Persediaan':'');
   _cancelEditNota();
   document.getElementById('notaList').innerHTML='<div class="empty">Memuat...</div>';
-  document.getElementById('ntAsFotoBarang').checked=false;   // foto nota & foto barang dipisah
   document.getElementById('ntGps').textContent='';
   _notaGps=null; _captureGps('ntGps', function(g){ _notaGps=g; });
   openModal('modalNota');
   _muatPenyedia(_isiDatalistNota);
+  _ntMuatDaftar();
+}
+/**
+ * Muat ulang DAFTAR nota beserta fotonya tanpa mengosongkan form di bawahnya
+ * (dipakai setelah tambah/hapus/pindah foto dari kartu).
+ */
+function _ntMuatDaftar(){
+  var no=_notaTarget;
   google.script.run
-    .withSuccessHandler(renderNotaList)
+    .withSuccessHandler(function(res){ if(String(no)===String(_notaTarget)) renderNotaList(res); })
     .withFailureHandler(fail)
-    .serverGetMultiNota(_tok, no);
+    .serverGetNotaDanFoto(_tok, no);
 }
 function _isiDatalistNota(){
   var dl=document.getElementById('ntPenyediaList'); dl.innerHTML='';
@@ -4568,22 +4622,49 @@ function cetakKuitansiPajakNota(no, urutan){
   if(pj.totalPajak<=0){ toast('Nota ini tidak dipotong pajak','info'); return; }
   _bukaPopup(_renderKuitansiPajakHtml(t, pj, n));
 }
-function renderNotaList(list){
-  _notaList=list||[];
-  var box=document.getElementById('notaList');
-  if(!list||!list.length){box.innerHTML='<div class="empty">Belum ada nota.</div>';return;}
+/**
+ * Daftar nota berkartu. Setiap kartu memuat Bukti A (scan nota) dan Bukti B
+ * (foto barang) MILIK NOTA ITU, jadi pasangan nota <-> foto terlihat langsung.
+ * `res` = hasil serverGetNotaDanFoto: {notas, fotoPerNota:{nomorNota:[foto]}}.
+ * Foto yang nomor notanya tidak cocok dengan nota aktif mana pun ditampilkan di
+ * kartu "Foto tanpa nota" supaya bisa dipindahkan, bukan hilang dari pandangan.
+ */
+function renderNotaList(res){
+  var list=(res&&res.notas)||[], fpn=(res&&res.fotoPerNota)||{};
+  _notaList=list; _ntFotoPerNota=fpn;
+  var box=document.getElementById('notaList'), h='', i, k;
+  if(_ntGagal && String(_ntGagal.no)===String(_notaTarget)){
+    h+='<div class="nt-gagal">&#9888; '+_ntGagal.files.length+' foto barang gagal diunggah ke Nota #'+esc(_ntGagal.urutan)
+      +'. <button class="mini b-dark" onclick="_ntCobaLagiGagal()">Coba lagi</button>'
+      +' <button class="mini b-gray" style="color:var(--bs-n800)" onclick="_ntAbaikanGagal()">Abaikan</button></div>';
+  }
+  var aktif={};
+  for(i=0;i<list.length;i++) aktif[String(list[i].urutan)]=true;
+  var yatim=[];
+  for(k in fpn) if(!aktif[k] && fpn[k] && fpn[k].length) yatim.push(k);
+  if(!list.length && !yatim.length){ box.innerHTML=h+'<div class="empty">Belum ada nota.</div>'; return; }
   list=list.slice().sort(function(a,b){return (+b.urutan||0)-(+a.urutan||0);}); // terbaru di atas
-  var h='';
-  for(var i=0;i<list.length;i++){
-    var n=list[i];
+  for(i=0;i<list.length;i++){
+    var n=list[i], fb=fpn[String(n.urutan)]||[];
     h+='<div class="card" style="margin-bottom:8px">'
-      +'<div class="row1"><div class="keg" style="font-size:14px">'+esc(n.namaPenyedia||'-')+'</div>'
+      +'<div class="row1"><div class="keg" style="font-size:14px"><span class="nt-no">Nota #'+esc(n.urutan)+'</span> '+esc(n.namaPenyedia||'-')+'</div>'
       +'<div class="amt">'+rupiah(n.nilai)+'</div></div>'
       +'<div class="tgl">'+(n.npwp?('NPWP '+esc(n.npwp)+' &middot; '):'')+'Tgl '+esc(n.tglNota?_tglID(n.tglNota):'-')
       +((n.jmlItem>0)?(' &middot; <b>'+n.jmlItem+' item</b>'):'')+'</div>'
       +(n.alamat?'<div class="tgl">'+esc(n.alamat)+'</div>':'')
       +_notaPajakChip(n)
-      +(n.fileId?('<a href="'+esc(n.urlFile||('https://drive.google.com/file/d/'+n.fileId+'/view'))+'" target="_blank" title="Lihat foto nota"><img class="nthumb" src="https://drive.google.com/thumbnail?id='+esc(n.fileId)+'&sz=w200"></a>'):'')
+      +'<div class="nt-bukti">'
+      +  '<div><div class="nt-lbl">Bukti A &mdash; nota</div><div class="tgrid">'
+      +    (n.fileId
+            ? _ntTileDriveHtml(n.fileId, n.urlFile, '')
+            : ('<button type="button" class="tileD add warn" title="Belum ada scan nota" onclick="_ntKartuNota('+aqd(n.urutan)+')">'
+               +'<span>&#129534;</span>Scan nota</button>'))
+      +  '</div>'+(n.fileId?'':'<div class="nt-warn">Belum ada scan nota</div>')+'</div>'
+      +  '<div><div class="nt-lbl">Bukti B &mdash; barang diterima ('+fb.length+')</div><div class="tgrid">'
+      +    _ntTileBHtml(n.urutan, fb, list)
+      +    _ntTileAddHtml('_ntKartuTambah('+aqd(n.urutan)+')','&#128247;','Tambah')
+      +  '</div></div>'
+      +'</div>'
       +'<div class="acts"><button class="b-edit" onclick="editNota('+n.urutan+')">&#9998; Edit</button>'
       +'<button class="b-dark" onclick="openModalPajak('+_notaTarget+','+n.urutan+')">&#9881; Pajak</button>'
       +((n.pajakKatIdx!==null&&n.pajakKatIdx!==undefined&&((+n.pajakPph||0)+(+n.pajakPpn||0))>0)
@@ -4591,7 +4672,101 @@ function renderNotaList(list){
       +'<button onclick="hapusNota('+_notaTarget+','+n.urutan+",'"+(n.fileId||'')+"')\">Hapus</button></div>"
       +'</div>';
   }
+  for(i=0;i<yatim.length;i++){
+    var fy=fpn[yatim[i]];
+    h+='<div class="card nt-yatim" style="margin-bottom:8px">'
+      +'<div class="keg" style="font-size:14px">&#9888; Foto tanpa nota (tercatat ke nomor nota '+esc(yatim[i])+' yang sudah tidak ada)</div>'
+      +'<div class="tgl">Pindahkan setiap foto ke nota yang benar, atau hapus bila tidak dipakai.</div>'
+      +'<div class="tgrid" style="margin-top:8px">'+_ntTileBHtml(yatim[i], fy, list)+'</div>'
+      +'</div>';
+  }
   box.innerHTML=h;
+}
+var _ntFotoPerNota={};
+/** Nilai untuk atribut onclick berkutip ganda: selalu dibungkus kutip tunggal. */
+function aqd(v){ return "'"+String(v==null?'':v).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; }
+/** Ubin gambar dari Drive (klik = buka di tab baru). */
+function _ntTileDriveHtml(fileId, url, tombolX){
+  var view=url||('https://drive.google.com/file/d/'+fileId+'/view');
+  return '<div class="tileD"><a href="'+esc(view)+'" target="_blank" title="Lihat foto">'
+    +'<img loading="lazy" src="https://drive.google.com/thumbnail?id='+esc(fileId)+'&sz=w200" alt=""></a>'
+    +(tombolX||'')+'</div>';
+}
+/** Ubin Bukti B satu nota: gambar + tombol hapus + pilihan "Pindah ke nota...". */
+function _ntTileBHtml(notaId, fotos, semuaNota){
+  var h='', i, j;
+  for(i=0;i<fotos.length;i++){
+    var f=fotos[i], opsi='';
+    for(j=0;j<semuaNota.length;j++){
+      if(String(semuaNota[j].urutan)===String(notaId)) continue;
+      opsi+='<option value="'+esc(semuaNota[j].urutan)+'">Nota #'+esc(semuaNota[j].urutan)+' '
+        +esc(String(semuaNota[j].namaPenyedia||'').slice(0,18))+'</option>';
+    }
+    h+='<div class="nt-fb">'
+      +_ntTileDriveHtml(f.fileId, f.urlFile,
+        '<button type="button" class="x" title="Hapus foto" onclick="_ntHapusFotoKartu('+aqd(notaId)+','+aqd(f.urutan)+')">&times;</button>')
+      +(opsi?('<select class="nt-pindah" title="Pindahkan foto ini ke nota lain" '
+        +'onchange="_ntPindahFotoKartu('+aqd(notaId)+','+aqd(f.urutan)+',this)">'
+        +'<option value="">Pindah ke&hellip;</option>'+opsi+'</select>'):'')
+      +'</div>';
+  }
+  return h;
+}
+var _ntKartuUrutan=null;   // nota tujuan untuk input #ntKartuFile, diisi tepat sebelum dialog dibuka
+/** Tambah foto barang langsung ke nota kartu ini. */
+function _ntKartuTambah(urutan){
+  _ntKartuUrutan=urutan;
+  var inp=document.getElementById('ntKartuFile'); inp.value=''; inp.click();
+}
+/** Nota tanpa scan: buka form edit nota itu lalu dialog pilih berkas nota. */
+function _ntKartuNota(urutan){
+  editNota(urutan);
+  document.getElementById('ntFile').click();
+}
+function _ntKartuFileDipilih(inp){
+  var files=inp.files, urutan=_ntKartuUrutan, no=_notaTarget;
+  if(!files||!files.length||urutan==null) return;
+  var n=files.length, arr=[], done=0, i;
+  showLoading(true,'Memproses '+n+' foto...');
+  for(i=0;i<n;i++){
+    (function(idx){
+      compressImage(files[idx], function(c){
+        if(_notaGps){ c.lat=_notaGps.lat; c.lng=_notaGps.lng; }
+        arr[idx]=c; done++;
+        if(done<n) return;
+        showLoading(true,'Mengunggah '+n+' foto ke Nota #'+urutan+'...');
+        _ntUnggahBertahap(no, urutan, arr, function(ok, gagal){
+          showLoading(false);
+          _ntGagal=gagal.length?{no:no, urutan:urutan, files:gagal}:null;
+          toast(gagal.length?(gagal.length+' foto gagal diunggah. Tekan "Coba lagi".'):(ok+' foto terunggah ke Nota #'+urutan),
+            gagal.length?'error':'success');
+          _ntMuatDaftar(); loadAll();
+        });
+      });
+    })(i);
+  }
+}
+/**
+ * Pindahkan satu foto barang ke nota lain di transaksi yang sama.
+ * Berkas Drive tidak diunggah ulang; server mencatatnya di AuditLog.
+ */
+function _ntPindahFotoKartu(notaAsal, urutanFoto, sel){
+  var tujuan=sel.value; if(!tujuan) return;
+  var label=sel.options[sel.selectedIndex].text;
+  if(!confirm('Pindahkan foto ini ke '+label+'?')){ sel.value=''; return; }
+  showLoading(true,'Memindahkan foto...');
+  google.script.run
+    .withSuccessHandler(function(){ showLoading(false); toast('Foto dipindah ke Nota #'+tujuan,'success'); _ntMuatDaftar(); loadAll(); })
+    .withFailureHandler(function(e){ sel.value=''; fail(e); })
+    .serverPindahFotoNota(_tok, _notaTarget, notaAsal, urutanFoto, tujuan);
+}
+function _ntHapusFotoKartu(notaId, urutanFoto){
+  if(!confirm('Hapus foto ini? Berkasnya ikut dibuang dari Drive.')) return;
+  showLoading(true,'Menghapus foto...');
+  google.script.run
+    .withSuccessHandler(function(){ showLoading(false); toast('Foto dihapus','success'); _ntMuatDaftar(); loadAll(); })
+    .withFailureHandler(fail)
+    .serverHapusFotoNota(_tok, _notaTarget, notaId, urutanFoto);
 }
 function editNota(urutan){
   var n=null;
@@ -4907,40 +5082,77 @@ function submitNota(){
   }
 }
 function sendNota(notaData){
-  var edit=(_notaEditUrutan!=null);
-  showLoading(true,edit?'Memperbarui nota...':'Menyimpan nota...');
-  // Sekaligus simpan foto nota sebagai Foto Barang (geotag) — baca sebelum form direset
-  var jugaFotoBarang=(notaData.file && notaData.file.base64 &&
-                      document.getElementById('ntAsFotoBarang').checked);
-  var ok=function(){
-    showLoading(false);toast(edit?'Nota diperbarui':'Nota ditambahkan','success');
-    // simpan penyedia ke master untuk autocomplete berikutnya
+  // Nota dan foto barangnya disimpan dalam SATU panggilan: nomor nota untuk
+  // foto diambil dari hasil simpan di server. Dulu foto barang dikirim
+  // terpisah dengan nomor nota tetap 1, sehingga foto barang Nota 2, 3, ...
+  // menumpuk di Nota 1. Modal baru dimuat ulang SETELAH semuanya selesai.
+  var edit=(_notaEditUrutan!=null), no=_notaTarget;
+  var foto=_ntBarangFiles.slice(), i;
+  if(_notaGps){ for(i=0;i<foto.length;i++){ foto[i].lat=_notaGps.lat; foto[i].lng=_notaGps.lng; } }
+  var pertama=foto.slice(0,NT_MAKS_FOTO), sisa=foto.slice(NT_MAKS_FOTO);
+  var btn=document.getElementById('ntSubmitBtn'); btn.disabled=true;
+  showLoading(true,(edit?'Memperbarui':'Menyimpan')+' nota'
+    +(foto.length?(' dan '+foto.length+' foto barang'):'')+'...');
+  function selesai(res, ok2, gagal2){
+    var gagalFoto=[], k;
+    for(k=0;k<(res.gagal||[]).length;k++) gagalFoto.push(pertama[res.gagal[k]]);
+    gagalFoto=gagalFoto.concat(gagal2);
+    var ok=(+res.jmlFotoBarang||0)+ok2;
+    showLoading(false); btn.disabled=false;
     if(notaData.namaPenyedia){
       _allPenyedia=null;
       google.script.run.serverSimpanPenyedia(_tok, {nama:notaData.namaPenyedia,npwp:notaData.npwp,alamat:notaData.alamat});
     }
-    // unggah Foto Barang dari foto nota (fire-and-forget)
-    if(jugaFotoBarang){
-      var fb={ base64:notaData.file.base64, mimeType:notaData.file.mimeType, namaFile:notaData.file.namaFile,
-               keterangan:'Nota: '+(notaData.namaPenyedia||'') };
-      if(_notaGps){ fb.lat=_notaGps.lat; fb.lng=_notaGps.lng; }
-      google.script.run.serverUploadFotoNota(_tok, _notaTarget, 1, [fb]);
+    _ntGagal=gagalFoto.length?{no:no, urutan:res.urutan, files:gagalFoto}:null;
+    if(gagalFoto.length){
+      toast('Nota tersimpan, tetapi '+gagalFoto.length+' foto barang gagal diunggah. Tekan "Coba lagi" di atas daftar nota.','error');
+    } else {
+      toast((edit?'Nota diperbarui':'Nota ditambahkan')+(ok?(' \u00b7 '+ok+' foto barang terunggah'):''),'success');
     }
-    // unggah Foto Barang tambahan langsung dari form nota (fire-and-forget)
-    if(_ntBarangFiles.length>0){
-      var arr=_ntBarangFiles.slice(); _ntBarangFiles=[];
-      if(_notaGps){ for(var bi=0;bi<arr.length;bi++){ arr[bi].lat=_notaGps.lat; arr[bi].lng=_notaGps.lng; } }
-      google.script.run.serverUploadFotoNota(_tok, _notaTarget, 1, arr);
-    }
-    openModalNota(_notaTarget);loadAll();
-  };
-  if(edit){
-    google.script.run.withSuccessHandler(ok).withFailureHandler(fail)
-      .serverUpdateNota(_tok, _notaTarget,_notaEditUrutan,notaData);
-  }else{
-    google.script.run.withSuccessHandler(ok).withFailureHandler(fail)
-      .serverTambahNota(_tok, _notaTarget,notaData);
+    openModalNota(no); loadAll();
   }
+  google.script.run
+    .withSuccessHandler(function(res){
+      _ntUnggahBertahap(no, res.urutan, sisa, function(ok2, gagal2){ selesai(res, ok2, gagal2); });
+    })
+    .withFailureHandler(function(e){ btn.disabled=false; fail(e); })
+    .serverSimpanNotaLengkap(_tok, no, edit?_notaEditUrutan:null, notaData, pertama);
+}
+var NT_MAKS_FOTO=6;   // sama dengan MAKS_FOTO_PER_SIMPAN di Code.gs
+var _ntGagal=null;    // {no, urutan, files} foto barang yang gagal diunggah, untuk "Coba lagi"
+/**
+ * Unggah foto ke SATU nota bertahap (6 per panggilan, berurutan).
+ * cb(jumlahBerhasil, fileYangGagal) -- tidak pernah melempar; kegagalan dikembalikan.
+ */
+function _ntUnggahBertahap(no, urutan, files, cb){
+  var ok=0, gagal=[];
+  (function lanjut(i){
+    if(i>=files.length){ cb(ok, gagal); return; }
+    var batch=files.slice(i, i+NT_MAKS_FOTO);
+    google.script.run
+      .withSuccessHandler(function(){ ok+=batch.length; lanjut(i+NT_MAKS_FOTO); })
+      .withFailureHandler(function(e){
+        if(_isSesiError(e)){ _forceLogin(); return; }
+        gagal=gagal.concat(batch); lanjut(i+NT_MAKS_FOTO);
+      })
+      .serverUploadFotoNota(_tok, no, urutan, batch);
+  })(0);
+}
+/** Ulangi unggah foto barang yang gagal (tombol "Coba lagi"). */
+function _ntCobaLagiGagal(){
+  var g=_ntGagal; if(!g) return;
+  showLoading(true,'Mengunggah ulang '+g.files.length+' foto...');
+  _ntUnggahBertahap(g.no, g.urutan, g.files, function(ok, gagal){
+    showLoading(false);
+    _ntGagal=gagal.length?{no:g.no, urutan:g.urutan, files:gagal}:null;
+    toast(gagal.length?(gagal.length+' foto masih gagal. Periksa sinyal lalu coba lagi.'):(ok+' foto terunggah'),
+      gagal.length?'error':'success');
+    _ntMuatDaftar(); loadAll();
+  });
+}
+function _ntAbaikanGagal(){
+  if(!confirm('Abaikan foto yang gagal diunggah? Foto itu tidak tersimpan.')) return;
+  _ntGagal=null; _ntMuatDaftar();
 }
 function hapusNota(no,urutan,fileId){
   if(!confirm('Hapus nota ini?'))return;
@@ -7221,10 +7433,12 @@ function _pkBukaAksi(jenis,id,tempat,panel){
       +esc(String(t.tanggal||todayISO()))+'"></div></div>';
   } else if(panel==='foto'){
     h='<div class="pandu">Pilih transaksi tujuan lalu beri label singkat. Berkasnya '
-      +'ditempelkan sebagai foto pada nota terakhir transaksi itu, lalu dipindahkan '
+      +'ditempelkan sebagai foto pada nota yang Anda isi (kosong = nota terakhir), lalu dipindahkan '
       +'dari kotak masuk supaya tidak muncul lagi.</div>'
       +'<div class="baris"><div><label>Kaitkan ke transaksi No.</label>'
       +'<input type="text" id="'+p+'No" inputmode="numeric" placeholder="mis. 401"></div>'
+      +'<div><label>Nota ke- (opsional)</label>'
+      +'<input type="text" id="'+p+'Nt" inputmode="numeric" placeholder="kosong = terakhir"></div>'
       +'<div class="lebar"><label>Label berkas</label>'
       +'<input type="text" id="'+p+'Lb" style="width:100%" value="'+esc(String(it.judul||''))+'"></div></div>';
   } else {
@@ -7316,7 +7530,7 @@ function _pkSimpanAksi(jenis,id,tempat,panel){
         if(pkData.jumlahAntrean) pkData.jumlahAntrean.foto=sc.length;
         beres('Berkas dikaitkan ke transaksi No '+noTx+'.');
       }).withFailureHandler(gagal)
-      .serverKaitkanScan(_tok, id, noTx, nilai('Lb'));
+      .serverKaitkanScan(_tok, id, noTx, nilai('Lb'), nilai('Nt'));
   }
 }
 
