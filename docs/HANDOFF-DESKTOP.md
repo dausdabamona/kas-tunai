@@ -132,7 +132,7 @@ sungguhan.**
 Belum dikerjakan dari spec: tombol "Catat transaksi" dibiarkan di `.topbar-v2`
 (spec §2.1 mengizinkan bila memindahkannya mengganggu tab lain).
 
-## 0j. Analisis dewan UI/UX — alur tahap transaksi (29 Sep 2026, ⬜ belum dikerjakan)
+## 0j. Analisis dewan UI/UX — alur tahap transaksi (29 Sep 2026, disetujui; usulan 3 dikerjakan lebih dulu)
 
 Isi tambahan untuk tugas urutan-12 **Layar Transaksi + panel detail kanan**
 (bukan rencana terpisah). Melengkapi 3b.2 — bagian yang bertentangan dengan 3b.2
@@ -185,11 +185,11 @@ Perjalanan Dinas punya jalur sendiri (SPD) — di luar cakupan tabel ini.
 |---|--------|--------|-------|
 | 1 | Status tahap di server → satu baris "x dari 7 tahap · kurang: …" | besar | sedang |
 | 2 | Panel detail kanan: tahap berurutan + satu tombol utama (tombol lama tetap selama transisi) | besar | besar |
-| 3 | Form catat 5 isian, MAK otomatis dari item POK, DRPP/SPP ke tahap belakang | sedang | kecil |
+| 3 | Form catat 5 isian, MAK otomatis dari item POK, DRPP/SPP ke tahap belakang — 🟡 **kode selesai 29 Sep 2026**: isian inti Nilai·Uraian·PUM·Tanggal+Sumber·Item POK; MAK tampil dari `item.mak` (server); akun terkunci ikut item, pergantian akun lama diberitahukan; sisanya di "Isian lanjutan" (terbuka otomatis bila berisi); akun 5218xx → Persediaan tercentang otomatis (transaksi baru saja). Uji klik 11/11. | sedang | kecil |
 | 4 | Modal Foto per transaksi dilebur ke kartu nota (kecuali Perjalanan Dinas) | sedang | kecil |
 | 5 | Pecah, Jadikan PD, Pindah dana → menu "⋯ Lainnya" | sedang | kecil |
 
-**Keputusan terbuka (bertentangan dengan 3b.2 — jangan dikerjakan sebelum dijawab):**
+**Keputusan (dijawab pengguna 29 Sep 2026: "saya setuju") — ketiga usul DITERIMA dan menggantikan bagian 3b.2 yang bertentangan:**
 - **K-UX1.** 3b.2 menaruh *blok hitung pajak di tingkat transaksi* (DPP = nilai ÷ 1,11).
   Keputusan domain yang berlaku sejak tugas mobile 4: **pajak melekat per nota**
   (per penyedia). Usul: panel detail menampilkan ringkasan pajak per nota, bukan satu
@@ -435,7 +435,7 @@ Yang berubah: kolom **Urutan** dan tambahan tugas 12–14.
 | 13 | **9** | Jejak audit "Tandai wajar" (baru, lihat R-4) | ⬜ belum |
 | 14 | **10** | Penanganan item yatim akibat revisi DIPA/POK (baru, lihat R-3) | ⬜ belum |
 | 2 | 11 | Layar Papan kerja (dashboard) | 🟡 **kode selesai 29 Jul 2026, belum diuji manual** |
-| 3 | 12 | Layar Transaksi + panel detail kanan (redesain) | ⬜ belum — **baca 0j** (alur 7 tahap + keputusan terbuka K-UX1..3) |
+| 3 | 12 | Layar Transaksi + panel detail kanan (redesain) | ⬜ belum — **baca 0j** (alur 7 tahap; K-UX1..3 disetujui) |
 | 4 | 13 | Layar Perjalanan dinas (redesain) | ⬜ belum |
 | 5 | 14 | Layar Rekonsiliasi (redesain) | ⬜ belum |
 | 6 | 15 | Layar Laporan & cetakan (redesain) | ⬜ belum |

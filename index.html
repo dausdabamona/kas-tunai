@@ -442,6 +442,11 @@
      Menghapus lewat tombol X, BUKAN klik gambarnya: versi lama menghapus foto
      pada klik pertama tanpa konfirmasi, dan klik untuk melihat malah membuang. */
   .tgrid{display:flex;flex-wrap:wrap;gap:8px}
+  /* Form transaksi: MAK otomatis & isian lanjutan */
+  .tx-mak{margin-top:6px;font-size:13px;font-family:Consolas,'Courier New',monospace}
+  .tx-mak.kosong{font-family:inherit;color:var(--bs-a2)}
+  .tx-lanjut{border:1px solid var(--bs-n300);border-radius:10px;padding:8px 10px;margin:4px 0 12px}
+  .tx-lanjut summary{cursor:pointer;font-weight:600;font-size:13px}
   /* Kartu nota: Bukti A & Bukti B milik nota itu berdampingan */
   .nt-bukti{display:grid;grid-template-columns:auto 1fr;gap:14px;margin-top:8px}
   .nt-lbl{font-size:11.5px;font-weight:600;color:var(--bs-n600);margin-bottom:4px}
@@ -857,42 +862,55 @@
 <div class="modal" id="modalTransaksi">
   <div class="sheet">
     <h2 id="txTitle">Tambah Transaksi</h2>
-    <div class="field"><label>Sumber Dana</label>
-      <select id="txSumber"><option value="TUNAI">💵 Kas Tunai</option><option value="BANK">🏦 Kas Bank</option></select></div>
-    <div class="field"><label>Tanggal</label><input type="date" id="txTanggal"></div>
-    <div class="field"><label>Kegiatan / Uraian</label><input type="text" id="txKegiatan" placeholder="Nama kegiatan"></div>
-    <div class="field"><label id="txPenjabLbl">Penanggung Jawab</label><input type="text" id="txPenjab"></div>
+    <!-- Isian inti: yang memang diketahui saat uang diserahkan (handoff desktop 0j, usulan 3).
+         Isian yang baru diketahui belakangan ada di "Isian lanjutan" di bawah. -->
     <div class="field"><label id="txNilaiLbl">Nilai</label><input type="text" class="numfmt" id="txNilai" value="0" inputmode="numeric" oninput="_cekSisaPagu();_pbHitung()"></div>
-    <div class="field"><label>Keterangan</label><textarea id="txKeterangan" rows="2"></textarea></div>
+    <div class="field"><label>Kegiatan / Uraian</label><input type="text" id="txKegiatan" placeholder="mis. Belanja bahan praktik budidaya"></div>
+    <div class="field"><label id="txPenjabLbl">Penanggung Jawab</label><input type="text" id="txPenjab"></div>
+    <div class="row2">
+      <div class="field"><label>Tanggal</label><input type="date" id="txTanggal"></div>
+      <div class="field"><label>Sumber Dana</label>
+        <select id="txSumber"><option value="TUNAI">💵 Kas Tunai</option><option value="BANK">🏦 Kas Bank</option></select></div>
+    </div>
     <div id="txAkunWrap">
       <div class="field"><label>Detail Kegiatan (item POK)</label>
         <input type="text" id="txItemCari" placeholder="ketik untuk menyaring: kode, uraian, atau akun…"
                autocomplete="off" oninput="_isiPilihanItem()">
         <select id="txItem" onchange="onPilihItem()"><option value="">(belum dipilih)</option></select>
-        <div class="tgl" id="txItemInfo" style="margin-top:3px">Opsional. Bila dipilih, Akun/MAK terisi otomatis dan sisa pagu ditampilkan.</div>
+        <div class="tx-mak" id="txMak"></div>
+        <div class="tgl" id="txItemInfo" style="margin-top:3px"></div>
         <div id="txKomponen" class="hidden"></div>
       </div>
-      <div class="field"><label>Akun / Kode Akun (MAK)</label>
-        <input type="text" id="txAkun" list="txAkunList" placeholder="mis. 521811" autocomplete="off">
-        <datalist id="txAkunList">
-          <option value="521811">521811 - Belanja Barang Persediaan Barang Konsumsi</option>
-          <option value="521211">521211 - Belanja Bahan</option>
-          <option value="521111">521111 - Belanja Keperluan Perkantoran</option>
-          <option value="522141">522141 - Belanja Sewa</option>
-          <option value="524111">524111 - Belanja Perjalanan Dinas Biasa</option>
-        </datalist>
-      </div>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:10px">
-        <input type="checkbox" id="txPersediaan" onchange="_onTxPersediaan()"> Akun <b>Persediaan</b> (perlu rincian barang &amp; foto per item di nota)
-      </label>
-      <!-- Kunci penghubung rekonsiliasi SAKTI (Fase 1) — opsional, khusus belanja -->
-      <div class="field"><label>No. Kuitansi (opsional)</label>
-        <input type="text" id="txNoKuitansi" placeholder="mis. 00072/KW/634146/2026" autocomplete="off"></div>
-      <div class="field"><label>No. DRPP (opsional)</label>
-        <input type="text" id="txNoDrpp" placeholder="mis. 00001/DRPP/634146/2026" autocomplete="off"></div>
-      <div class="field"><label>No. SPP (opsional)</label>
-        <input type="text" id="txNoSpp" placeholder="mis. 00128T" autocomplete="off"></div>
     </div>
+    <details id="txLanjut" class="tx-lanjut">
+      <summary>Isian lanjutan <span class="tgl" id="txLanjutRingkas">— keterangan, akun manual, persediaan, nomor kuitansi/DRPP/SPP</span></summary>
+      <div class="field"><label>Keterangan</label><textarea id="txKeterangan" rows="2"></textarea></div>
+      <div id="txLanjutKeluar">
+        <div class="field"><label>Akun (hanya bila tanpa item POK)</label>
+          <input type="text" id="txAkun" list="txAkunList" placeholder="mis. 521811" autocomplete="off">
+          <datalist id="txAkunList">
+            <option value="521811">521811 - Belanja Barang Persediaan Barang Konsumsi</option>
+            <option value="521211">521211 - Belanja Bahan</option>
+            <option value="521111">521111 - Belanja Keperluan Perkantoran</option>
+            <option value="522141">522141 - Belanja Sewa</option>
+            <option value="524111">524111 - Belanja Perjalanan Dinas Biasa</option>
+          </datalist>
+          <div class="tgl" id="txAkunInfo"></div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:10px">
+          <input type="checkbox" id="txPersediaan" onchange="_onTxPersediaan()"> Akun <b>Persediaan</b> (perlu rincian barang &amp; foto per item di nota)
+        </label>
+        <!-- Kunci penghubung rekonsiliasi SAKTI — baru diketahui pada tahap SPBy/GUP. -->
+        <div class="field"><label>No. Kuitansi (opsional)</label>
+          <input type="text" id="txNoKuitansi" placeholder="mis. 00072/KW/634146/2026" autocomplete="off"></div>
+        <div class="row2">
+          <div class="field"><label>No. DRPP (opsional)</label>
+            <input type="text" id="txNoDrpp" placeholder="mis. 00001/DRPP/634146/2026" autocomplete="off"></div>
+          <div class="field"><label>No. SPP (opsional)</label>
+            <input type="text" id="txNoSpp" placeholder="mis. 00128T" autocomplete="off"></div>
+        </div>
+      </div>
+    </details>
     <button class="btn" id="txSimpan" onclick="submitTransaksi()">Simpan</button>
     <button class="btn ghost" onclick="closeModal('modalTransaksi')">Batal</button>
   </div>
@@ -1446,7 +1464,7 @@ var _allPenyedia  = null;
 /* Penanda rilis. Tampil di layar masuk dan di kaki cetakan SPJ, supaya
    "kode versi mana yang sedang berjalan" bisa dijawab dengan MELIHAT, bukan
    menebak-nebak jalur deploy. Naikkan tanggalnya tiap perubahan berarti. */
-var KT_VERSI='v4.2 — 29 Sep 2026 (TTD tanpa garis)';
+var KT_VERSI='v4.3 — 29 Sep 2026 (form transaksi ramping)';
 
 /* ============== Data institusi (hardcoded) ============== */
 var INST = {
@@ -3982,7 +4000,9 @@ function openModalTransaksi(mode){
   document.getElementById('txItem').value=''; _pbReset();
   _muatItemPagu(function(){ var sl=document.getElementById('txItem'); if(sl) sl.value=''; onPilihItem(); });
   document.getElementById('txAkunWrap').style.display=masuk?'none':'';
+  document.getElementById('txAkun').readOnly=false;
   _onTxPersediaan();
+  _txAturLanjut();
   openModal('modalTransaksi');
 }
 /* Auto-centang persediaan bila akun = 521811 (umum); cukup info, tetap bisa diubah manual */
@@ -4044,8 +4064,12 @@ function editTransaksi(no){
       }
     }
     onPilihItem();
+    // Transaksi lama tanpa item POK tapi berakun manual: tampilkan akunnya.
+    if(!_cariItem(document.getElementById('txItem').value) && (t.akun||'')) document.getElementById('txLanjut').open=true;
   });
   document.getElementById('txAkunWrap').style.display=masuk?'none':'';
+  document.getElementById('txAkun').readOnly=false;
+  _txAturLanjut();
   openModal('modalTransaksi');
 }
 function openModalPindah(){
@@ -6527,11 +6551,61 @@ function _cariItem(teks){
 function onPilihItem(){
   var info=document.getElementById('txItemInfo');
   var x=_cariItem(document.getElementById('txItem').value);
-  if(!x){ info.innerHTML='Opsional. Bila dipilih, Akun/MAK terisi otomatis dan sisa pagu ditampilkan.';
-          _pbReset(); _pbRender(); return; }
-  var ak=document.getElementById('txAkun'); if(ak && !ak.value.trim()) ak.value=x.akun;
+  var ak=document.getElementById('txAkun');
+  if(!x){
+    info.innerHTML='';
+    ak.readOnly=false;
+    _txTampilMak(null);
+    _pbReset(); _pbRender(); return;
+  }
+  // Item POK menentukan akun -- akun lain untuk item yang sama akan membuat
+  // MAK cetakan dan pembebanan pagu saling bertentangan. Dikunci, bukan ditebak.
+  var akunLama=String(ak.value||'').trim();
+  ak.value=x.akun; ak.readOnly=true;
+  // Transaksi BARU berakun persediaan (5218xx) -> centang Persediaan otomatis.
+  // Saat mengedit, pilihan yang sudah tersimpan tidak diubah diam-diam.
+  if(_txEditNo==null) document.getElementById('txPersediaan').checked=/^5218/.test(String(x.akun||''));
+  _txTampilMak(x);
+  if(akunLama && akunLama!==String(x.akun)){
+    // Jangan ganti diam-diam: beri tahu, dan buka bagiannya supaya terlihat.
+    var infoAk=document.getElementById('txAkunInfo');
+    if(infoAk) infoAk.innerHTML='&#9888; Akun sebelumnya <b>'+esc(akunLama)+'</b> diganti <b>'+esc(x.akun)+'</b> mengikuti item POK. Batal bila tidak dimaksud.';
+    document.getElementById('txLanjut').open=true;
+  }
   _cekSisaPagu(x);
   _pbRender();
+}
+/**
+ * Tampilkan MAK yang akan tercetak di Tanda Terima. MAK disusun di server
+ * (Anggaran.susunMak -> item.mak); di sini hanya ditampilkan, tidak dirakit.
+ */
+function _txTampilMak(x){
+  var el=document.getElementById('txMak'); if(!el) return;
+  var infoAk=document.getElementById('txAkunInfo');
+  if(x){
+    el.className='tx-mak';
+    el.innerHTML='MAK: <b>'+esc(x.mak||x.akun||'-')+'</b>';
+    if(infoAk) infoAk.textContent='Terkunci mengikuti item POK yang dipilih.';
+  } else {
+    el.className='tx-mak kosong';
+    el.innerHTML=(_txMode==='keluar')
+      ? '&#9888; Belum ada item POK — MAK di tanda terima hanya berisi akun. Pilih item supaya MAK lengkap dan sisa pagu terpantau.'
+      : '';
+    if(infoAk) infoAk.textContent='';
+  }
+}
+/**
+ * Bagian "Isian lanjutan": khusus pengeluaran untuk akun/persediaan/nomor
+ * rekonsiliasi, dan dibuka otomatis bila salah satunya sudah berisi -- supaya
+ * data yang sudah ada tidak tersembunyi saat mengedit.
+ */
+function _txAturLanjut(){
+  var keluar=(_txMode==='keluar');
+  document.getElementById('txLanjutKeluar').style.display=keluar?'':'none';
+  var terisi=['txKeterangan','txNoKuitansi','txNoDrpp','txNoSpp'].some(function(id){
+    return String(document.getElementById(id).value||'').trim()!=='';
+  }) || (keluar && document.getElementById('txPersediaan').checked);
+  document.getElementById('txLanjut').open=terisi;
 }
 
 /* ============ Pembebanan ke beberapa item POK satu komponen ============

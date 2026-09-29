@@ -104,6 +104,8 @@ var Anggaran = (function () {
         komponen: _norm(r[p.KODE_KOMPONEN]), ro: _norm(r[p.KODE_RO]),
         uraianRo: _norm(r[p.URAIAN_RO]), kegiatan: _norm(r[p.KODE_KEGIATAN]),
         program: _norm(r[p.KODE_PROGRAM]),
+        // MAK jadi, supaya form & cetakan tidak menyusun ulang sendiri.
+        mak: susunMak(r[p.KODE_KEGIATAN], r[p.KODE_RO], r[p.AKUN]),
         pagu: Util.num(r[p.PAGU]), realisasiSakti: Util.num(r[p.REALISASI_SAKTI]),
         sisaSakti: Util.num(r[p.SISA_SAKTI]), periode: _norm(r[p.PERIODE])
       });
