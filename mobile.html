@@ -20,6 +20,17 @@
   .hide{display:none!important}
   .num{font-family:var(--fh);font-weight:600;font-variant-numeric:tabular-nums}
   .kick{font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--n600)}
+  /* Status 7 tahap di layar detail (sama dengan desktop, dihitung di server) */
+  .tahapBlk{margin-top:18px;border:1px solid var(--n300);border-radius:14px;padding:12px 14px}
+  .tahapJudul{font-weight:600;font-size:15px}
+  .tahapList{list-style:none;margin:10px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;font-size:13.5px}
+  .tahapList li{display:flex;align-items:center;gap:8px;min-height:28px;color:var(--n600)}
+  .tahapList .tb{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+    font-size:12px;border:1px solid var(--n300);flex:0 0 24px}
+  .tahapList li.ok{color:var(--n900,#111)} .tahapList li.ok .tb{background:#2e8b57;border-color:#2e8b57;color:#fff}
+  .tahapList li.kini{color:var(--a2);font-weight:600} .tahapList li.kini .tb{border-color:var(--a2);color:var(--a2)}
+  .tahapKurang{margin-top:10px;font-size:13px}
+  .tahapWarn{margin-top:6px;font-size:12.5px;color:var(--a2)}
   .h1{font-family:var(--fh);font-size:27px;font-weight:600;letter-spacing:-.01em}
   .scr{padding:22px 20px 120px;display:none}
   .scr.on{display:block}
@@ -1254,6 +1265,7 @@ function tagsTx(t, kd){
   var h = '<span class="tags">';
   // Keadaan kerja tampil paling depan -- ia yang menentukan warna pitanya.
   h += tagKeadaan(kd);
+  if (t.tahap) h += '<span class="tag' + (t.tahap.selesai===t.tahap.dari?' ac':'') + '">' + t.tahap.selesai + '/' + t.tahap.dari + ' tahap</span>';
   if (pajakBelum(t)) h += '<span class="tag pink">Pajak belum</span>';
   if (t.noSpby) h += '<span class="tag ac">SPBY ' + esc(t.noSpby) + '</span>';
   else if (isKeluar(t)) h += '<span class="tag">Belum SPBY</span>';
@@ -1432,7 +1444,7 @@ function bukaDetail(no){
   google.script.run
     .withSuccessHandler(function(d){
       NOTAS = (d && d.notas) || []; FOTO_NOTA = (d && d.fotoPerNota) || {};
-      $('dtIsi').innerHTML = detailKepala(t) + detailNeraca(t, NOTAS) + detailNota(t, NOTAS);
+      $('dtIsi').innerHTML = detailKepala(t) + blokTahap(t) + detailNeraca(t, NOTAS) + detailNota(t, NOTAS);
     })
     .withFailureHandler(function(e){ $('dtIsi').innerHTML = detailKepala(t) + '<div class="empty">Gagal memuat nota.</div>'; gagal(e); })
     .serverGetNotaDanFoto(_tok, no);
@@ -1623,8 +1635,51 @@ function _dtTambahFoto(no, urutan, jenis){
   if (!NT || String(NT.urutan) !== String(urutan)) return;   // nota tak ketemu, pesan sudah muncul
   ntAmbil(jenis);
 }
+/* ===================== Status 7 tahap =====================
+ * `t.tahap` dihitung di server (StatusTahap.gs) -- SAMA dengan desktop.
+ * Di sini hanya ditampilkan. Tombol "Kerjakan" hanya untuk tahap yang memang
+ * dikerjakan di HP (alat tangkap); unggah TTD, SPBy, dan GUP = pekerjaan meja. */
+var TAHAP_URUT = ['catat','serahkan','nota','pajak','kembali','spby','gup'];
+var TAHAP_LABEL = {catat:'Catat', serahkan:'Serahkan uang', nota:'Nota & bukti', pajak:'Pajak',
+  kembali:'Pengembalian sisa', spby:'SPBy', gup:'SPJ & GUP'};
+function blokTahap(t){
+  var s = t && t.tahap; if (!s) return '';
+  var h = '<div class="tahapBlk"><div class="tahapJudul">'
+    + (s.selesai===s.dari ? 'Lengkap — semua tahap selesai' : (s.selesai + ' dari ' + s.dari + ' tahap selesai'))
+    + '</div><ol class="tahapList">';
+  for (var i=0;i<TAHAP_URUT.length;i++){
+    var k = TAHAP_URUT[i], ok = s.tahap[k], kini = (k===s.berikut);
+    h += '<li class="' + (ok?'ok':(kini?'kini':'')) + '"><span class="tb">' + (ok?'&#10003;':(i+1)) + '</span>'
+      + esc(TAHAP_LABEL[k]) + '</li>';
+  }
+  h += '</ol>';
+  if ((s.kurang||[]).length) h += '<div class="tahapKurang">Kurang: ' + esc(s.kurang.join('; ')) + '</div>';
+  if ((s.peringatan||[]).length) h += '<div class="tahapWarn">&#9888; ' + esc(s.peringatan.join('; ')) + '</div>';
+  var ak = aksiTahapHp(t, s.berikut);
+  if (ak) h += ak;
+  return h + '</div>';
+}
+function aksiTahapHp(t, kode){
+  var no = aq(t.no);
+  switch (kode){
+    case 'serahkan':
+      return '<button class="btn ac" style="width:100%;margin-top:12px" onclick="cetakTandaTerima('+no+')">Cetak Tanda Terima</button>'
+        + '<div class="hint" style="text-align:center">Setelah ditandatangani, unggah scan-nya dari desktop.</div>';
+    case 'nota':
+      return '<button class="btn ac" style="width:100%;margin-top:12px" onclick="'
+        + (NOTAS.length ? "var e=document.getElementById('dtNotaSec');if(e)e.scrollIntoView({behavior:'smooth'})" : 'bukaNotaBaru('+no+')')
+        + '">' + (NOTAS.length ? 'Lengkapi scan nota' : 'Tambah nota') + '</button>';
+    case 'pajak':
+      return '<button class="btn ac" style="width:100%;margin-top:12px" onclick="var e=document.getElementById(\'dtNotaSec\');if(e)e.scrollIntoView({behavior:\'smooth\'})">Tetapkan pajak nota</button>';
+    case 'kembali':
+      return '<button class="btn ac" style="width:100%;margin-top:12px" onclick="bukaPengembalian('+no+')">Catat pengembalian</button>';
+    case 'spby': case 'gup':
+      return '<div class="hint" style="margin-top:10px">Tahap ' + esc(TAHAP_LABEL[kode]) + ' dikerjakan di desktop.</div>';
+    default: return '';
+  }
+}
 function detailNota(t, notas){
-  var h = '<div class="sec-h" style="margin-top:8px"><div class="t">Nota (' + notas.length + ')</div>'
+  var h = '<div class="sec-h" id="dtNotaSec" style="margin-top:8px"><div class="t">Nota (' + notas.length + ')</div>'
         + (isKeluar(t) ? ('<button class="lnk" onclick="bukaNotaBaru('+aq(t.no)+')">+ Tambah nota</button>') : '')
         + '</div>';
   if (!notas.length) h += '<div class="empty">Belum ada nota pada transaksi ini.'
