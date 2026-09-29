@@ -45,6 +45,15 @@ var FotoNota = (function () {
     return rows.map(function (x) { return _toObj(c, x.values, x.rowIndex); });
   }
 
+  /** Nomor URUTAN semua foto satu nota, TERMASUK yang terhapus. */
+  function _nomorFotoSemua(noTransaksi, notaId) {
+    var c = FC();
+    return findRows(CONFIG.SHEETS.FOTO_NOTA, function (r) {
+      return String(r[c.NO_TRANSAKSI]) === String(noTransaksi) &&
+             String(r[c.NOTA_ID]) === String(notaId);
+    }).map(function (x) { return x.values[c.URUTAN]; });
+  }
+
   /** Format URL Maps dari lat/lng. */
   function _mapsUrl(lat, lng) {
     if (lat === '' || lng === '' || lat == null || lng == null) return '';
@@ -62,7 +71,9 @@ var FotoNota = (function () {
    * @param fotoArr array of {base64, mimeType, lat, lng, keterangan}
    */
   function uploadFotoNota(noTransaksi, notaId, fotoArr) {
-    var urutan = getFotoNota(noTransaksi, notaId).length;
+    // Mulai dari nomor terbesar yang pernah dipakai (termasuk foto terhapus),
+    // supaya hapus/ubah foto berdasarkan nomor tidak mengenai foto lain.
+    var urutan = Util.nomorBerikutnya(_nomorFotoSemua(noTransaksi, notaId)) - 1;
     for (var i = 0; i < fotoArr.length; i++) {
       var foto = fotoArr[i];
       var now = new Date();

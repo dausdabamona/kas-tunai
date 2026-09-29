@@ -354,8 +354,12 @@ var KasTunai = (function () {
     // dengan NO_TRANSAKSI kosong/undefined dan tidak akan pernah ditemukan lagi.
     if (transactionId === undefined || transactionId === null || String(transactionId).trim() === '')
       throw new Error('Transaksi tidak punya Nomor. Jalankan perbaikiNomorTransaksi() dari editor Apps Script.');
-    var urutan = getMultiNota(transactionId).length + 1;
-    var file = (notaData.file && notaData.file.base64) ? DriveHelper.upload(notaData.file, {noTransaksi:transactionId}) : null;
+    var n0 = NC();
+    // Termasuk nota terhapus — lihat Util.nomorBerikutnya.
+    var urutan = Util.nomorBerikutnya(findRows(CONFIG.SHEETS.MULTI_NOTA, function (r) {
+      return String(r[n0.NO_TRANSAKSI]) === String(transactionId);
+    }).map(function (x) { return x.values[n0.URUTAN]; }));
+    var file =(notaData.file && notaData.file.base64) ? DriveHelper.upload(notaData.file, {noTransaksi:transactionId}) : null;
     var hasDetail = notaData.detail && notaData.detail.length;
     var nilai = hasDetail ? DetailNota.totalItems(notaData.detail) : Util.num(notaData.nilai);
 
@@ -419,6 +423,11 @@ var KasTunai = (function () {
       return String(r[n.NO_TRANSAKSI]) === String(transactionId) && String(r[n.URUTAN]) === String(urutan);
     });
     if (!rows.length) throw new Error('Nota tidak ditemukan');
+    // Data lama (sebelum nomor tidak dipakai ulang) bisa punya nota aktif lain
+    // bernomor sama. Memulihkan nota ini akan membuat dua nota kembar yang
+    // saling berbagi foto & pajak -- tolak dengan penjelasan.
+    if (_findNotaRow(transactionId, urutan))
+      throw new Error('Nomor nota ' + urutan + ' sudah dipakai nota lain di transaksi ini, jadi nota lama tidak bisa dipulihkan.');
     restoreRecord(CONFIG.SHEETS.MULTI_NOTA, rows[0].rowIndex, transactionId + '#' + urutan);
     _recalcNota(transactionId);
     return { success: true };
