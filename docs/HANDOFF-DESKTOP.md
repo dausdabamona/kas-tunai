@@ -187,7 +187,7 @@ Perjalanan Dinas punya jalur sendiri (SPD) — di luar cakupan tabel ini.
 | 2 | Panel detail kanan: tahap berurutan + satu tombol utama (tombol lama tetap selama transisi) | besar | besar |
 | 3 | Form catat 5 isian, MAK otomatis dari item POK, DRPP/SPP ke tahap belakang — 🟡 **kode selesai 29 Sep 2026**: isian inti Nilai·Uraian·PUM·Tanggal+Sumber·Item POK; MAK tampil dari `item.mak` (server); akun terkunci ikut item, pergantian akun lama diberitahukan; sisanya di "Isian lanjutan" (terbuka otomatis bila berisi); akun 5218xx → Persediaan tercentang otomatis (transaksi baru saja). Uji klik 11/11. | sedang | kecil |
 | 4 | Modal Foto per transaksi dilebur ke kartu nota (kecuali Perjalanan Dinas) — 🟡 **kode selesai 29 Sep 2026**: tombol "Kelola Nota" + "Foto" jadi satu "Nota & Foto"; `openFoto()` transaksi biasa dialihkan ke kartu nota; modal Foto tinggal untuk Perjalanan Dinas. Uji klik 6/6 + regresi nota 16/16. | sedang | kecil |
-| 5 | Pecah, Jadikan PD, Pindah dana → menu "⋯ Lainnya" | sedang | kecil |
+| 5 | Pecah, Jadikan PD, Pindah dana → menu "⋯ Lainnya" — 🟡 **kode selesai 29 Sep 2026**: `_menuLainnya()` (elemen `<details>`), menutup sendiri saat klik di luar/setelah memilih; kartu PD: Batalkan PD ikut pindah. Uji klik 7/7. | sedang | kecil |
 
 **Keputusan (dijawab pengguna 29 Sep 2026: "saya setuju") — ketiga usul DITERIMA dan menggantikan bagian 3b.2 yang bertentangan:**
 - **K-UX1.** 3b.2 menaruh *blok hitung pajak di tingkat transaksi* (DPP = nilai ÷ 1,11).

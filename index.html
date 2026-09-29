@@ -341,6 +341,17 @@
   .chip.ok{background:var(--bs-n200);color:var(--bs-n700);border-color:var(--bs-n200)} .chip.no{background:var(--bs-a2);color:var(--bs-paper);border-color:var(--bs-a2)}
   .chip.warn{background:var(--bs-a2);color:var(--bs-paper);border-color:var(--bs-a2)}
   .acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+  /* Menu "Lainnya" pada kartu transaksi */
+  details.lainnya{position:relative;flex:0 0 auto}
+  details.lainnya>summary{list-style:none;cursor:pointer;border:1px solid var(--bs-n300);border-radius:8px;
+    padding:8px 12px;font-size:12.5px;font-weight:700;color:var(--bs-n700);background:var(--bs-paper);min-height:36px}
+  details.lainnya>summary::-webkit-details-marker{display:none}
+  details.lainnya .lainnya-isi{position:absolute;right:0;top:calc(100% + 4px);z-index:30;min-width:190px;
+    background:var(--bs-paper);border:1px solid var(--bs-n300);border-radius:10px;padding:6px;
+    box-shadow:0 6px 18px rgba(0,0,0,.12);display:flex;flex-direction:column;gap:4px}
+  details.lainnya .lainnya-isi button{display:block;width:100%;text-align:left;background:transparent!important;
+    color:var(--bs-n800)!important;border:0!important;border-radius:6px;padding:8px 10px;font-weight:600;min-height:36px}
+  details.lainnya .lainnya-isi button:hover{background:var(--bs-n200)!important}
   .acts button{border:0;border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:700;color:var(--bs-paper);flex:1 0 auto;background:var(--bs-n600)}
   .b-orange{background:var(--bs-a2)} .b-purple{background:var(--bs-n800)} .b-gray{background:var(--bs-n400);color:var(--bs-n800)}
   .b-dark{background:var(--bs-ac7)} .b-green{background:var(--bs-n700)} .b-spby{background:var(--bs-ac)} .b-spd{background:var(--bs-ac7)} .b-edit{background:var(--bs-n800)}
@@ -1464,7 +1475,7 @@ var _allPenyedia  = null;
 /* Penanda rilis. Tampil di layar masuk dan di kaki cetakan SPJ, supaya
    "kode versi mana yang sedang berjalan" bisa dijawab dengan MELIHAT, bukan
    menebak-nebak jalur deploy. Naikkan tanggalnya tiap perubahan berarti. */
-var KT_VERSI='v4.4 — 29 Sep 2026 (satu pintu nota dan foto)';
+var KT_VERSI='v4.5 — 29 Sep 2026 (menu Lainnya)';
 
 /* ============== Data institusi (hardcoded) ============== */
 var INST = {
@@ -2500,7 +2511,7 @@ function _cardHtml(t, mode){
       +'<button class="b-edit" onclick="editSpd('+t.no+')">Edit SPD</button>'
       +'<button class="b-gray" onclick="openModalBukti('+t.no+')">&#128206; Bukti</button>'
       +'<button class="b-dark" onclick="cetakSpjPd('+t.no+')">&#129534; Cetak SPJ</button>'
-      +'<button onclick="batalkanPd('+t.no+')" title="Kembalikan ke transaksi biasa">&#8630; Batalkan PD</button>';
+      +_menuLainnya('<button onclick="batalkanPd('+t.no+')" title="Kembalikan ke transaksi biasa">&#8630; Batalkan PD</button>');
   } else {
     h+='<button class="b-edit" onclick="editTransaksi('+t.no+')">&#9998; Edit</button>'
       // Satu pintu untuk nota dan fotonya (handoff desktop 0j, usulan 4).
@@ -2509,20 +2520,36 @@ function _cardHtml(t, mode){
       +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">'+(t.sumber==='BANK'?'Bukti Transfer':'Tanda Terima')+'</button>'
       +'<button class="b-spby" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+(t.noSpby?'SPBY &#10003;':'SPBY')+'</button>';
     h+='<button class="b-dark" onclick="cetakSPJ('+t.no+')">'+(lunas?'Cetak SPJ':'SPJ Sementara')+'</button>';
-    h+='<button class="b-spd" onclick="konversiKePd('+t.no+')" title="Jadikan transaksi ini Perjalanan Dinas">&#9992; Jadikan PD</button>'
+    // Tindakan yang jarang dipakai masuk menu "Lainnya" (handoff desktop 0j,
+    // usulan 5). Fungsinya tidak berubah -- tetap tercatat di AuditLog seperti biasa.
+    var lain='<button onclick="konversiKePd('+t.no+')" title="Jadikan transaksi ini Perjalanan Dinas">&#9992; Jadikan PD</button>'
       +'<button onclick="openModalPecah('+t.no+')" title="Pecah jadi beberapa transaksi">&#9986; Pecah</button>';
     // Transaksi keluar yang belum punya nota/SPBY bisa jadi sebenarnya bukan
     // belanja, melainkan penarikan/penyetoran antar kas.
     if(+t.kredit>0 && !(+t.notaTotal>0) && !t.noSpby){
-      h+= (t.sumber==='BANK')
-        ? '<button class="b-teal" onclick="jadikanPindahDana('+t.no+')" title="Uang ini ditarik dari bank untuk mengisi kas tunai, bukan belanja">&#127974;&#8594;&#128181; Ke Kas Tunai</button>'
-        : '<button class="b-teal" onclick="jadikanPindahDana('+t.no+')" title="Uang ini disetor ke rekening, bukan belanja">&#128181;&#8594;&#127974; Setor ke Bank</button>';
+      lain+= (t.sumber==='BANK')
+        ? '<button onclick="jadikanPindahDana('+t.no+')" title="Uang ini ditarik dari bank untuk mengisi kas tunai, bukan belanja">&#127974;&#8594;&#128181; Ke Kas Tunai</button>'
+        : '<button onclick="jadikanPindahDana('+t.no+')" title="Uang ini disetor ke rekening, bukan belanja">&#128181;&#8594;&#127974; Setor ke Bank</button>';
     }
+    h+=_menuLainnya(lain);
   }
   h+='</div></div>';
   return h;
 }
 
+/** Menu "⋯ Lainnya" di kartu transaksi (elemen <details> bawaan, tanpa pustaka). */
+function _menuLainnya(isi){
+  return '<details class="lainnya"><summary title="Tindakan lain">&#8943; Lainnya</summary>'
+    +'<div class="lainnya-isi">'+isi+'</div></details>';
+}
+// Tutup menu "Lainnya" yang terbuka bila klik di luarnya atau setelah memilih.
+document.addEventListener('click', function(e){
+  var buka=document.querySelectorAll('details.lainnya[open]');
+  for(var i=0;i<buka.length;i++){
+    var d=buka[i];
+    if(!d.contains(e.target) || (e.target.closest && e.target.closest('.lainnya-isi button'))) d.removeAttribute('open');
+  }
+});
 function renderList(){
   updateSaldoBar();
   _populateBulan();
