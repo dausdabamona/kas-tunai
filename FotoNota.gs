@@ -242,3 +242,100 @@ var FotoNota = (function () {
   };
 })();
 
+/* ============================================================
+ * Pemeriksa pasangan nota <-> foto (BACA-SAJA)
+ * ============================================================ */
+
+/**
+ * Inti analisis, fungsi murni (tanpa Sheets) supaya bisa diuji.
+ * @param notaAktif  [{no, urutan}]  nota yang TIDAK terhapus
+ * @param fotoAktif  [{no, notaId}]  foto nota yang TIDAK terhapus
+ * @return {kembar:[{no,urutan,jumlah}], tumpukNota1:[{no,fotoNota1,notaTanpaFoto}],
+ *          yatim:[{no,notaId,jumlah}]}
+ *
+ * - kembar      : dua nota aktif atau lebih bernomor sama (akibat nomor lama
+ *                 "jumlah aktif + 1").
+ * - tumpukNota1 : transaksi bernota > 1 yang fotonya ada di Nota 1 sementara
+ *                 nota lain kosong -- KANDIDAT akibat desktop dulu selalu
+ *                 mengirim foto barang ke Nota 1. Kandidat, bukan kepastian.
+ * - yatim       : foto yang nomor notanya tidak cocok dengan nota aktif mana pun.
+ */
+function analisisPasanganNota_(notaAktif, fotoAktif) {
+  var notaPerTx = {}, i, k;
+  for (i = 0; i < notaAktif.length; i++) {
+    var no = String(notaAktif[i].no), u = String(notaAktif[i].urutan);
+    if (!notaPerTx[no]) notaPerTx[no] = {};
+    notaPerTx[no][u] = (notaPerTx[no][u] || 0) + 1;
+  }
+  var fotoPerTx = {};
+  for (i = 0; i < fotoAktif.length; i++) {
+    var nf = String(fotoAktif[i].no), nid = String(fotoAktif[i].notaId);
+    if (!fotoPerTx[nf]) fotoPerTx[nf] = {};
+    fotoPerTx[nf][nid] = (fotoPerTx[nf][nid] || 0) + 1;
+  }
+  var hasil = { kembar: [], tumpukNota1: [], yatim: [] };
+  for (var tx in notaPerTx) {
+    var peta = notaPerTx[tx], nomor = [];
+    for (k in peta) {
+      nomor.push(k);
+      if (peta[k] > 1) hasil.kembar.push({ no: tx, urutan: k, jumlah: peta[k] });
+    }
+    var foto = fotoPerTx[tx] || {};
+    if (nomor.length > 1 && peta['1'] && foto['1']) {
+      var kosong = [];
+      for (var j = 0; j < nomor.length; j++) if (nomor[j] !== '1' && !foto[nomor[j]]) kosong.push(nomor[j]);
+      if (kosong.length) hasil.tumpukNota1.push({ no: tx, fotoNota1: foto['1'], notaTanpaFoto: kosong });
+    }
+  }
+  for (var tf in fotoPerTx) {
+    for (k in fotoPerTx[tf]) {
+      if (!notaPerTx[tf] || !notaPerTx[tf][k]) hasil.yatim.push({ no: tf, notaId: k, jumlah: fotoPerTx[tf][k] });
+    }
+  }
+  return hasil;
+}
+
+/**
+ * Jalankan dari editor Apps Script, baca Log. TIDAK mengubah data apa pun.
+ * Hasilnya daftar kerja untuk dirapikan lewat "Pindahkan ke nota..." di desktop.
+ */
+function cekPasanganNota_() {
+  var n = Util.colMap(CONFIG.SHEETS.MULTI_NOTA), c = Util.colMap(CONFIG.SHEETS.FOTO_NOTA);
+  var dn = SheetRepo.getData(CONFIG.SHEETS.MULTI_NOTA), df = SheetRepo.getData(CONFIG.SHEETS.FOTO_NOTA);
+  var nota = [], foto = [], i;
+  for (i = 0; i < dn.length; i++)
+    if (dn[i][n.NO_TRANSAKSI] !== '' && !isDeleted(dn[i][n.IS_DELETED]))
+      nota.push({ no: dn[i][n.NO_TRANSAKSI], urutan: dn[i][n.URUTAN] });
+  for (i = 0; i < df.length; i++)
+    if (df[i][c.NO_TRANSAKSI] !== '' && !isDeleted(df[i][c.IS_DELETED]))
+      foto.push({ no: df[i][c.NO_TRANSAKSI], notaId: df[i][c.NOTA_ID] });
+  var h = analisisPasanganNota_(nota, foto);
+  Logger.log('=== Nomor nota KEMBAR (' + h.kembar.length + ') ===');
+  h.kembar.forEach(function (x) { Logger.log('Transaksi ' + x.no + ': nota nomor ' + x.urutan + ' ada ' + x.jumlah + ' baris aktif'); });
+  Logger.log('=== Foto menumpuk di Nota 1 — periksa (' + h.tumpukNota1.length + ') ===');
+  h.tumpukNota1.forEach(function (x) {
+    Logger.log('Transaksi ' + x.no + ': ' + x.fotoNota1 + ' foto di Nota 1; nota tanpa foto: ' + x.notaTanpaFoto.join(', '));
+  });
+  Logger.log('=== Foto YATIM (nota tidak ada) (' + h.yatim.length + ') ===');
+  h.yatim.forEach(function (x) { Logger.log('Transaksi ' + x.no + ': ' + x.jumlah + ' foto menempel ke nota ' + x.notaId + ' yang tidak aktif'); });
+  return h;
+}
+
+/** Uji manual analisisPasanganNota — jalankan dari editor, baca Log. */
+function ujiPasanganNota_() {
+  var nota = [ {no:1,urutan:1},{no:1,urutan:2},{no:1,urutan:3},   // tx1: tiga nota
+               {no:2,urutan:1},{no:2,urutan:3},{no:2,urutan:3},   // tx2: nota 3 kembar
+               {no:3,urutan:1},{no:3,urutan:2} ];                 // tx3: rapi
+  var foto = [ {no:1,notaId:1},{no:1,notaId:1},{no:1,notaId:1},   // tx1: semua di nota 1
+               {no:3,notaId:1},{no:3,notaId:2},                   // tx3: rapi
+               {no:4,notaId:1} ];                                 // tx4: tak ada nota
+  var h = analisisPasanganNota_(nota, foto), gagal = 0;
+  function cek(nama, ok) { if (!ok) gagal++; Logger.log((ok ? 'PASS' : 'FAIL') + ' — ' + nama); }
+  cek('kembar terdeteksi di tx2 nota 3', h.kembar.length === 1 && h.kembar[0].no === '2' && h.kembar[0].urutan === '3');
+  cek('tx1 masuk daftar tumpuk Nota 1, nota 2 & 3 kosong',
+      h.tumpukNota1.length === 1 && h.tumpukNota1[0].no === '1' && h.tumpukNota1[0].notaTanpaFoto.join() === '2,3');
+  cek('tx3 yang rapi tidak dilaporkan', JSON.stringify(h).indexOf('"no":"3"') < 0);
+  cek('foto tx4 yatim', h.yatim.length === 1 && h.yatim[0].no === '4');
+  Logger.log(gagal ? (gagal + ' kasus GAGAL') : 'Semua kasus lulus (4)');
+  return gagal === 0;
+}
