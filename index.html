@@ -341,6 +341,18 @@
   .chip.ok{background:var(--bs-n200);color:var(--bs-n700);border-color:var(--bs-n200)} .chip.no{background:var(--bs-a2);color:var(--bs-paper);border-color:var(--bs-a2)}
   .chip.warn{background:var(--bs-a2);color:var(--bs-paper);border-color:var(--bs-a2)}
   .acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+  /* Baris status 7 tahap pada kartu transaksi */
+  .tahap-baris{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;padding:8px 10px;
+    border:1px solid var(--bs-n300);border-radius:10px;background:var(--bs-paper);font-size:12.5px}
+  .tahap-baris.lengkap{border-color:#8fc9a3}
+  .tahap-dot{display:flex;gap:4px}
+  .tahap-dot .td{width:10px;height:10px;border-radius:50%;background:var(--bs-n300)}
+  .tahap-dot .td.ok{background:#2e8b57}
+  .tahap-dot .td.kini{background:var(--bs-a2)}
+  .tahap-teks{flex:1;min-width:180px}
+  .tahap-warn{color:var(--bs-a2);font-size:11.5px;margin-top:2px}
+  .tahap-aksi{border:0;border-radius:8px;padding:7px 12px;font-weight:700;font-size:12.5px;
+    background:var(--bs-a2);color:#fff;cursor:pointer;min-height:34px}
   /* Menu "Lainnya" pada kartu transaksi */
   details.lainnya{position:relative;flex:0 0 auto}
   details.lainnya>summary{list-style:none;cursor:pointer;border:1px solid var(--bs-n300);border-radius:8px;
@@ -1475,7 +1487,7 @@ var _allPenyedia  = null;
 /* Penanda rilis. Tampil di layar masuk dan di kaki cetakan SPJ, supaya
    "kode versi mana yang sedang berjalan" bisa dijawab dengan MELIHAT, bukan
    menebak-nebak jalur deploy. Naikkan tanggalnya tiap perubahan berarti. */
-var KT_VERSI='v4.5 — 29 Sep 2026 (menu Lainnya)';
+var KT_VERSI='v4.6 — 29 Sep 2026 (status 7 tahap)';
 
 /* ============== Data institusi (hardcoded) ============== */
 var INST = {
@@ -2500,6 +2512,7 @@ function _cardHtml(t, mode){
   h+='<div class="chips">'+spjChip+notaChip+fotoChip+kwChip+'</div>';
   // actions
   var isPd=!!suratMap[String(t.no)];
+  if(!isPd) h+=_tahapBarisHtml(t);
   h+='<div class="acts">';
   if(isPd){
     // Kartu Perjalanan Dinas: pertanggungjawaban via SPD (tanpa Kelola Nota)
@@ -2537,6 +2550,41 @@ function _cardHtml(t, mode){
   return h;
 }
 
+/**
+ * Baris status 7 tahap (handoff desktop 0j, usulan 1). `t.tahap` dihitung di
+ * server (StatusTahap.gs) -- di sini hanya ditampilkan, tidak dihitung ulang.
+ */
+function _tahapBarisHtml(t){
+  var s=t&&t.tahap; if(!s) return '';
+  var urut=['catat','serahkan','nota','pajak','kembali','spby','gup'], dot='', i;
+  for(i=0;i<urut.length;i++){
+    var k=urut[i], kelas=s.tahap[k]?'ok':(k===s.berikut?'kini':'');
+    dot+='<span class="td '+kelas+'" title="'+esc(TAHAP_LABEL[k])+'"></span>';
+  }
+  var teks=(s.selesai===s.dari)
+    ? '<b>Lengkap</b> &mdash; semua tahap selesai'
+    : '<b>'+s.selesai+' dari '+s.dari+' tahap</b> &middot; kurang: '+esc((s.kurang||[]).slice(0,2).join('; '))
+      +((s.kurang||[]).length>2?(' (+'+(s.kurang.length-2)+' lagi)'):'');
+  var aksi=_tahapAksi(t, s.berikut);
+  return '<div class="tahap-baris'+(s.selesai===s.dari?' lengkap':'')+'">'
+    +'<div class="tahap-dot">'+dot+'</div>'
+    +'<div class="tahap-teks">'+teks
+    +((s.peringatan||[]).length?('<div class="tahap-warn">&#9888; '+esc(s.peringatan.join('; '))+'</div>'):'')+'</div>'
+    +(aksi?('<button class="tahap-aksi" onclick="'+aksi+'">Kerjakan: '+esc(s.labelBerikut)+'</button>'):'')
+    +'</div>';
+}
+var TAHAP_LABEL={catat:'Catat',serahkan:'Serahkan uang',nota:'Nota & bukti',pajak:'Pajak',
+  kembali:'Pengembalian sisa',spby:'SPBy',gup:'SPJ & GUP'};
+/** Tombol "Kerjakan" membuka layar tahap yang kurang. SPJ & GUP diisi dari rekonsiliasi -> tanpa tombol. */
+function _tahapAksi(t, kode){
+  switch(kode){
+    case 'serahkan': return 'bukaModalKuitansi('+t.no+')';
+    case 'nota': case 'pajak': return 'openModalNota('+t.no+')';
+    case 'kembali': return 'openModalKembali('+t.no+')';
+    case 'spby': return 'openModalSpby('+t.no+','+t.rowIndex+')';
+    default: return '';
+  }
+}
 /** Menu "⋯ Lainnya" di kartu transaksi (elemen <details> bawaan, tanpa pustaka). */
 function _menuLainnya(isi){
   return '<details class="lainnya"><summary title="Tindakan lain">&#8943; Lainnya</summary>'

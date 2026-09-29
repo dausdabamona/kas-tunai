@@ -89,6 +89,8 @@ var KasTunai = (function () {
       obj.transfer = _isTransfer(row);
       out.push(obj);
     }
+    // Status 7 tahap per transaksi pengeluaran -- satu sumber untuk semua layar.
+    StatusTahap.tempelkan(out);
     return out;
   }
 

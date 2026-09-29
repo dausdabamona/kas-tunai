@@ -23,6 +23,7 @@
     "Rekonsiliasi.gs",
     "AntreanStatus.gs",
     "BerkasGup.gs",
+    "StatusTahap.gs",
     "Code.gs"
   ]
 }
