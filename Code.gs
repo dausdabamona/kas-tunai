@@ -211,8 +211,13 @@ function _pkJumlahAntrean(tx, jmlScan) {
  * notaId: foto nota berkunci (NO_TRANSAKSI, NOTA_ID). Bila transaksinya belum
  * punya nota sama sekali, dipakai 1 -- fotonya menempel pada nota pertama yang
  * nanti dibuat, bukan hilang.
+ *
+ * notaPilihan (opsional): nota yang dipilih pengguna. Kosong = perilaku lama
+ * (nota TERAKHIR), dipertahankan supaya pemanggil lama tetap jalan. Selalu
+ * kirim nota pilihan dari layar yang tahu notanya -- menebak "nota terakhir"
+ * membuat scan untuk nota lain salah pasang.
  */
-function serverKaitkanScan(token, fileId, noTransaksi, keterangan) {
+function serverKaitkanScan(token, fileId, noTransaksi, keterangan, notaPilihan) {
   return _run(token, function (auth) {
     if (auth.role !== 'admin' && auth.role !== 'full') throw new Error('Akses ditolak');
     var no = String(noTransaksi == null ? '' : noTransaksi).trim();
@@ -220,6 +225,12 @@ function serverKaitkanScan(token, fileId, noTransaksi, keterangan) {
     if (!getRowByTransactionId(no)) throw new Error('Transaksi No ' + no + ' tidak ditemukan.');
     var notas = KasTunai.getMultiNota(no);
     var notaId = notas.length ? notas[notas.length - 1].urutan : 1;
+    if (notaPilihan !== undefined && notaPilihan !== null && String(notaPilihan).trim() !== '') {
+      var ada = false;
+      for (var i = 0; i < notas.length; i++) if (String(notas[i].urutan) === String(notaPilihan)) ada = true;
+      if (!ada) throw new Error('Nota ' + notaPilihan + ' tidak ditemukan di transaksi ' + no + '.');
+      notaId = notaPilihan;
+    }
     var f = ScanInbox.getFile(fileId);
     FotoNota.uploadFotoNota(no, notaId, [{
       base64: f.base64, mimeType: f.mimeType,
@@ -700,6 +711,54 @@ function serverRestoreNota(token, transactionId, urutan) {
   return _run(token, function (auth) { return KasTunai.restoreNota(transactionId, urutan); });
 }
 
+/** Batas foto barang per panggilan serverSimpanNotaLengkap (sisanya lewat serverUploadFotoNota). */
+var MAKS_FOTO_PER_SIMPAN = 6;
+
+/**
+ * Simpan nota (tambah atau ubah) LALU unggah foto barangnya ke nota itu,
+ * dalam satu request.
+ *
+ * Nomor nota untuk foto diambil dari HASIL simpan, bukan dari klien. Dulu
+ * desktop mengunggah foto barang dengan nomor nota tetap 1, sehingga foto
+ * barang Nota 2, 3, ... menumpuk di Nota 1.
+ *
+ * Nota disimpan lebih dulu. Foto diunggah satu per satu: bila ada yang gagal,
+ * nota tetap tersimpan dan indeks foto yang gagal dikembalikan di `gagal`,
+ * supaya klien cukup mengulang foto itu (lewat serverUploadFotoNota dengan
+ * nomor nota dari jawaban ini) tanpa menggandakan nota.
+ *
+ * @param urutanEdit  nomor nota yang diubah; kosong/null = nota baru
+ * @param fotoBarang  array {base64, mimeType, namaFile, lat, lng, keterangan}, maks 6
+ * @return {success, urutan, jmlFotoBarang, gagal:[indeks], pesanGagal:String}
+ */
+function serverSimpanNotaLengkap(token, transactionId, urutanEdit, notaData, fotoBarang) {
+  return _run(token, function (auth) {
+    fotoBarang = fotoBarang || [];
+    if (fotoBarang.length > MAKS_FOTO_PER_SIMPAN)
+      throw new Error('Maksimal ' + MAKS_FOTO_PER_SIMPAN + ' foto barang per simpan.');
+    var baru = (urutanEdit === undefined || urutanEdit === null || String(urutanEdit).trim() === '');
+    var urutan;
+    if (baru) {
+      urutan = KasTunai.tambahNota(transactionId, notaData).urutan;
+    } else {
+      KasTunai.updateNota(transactionId, urutanEdit, notaData);
+      urutan = urutanEdit;
+    }
+    var terunggah = 0, gagal = [], pesan = '';
+    for (var i = 0; i < fotoBarang.length; i++) {
+      try {
+        FotoNota.uploadFotoNota(transactionId, urutan, [fotoBarang[i]]);
+        terunggah++;
+      } catch (e) {
+        gagal.push(i);
+        pesan = e.message;
+        Logger.log('[serverSimpanNotaLengkap] foto ' + i + ' gagal: ' + e.message);
+      }
+    }
+    return { success: true, urutan: urutan, jmlFotoBarang: terunggah, gagal: gagal, pesanGagal: pesan };
+  });
+}
+
 /* ============================================================
  * Foto Nota
  * ============================================================ */
@@ -717,6 +776,12 @@ function serverHapusFotoNota(token, noTransaksi, notaId, urutan) {
 }
 function serverUpdateFotoNota(token, noTransaksi, notaId, urutan, data) {
   return _run(token, function (auth) { return FotoNota.updateFotoNota(noTransaksi, notaId, urutan, data); });
+}
+/** Pindahkan satu foto ke nota lain dalam transaksi yang sama (berkas Drive tetap). */
+function serverPindahFotoNota(token, noTransaksi, notaAsal, urutanFoto, notaTujuan) {
+  return _run(token, function (auth) {
+    return FotoNota.pindahFotoNota(noTransaksi, notaAsal, urutanFoto, notaTujuan);
+  });
 }
 function serverGetNotaDanFoto(token, noTransaksi) {
   return _run(token, function (auth) { return FotoNota.getNotaDanFoto(noTransaksi); });

@@ -133,6 +133,47 @@ var FotoNota = (function () {
   }
 
   /**
+   * Pindahkan satu foto ke nota lain DALAM transaksi yang sama.
+   *
+   * Dipakai untuk merapikan foto yang salah pasang (mis. foto barang yang dulu
+   * selalu terkirim ke Nota 1). Baris lama di-soft-delete, baris baru ditulis
+   * di nota tujuan dengan FILE_ID yang SAMA: berkas Drive tidak diunggah ulang
+   * dan TIDAK dibuang -- beda dengan hapusFotoNota yang membuang berkasnya.
+   * Waktu, lokasi, dan keterangan asli ikut dibawa.
+   */
+  function pindahFotoNota(noTransaksi, notaAsal, urutanFoto, notaTujuan) {
+    if (String(notaAsal) === String(notaTujuan)) throw new Error('Nota tujuan sama dengan nota asal.');
+    var adaTujuan = false, notas = KasTunai.getMultiNota(noTransaksi);
+    for (var i = 0; i < notas.length; i++) if (String(notas[i].urutan) === String(notaTujuan)) adaTujuan = true;
+    if (!adaTujuan) throw new Error('Nota tujuan tidak ditemukan di transaksi ' + noTransaksi + '.');
+
+    var c = FC();
+    var rows = findRows(CONFIG.SHEETS.FOTO_NOTA, function (r) {
+      return String(r[c.NO_TRANSAKSI]) === String(noTransaksi) &&
+             String(r[c.NOTA_ID]) === String(notaAsal) &&
+             String(r[c.URUTAN]) === String(urutanFoto) && !isDeleted(r[c.IS_DELETED]);
+    });
+    if (!rows.length) throw new Error('Foto tidak ditemukan (mungkin sudah dipindah atau dihapus).');
+    var lama = rows[0].values;
+
+    var baru = Util.emptyRow(CONFIG.HEADERS.FOTO_NOTA.length);
+    for (var k = 0; k < lama.length && k < baru.length; k++) baru[k] = lama[k];
+    var urutanBaru = Util.nomorBerikutnya(_nomorFotoSemua(noTransaksi, notaTujuan));
+    baru[c.NOTA_ID] = notaTujuan;
+    baru[c.URUTAN] = urutanBaru;
+    baru[c.IS_DELETED] = FLAG_ACTIVE; baru[c.DELETED_AT] = ''; baru[c.DELETED_BY] = '';
+
+    // Tulis yang baru dulu, baru tandai yang lama: bila gagal di tengah,
+    // akibatnya foto tampil dobel (terlihat & bisa dihapus), bukan hilang.
+    SheetRepo.appendRow(CONFIG.SHEETS.FOTO_NOTA, baru);
+    softDelete(CONFIG.SHEETS.FOTO_NOTA, rows[0].rowIndex, noTransaksi + '#' + notaAsal + '#' + urutanFoto);
+    AuditLog.write('PINDAH_FOTO_NOTA', CONFIG.SHEETS.FOTO_NOTA,
+      noTransaksi + '#' + notaAsal + '#' + urutanFoto, '-> nota ' + notaTujuan + ' #' + urutanBaru);
+    DeferredFlush.mark();
+    return { success: true, notaTujuan: notaTujuan, urutan: urutanBaru };
+  }
+
+  /**
    * Ambil semua nota + foto-nya untuk satu transaksi sekaligus.
    * @return {{notas:Array, fotoPerNota:Object}}
    */
@@ -195,7 +236,9 @@ var FotoNota = (function () {
     uploadFotoNota: uploadFotoNota,
     hapusFotoNota: hapusFotoNota,
     updateFotoNota: updateFotoNota,
+    pindahFotoNota: pindahFotoNota,
     getNotaDanFoto: getNotaDanFoto,
     getSpjData: getSpjData
   };
 })();
+

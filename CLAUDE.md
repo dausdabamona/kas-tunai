@@ -24,7 +24,7 @@ dua entry point: `index.html` (desktop) dan `mobile.html` (HP).
 | File | Peran |
 |------|-------|
 | `_Config.gs` | `CONFIG`: SPREADSHEET_ID, nama sheet, index kolom, header, PAJAK_REF, INSTANSI |
-| `Util.gs` | `num`, `fmtDate`, `emptyRow`, `set`, `colMap` |
+| `Util.gs` | `num`, `fmtDate`, `emptyRow`, `set`, `colMap`, `nomorBerikutnya` (nomor urut tidak dipakai ulang) |
 | `SheetRepository.gs` | Cache 3 lapis (`_ExecCache`, `AppCache`, `SheetRepo`) + `DeferredFlush` |
 | `SoftDelete.gs` | `softDelete`, `restoreRecord`, `AuditLog`, `getOperator` |
 | `TxnHelper.gs` | Lookup berbasis NO transaksi |
