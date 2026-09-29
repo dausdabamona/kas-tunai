@@ -132,6 +132,73 @@ sungguhan.**
 Belum dikerjakan dari spec: tombol "Catat transaksi" dibiarkan di `.topbar-v2`
 (spec §2.1 mengizinkan bila memindahkannya mengganggu tab lain).
 
+## 0j. Analisis dewan UI/UX — alur tahap transaksi (29 Sep 2026, ⬜ belum dikerjakan)
+
+Isi tambahan untuk tugas urutan-12 **Layar Transaksi + panel detail kanan**
+(bukan rencana terpisah). Melengkapi 3b.2 — bagian yang bertentangan dengan 3b.2
+ditandai di "Keputusan terbuka" dan **menunggu jawaban pengguna**.
+
+**Diagnosis.** Aplikasi disusun per *alat*, pekerjaan berjalan per *tahap*. Kartu
+transaksi desktop memuat 8–10 tombol sejajar (Edit, Kelola Nota, Foto, Tanda Terima,
+SPBY, SPJ, Jadikan PD, Pecah, Pindah dana) dan di belakangnya 24 modal; pengguna
+harus hafal urutan, tombol, dan apa yang kurang. Keluhan foto tertukar
+(spec `2026-09-29-pasangan-foto-nota-design.md`) lahir dari pola yang sama: tiga
+pintu foto dengan perilaku berbeda.
+
+**Urutan tahap transaksi uang muka** — dikonfirmasi pengguna 29 Sep 2026:
+*SPBy ditandatangani PPK SETELAH nota terkumpul.*
+
+| # | Tahap | Selesai bila | Catatan |
+|---|-------|--------------|---------|
+| 1 | Catat | baris ada | peringatan bila tanpa item POK (MAK cetakan jadi tidak lengkap) |
+| 2 | Serahkan uang | Tanda Terima / Bukti Transfer ber-TTD terunggah (`KUITANSI_URL`) | hanya uang muka ke PUM; belanja langsung = dilewati |
+| 3 | Nota & bukti | ≥1 nota dan **setiap** nota punya Bukti A (scan nota) | |
+| 4 | Pajak | setiap nota sudah ditetapkan pajaknya (`pajakKatIdx` terisi) | objek pajak yang belum dipotong tetap merah |
+| 5 | Pengembalian sisa | `SisaDiTanganPUM = 0` | rumus **HANDOFF-MOBILE bagian 2** — jangan ditulis ulang |
+| 6 | SPBy | `NO_SPBY` terisi | tombol baru aktif setelah 3–5 selesai |
+| 7 | SPJ & GUP | `NO_DRPP` / `NO_SPP` terisi | SPJ final hanya bila 1–6 selesai; sebelumnya tetap "SPJ Sementara" |
+
+Perjalanan Dinas punya jalur sendiri (SPD) — di luar cakupan tabel ini.
+
+**Pandangan dewan (ringkas).**
+- *Bendahara:* status tercecer di banyak chip → satu baris
+  **"4 dari 7 tahap · kurang: scan nota Toko B, pajak Toko C"** + satu tombol utama
+  "Kerjakan: …" yang membuka tahap yang kurang.
+- *PUM/HP:* HP sudah berpola layar detail per transaksi; desktop meniru pola itu
+  lewat panel detail kanan (sejalan 3b.2).
+- *PPK:* form catat 9 isian; No. Kuitansi/DRPP/SPP baru diketahui saat rekonsiliasi.
+  Form catat cukup **nilai, uraian, PUM, tanggal, item POK**; Akun/MAK terisi otomatis
+  dari item POK (hanya-baca); DRPP/SPP pindah ke tahap 6–7.
+- *Auditor (pengingat):* peringatan pengendalian (nota tanpa scan, lebih pagu, pajak
+  belum dipotong) tetap tampil merah; tindakan di menu "⋯ Lainnya" tetap tercatat di
+  AuditLog; tahap tidak bisa dilompati diam-diam.
+- *UX:* satu layar satu keputusan; hapus pintu ganda; label tombol = kata kerja
+  tahap; warna status tiga saja (selesai / perlu tindakan / terblokir).
+- *Pemelihara (pengingat):* `index.html` ±8.000 baris → bertahap dan berdampingan;
+  tombol lama tetap ada selama satu siklus GUP. Status tahap dihitung **di satu tempat
+  di server** dan dipakai desktop, HP, dan Papan kerja — antrean Papan kerja yang
+  sekarang menghitung sendiri wajib dialihkan ke sumber yang sama, bukan diduplikasi.
+
+**Usulan & urutan kerja** (disarankan 3 → 4 → 5 → 1 → 2):
+
+| # | Usulan | Dampak | Usaha |
+|---|--------|--------|-------|
+| 1 | Status tahap di server → satu baris "x dari 7 tahap · kurang: …" | besar | sedang |
+| 2 | Panel detail kanan: tahap berurutan + satu tombol utama (tombol lama tetap selama transisi) | besar | besar |
+| 3 | Form catat 5 isian, MAK otomatis dari item POK, DRPP/SPP ke tahap belakang | sedang | kecil |
+| 4 | Modal Foto per transaksi dilebur ke kartu nota (kecuali Perjalanan Dinas) | sedang | kecil |
+| 5 | Pecah, Jadikan PD, Pindah dana → menu "⋯ Lainnya" | sedang | kecil |
+
+**Keputusan terbuka (bertentangan dengan 3b.2 — jangan dikerjakan sebelum dijawab):**
+- **K-UX1.** 3b.2 menaruh *blok hitung pajak di tingkat transaksi* (DPP = nilai ÷ 1,11).
+  Keputusan domain yang berlaku sejak tugas mobile 4: **pajak melekat per nota**
+  (per penyedia). Usul: panel detail menampilkan ringkasan pajak per nota, bukan satu
+  blok hitung per transaksi.
+- **K-UX2.** 3b.2 menjadikan *"Terbitkan SPBY"* tombol utama selalu. Dengan urutan tahap
+  di atas, SPBy baru relevan setelah tahap 3–5. Usul: tombol utama = tahap berikutnya
+  yang belum selesai.
+- **K-UX3.** Lama masa transisi tombol lama: usul satu siklus GUP.
+
 ## 0i. Item POK ikut tercetak di Tanda Terima Uang Muka — 21 Sep 2026 (🟡 belum diuji manual)
 
 Baris baru **"Detail kegiatan (item POK)"** pada tanda terima, di antara "Untuk
@@ -368,7 +435,7 @@ Yang berubah: kolom **Urutan** dan tambahan tugas 12–14.
 | 13 | **9** | Jejak audit "Tandai wajar" (baru, lihat R-4) | ⬜ belum |
 | 14 | **10** | Penanganan item yatim akibat revisi DIPA/POK (baru, lihat R-3) | ⬜ belum |
 | 2 | 11 | Layar Papan kerja (dashboard) | 🟡 **kode selesai 29 Jul 2026, belum diuji manual** |
-| 3 | 12 | Layar Transaksi + panel detail kanan (redesain) | ⬜ belum |
+| 3 | 12 | Layar Transaksi + panel detail kanan (redesain) | ⬜ belum — **baca 0j** (alur 7 tahap + keputusan terbuka K-UX1..3) |
 | 4 | 13 | Layar Perjalanan dinas (redesain) | ⬜ belum |
 | 5 | 14 | Layar Rekonsiliasi (redesain) | ⬜ belum |
 | 6 | 15 | Layar Laporan & cetakan (redesain) | ⬜ belum |
