@@ -81,8 +81,20 @@ var StatusTahap = (function () {
       if (ok[URUT[i]]) selesai++;
       else if (berikut === null) berikut = URUT[i];
     }
+    // Antrean Papan kerja -- SATU-SATUNYA definisi; server (_pkJumlahAntrean)
+    // dan tampilan (_pkKriteriaTindakan) sama-sama membaca daftar ini.
+    //   spby  : SIAP di-SPBY = nota, pajak, pengembalian beres, SPBy belum
+    //           (SPBy ditandatangani PPK setelah nota terkumpul)
+    //   pajak : ada nota yang pajaknya belum ditetapkan (per nota, K-UX1)
+    //   nota  : uang muka belum tertutup nota/pengembalian
+    var antrean = [];
+    if (ok.nota && ok.pajak && ok.kembali && !ok.spby) antrean.push('spby');
+    if (tanpaPajak.length) antrean.push('pajak');
+    if (sisa > 0) antrean.push('nota');
     return { selesai: selesai, dari: URUT.length, tahap: ok, berikut: berikut,
-             labelBerikut: berikut ? LABEL[berikut] : '', kurang: kurang, peringatan: peringatan };
+             labelBerikut: berikut ? LABEL[berikut] : '', kurang: kurang, peringatan: peringatan,
+             antrean: antrean, jmlNota: notas.length, notaTanpaPajak: tanpaPajak.length,
+             notaTanpaScan: tanpaScan.length, sisa: sisa };
   }
 
   /** Peta noTransaksi -> [{nama, adaScan, pajakSet}] dari sheet Multi Nota (sekali baca). */
@@ -145,6 +157,11 @@ function ujiStatusTahap_() {
   cek('nota melebihi UM -> tahap kembali selesai + peringatan', lebih.tahap.kembali && lebih.peringatan.join().indexOf('melebihi') >= 0);
   var spbyDulu = H({ kredit: 100000, noSpby: '9' }, []);
   cek('SPBy tercatat tapi nota belum -> berikut tetap tahap paling awal yang kurang', spbyDulu.berikut === 'serahkan' && spbyDulu.tahap.spby);
-  Logger.log(gagal ? (gagal + ' kasus GAGAL') : 'Semua kasus lulus (9)');
+  cek('antrean: nota Toko B tanpa pajak -> antrean pajak, belum siap SPBy', nota.antrean.join() === 'pajak');
+  cek('antrean: sisa uang muka -> antrean nota', sisa.antrean.join() === 'nota');
+  var siap = H({ kredit: 1, kuitansiUrl: 'x', notaTotal: 1 }, [{ nama: 'A', adaScan: true, pajakSet: true }]);
+  cek('antrean: nota+pajak+kembali beres, SPBy belum -> siap SPBy', siap.antrean.join() === 'spby');
+  cek('antrean: transaksi lengkap -> tidak masuk antrean mana pun', lengkap.antrean.length === 0);
+  Logger.log(gagal ? (gagal + ' kasus GAGAL') : 'Semua kasus lulus (13)');
   return gagal === 0;
 }

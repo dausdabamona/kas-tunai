@@ -69,6 +69,17 @@ function _run(token, fn) {
 /* ============================================================
  * Transaksi
  * ============================================================ */
+/**
+ * Status 7 tahap SATU transaksi (untuk menyegarkan antrean Papan kerja setelah
+ * aksi cepat, tanpa memuat ulang seluruh daftar). null bila tidak berlaku.
+ */
+function serverGetTahap(token, no) {
+  return _run(token, function (auth) {
+    var tx = KasTunai.getTransaksi();
+    for (var i = 0; i < tx.length; i++) if (String(tx[i].no) === String(no)) return tx[i].tahap || null;
+    return null;
+  });
+}
 function serverGetTransaksi(token) {
   return _run(token, function (auth) { return KasTunai.getTransaksi(); });
 }
@@ -176,26 +187,18 @@ function serverGetPapanKerja(token) {
 /**
  * Hitungan penuh tiap antrean Papan kerja.
  *
- * Kriterianya WAJIB sama persis dengan _pkKriteriaTindakan() di index.html --
- * bila berbeda, badge pil menampilkan angka yang tidak cocok dengan isinya.
- * Rumus sisaPUM adalah salinan mode ringkas hitungNeraca (docs/HANDOFF-MOBILE.md
- * bagian 2); bila rumus itu berubah, KEDUA salinan harus ikut diperbarui.
- *
- * Pindah dana (REF_TRANSFER diawali 'TF-') dikecualikan dari semuanya: ia tidak
- * punya siklus pertanggungjawaban sama sekali.
+ * Kriteria spby/pajak/nota TIDAK ditulis di sini: dibaca dari t.tahap.antrean
+ * yang dihitung StatusTahap.hitung (satu sumber, juga dipakai tampilan lewat
+ * _pkKriteriaTindakan di index.html). Rekon & foto punya sumber sendiri.
+ * Pindah dana dan transaksi masuk tidak punya t.tahap -> tidak masuk antrean.
  */
 function _pkJumlahAntrean(tx, jmlScan) {
   var n = { spby: 0, pajak: 0, nota: 0, foto: (jmlScan || 0), rekon: 0 };
   for (var i = 0; i < tx.length; i++) {
     var t = tx[i];
-    var kredit = Util.num(t.kredit);
     if (String(t.statusRekon || '').toUpperCase() === 'NILAI_BEDA') n.rekon++;
-    if (kredit <= 0) continue;
-    if (String(t.refTransfer || '').indexOf('TF-') === 0) continue;
-    if (!t.noSpby) n.spby++;
-    if (t.pajakKatIdx === null || t.pajakKatIdx === undefined || t.pajakKatIdx === '') n.pajak++;
-    var um = (Util.num(t.uangDiserahkan) > 0) ? Util.num(t.uangDiserahkan) : kredit;
-    if ((um - Util.num(t.notaTotal) - Util.num(t.kembalianTotal)) > 0) n.nota++;
+    var a = (t.tahap && t.tahap.antrean) || [];
+    for (var j = 0; j < a.length; j++) if (n[a[j]] !== undefined) n[a[j]]++;
   }
   return n;
 }

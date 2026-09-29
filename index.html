@@ -1487,7 +1487,7 @@ var _allPenyedia  = null;
 /* Penanda rilis. Tampil di layar masuk dan di kaki cetakan SPJ, supaya
    "kode versi mana yang sedang berjalan" bisa dijawab dengan MELIHAT, bukan
    menebak-nebak jalur deploy. Naikkan tanggalnya tiap perubahan berarti. */
-var KT_VERSI='v4.7 — 29 Sep 2026 (SPJ lengkap ikut tahap)';
+var KT_VERSI='v4.8 — 29 Sep 2026 (antrean satu sumber)';
 
 /* ============== Data institusi (hardcoded) ============== */
 var INST = {
@@ -7171,21 +7171,30 @@ function submitPagu(){
  * fungsi ini HARUS ikut diperbarui manual -- ini dua salinan yang sengaja
  * dijaga sama, bukan kebetulan.
  */
-function _pkKriteriaTindakan(t){
-  var alasan=[];
-  // Pindah dana bank<->tunai TIDAK punya siklus pertanggungjawaban sama sekali:
-  // tidak perlu SPBY, tidak kena pajak, tidak ada uang muka yang harus bernota.
-  // Sebelum penjagaan ini ia memenuhi daftar tindakan dengan puluhan baris
-  // "Belum SPBY" yang tidak akan pernah bisa diselesaikan.
-  if(!_notTransfer(t)) return alasan;
-  if((+t.kredit||0)>0 && !t.noSpby) alasan.push('Belum SPBY');
-  if((+t.kredit||0)>0 && (t.pajakKatIdx===null||t.pajakKatIdx===undefined)) alasan.push('Pajak belum diisi');
-  if((+t.kredit||0)>0){
-    var um=(+t.uangDiserahkan>0)?(+t.uangDiserahkan):(+t.kredit||0);
-    var sisaPUM=um-(+t.notaTotal||0)-(+t.kembalianTotal||0);
-    if(sisaPUM>0) alasan.push('PUM belum bernota');
+/**
+ * Hitung ulang badge antrean dari t.tahap yang sudah ada di memori (tanpa ke
+ * server). Kriterianya tetap satu sumber: t.tahap.antrean dari StatusTahap.
+ */
+function _pkHitungUlangJumlah(){
+  var res=pkData||{}, j=res.jumlahAntrean; if(!j) return;
+  var tx=res.transaksi||[], i, k, a;
+  j.spby=0; j.pajak=0; j.nota=0;
+  for(i=0;i<tx.length;i++){
+    a=(tx[i].tahap&&tx[i].tahap.antrean)||[];
+    for(k=0;k<a.length;k++) if(j[a[k]]!==undefined) j[a[k]]++;
   }
-  if(String(t.statusRekon||'').toUpperCase()==='NILAI_BEDA') alasan.push('Rekon selisih');
+}
+/**
+ * Alasan sebuah transaksi masuk antrean Papan kerja. Kriteria spby/pajak/nota
+ * dibaca dari t.tahap.antrean (StatusTahap.gs di server) -- JANGAN menulis
+ * ulang rumusnya di sini; dulu ada tiga salinan dan antrean pajak masih
+ * per transaksi padahal pajak melekat per nota.
+ */
+var PK_ALASAN={spby:'Siap SPBY', pajak:'Pajak nota belum', nota:'PUM belum bernota'};
+function _pkKriteriaTindakan(t){
+  var alasan=[], a=(t&&t.tahap&&t.tahap.antrean)||[], i;
+  for(i=0;i<a.length;i++) if(PK_ALASAN[a[i]]) alasan.push(PK_ALASAN[a[i]]);
+  if(String((t&&t.statusRekon)||'').toUpperCase()==='NILAI_BEDA') alasan.push('Rekon selisih');
   return alasan;
 }
 
@@ -7196,12 +7205,12 @@ var pkAntreanAktif='spby';
 /* Definisi antrean. Kriterianya WAJIB sama dengan _pkJumlahAntrean() di Code.gs
    -- kalau berbeda, badge pil menampilkan angka yang tidak cocok dengan isinya. */
 var PK_ANTREAN=[
-  {k:'spby', n:'Belum di-SPBY', aksi:'Catat SPBY',
-   ket:'Belanja di sini sudah tercatat tetapi belum punya nomor SPBY. Selama nomornya kosong, belanja ini belum bisa ikut ke berkas GUP berikutnya.',
-   st:'Belum ada nomor SPBY'},
-  {k:'pajak', n:'Pajak belum diisi', aksi:'Isi pajak',
-   ket:'Kategori pajaknya belum ditetapkan, jadi PPh dan PPN-nya belum terhitung sama sekali.',
-   st:'Kategori pajak kosong'},
+  {k:'spby', n:'Siap di-SPBY', aksi:'Catat SPBY',
+   ket:'Nota, pajak, dan pengembalian belanja di sini sudah beres; tinggal nomor SPBY yang ditandatangani PPK. Selama nomornya kosong, belanja ini belum bisa ikut ke berkas GUP berikutnya.',
+   st:'Siap, nomor SPBY belum ada'},
+  {k:'pajak', n:'Pajak nota belum', aksi:'Tetapkan pajak',
+   ket:'Ada nota yang kategori pajaknya belum ditetapkan, jadi PPh dan PPN-nya belum terhitung. Pajak melekat pada nota (penyedia), bukan pada transaksi.',
+   st:'Pajak nota belum ditetapkan'},
   {k:'nota', n:'PUM belum bernota', aksi:'Catat nota',
    ket:'Uang muka yang sudah diserahkan belum tertutup nota. Selama belum, nilainya masih dihitung sebagai uang yang dipegang pemegang uang muka.',
    st:'Uang muka belum tertutup'},
@@ -7250,9 +7259,7 @@ function _pkItem(kunci){
     var t=tx[i], al=_pkKriteriaTindakan(t);
     var cocok=false, a;
     for(a=0;a<al.length;a++){
-      if(kunci==='spby'  && al[a]==='Belum SPBY') cocok=true;
-      if(kunci==='pajak' && al[a]==='Pajak belum diisi') cocok=true;
-      if(kunci==='nota'  && al[a]==='PUM belum bernota') cocok=true;
+      if(PK_ALASAN[kunci] && al[a]===PK_ALASAN[kunci]) cocok=true;
       if(kunci==='rekon' && al[a]==='Rekon selisih') cocok=true;
     }
     if(!cocok) continue;
@@ -7269,8 +7276,11 @@ function _pkItem(kunci){
 /** Kalimat penuh yang menjelaskan kenapa item ini perlu dikerjakan. */
 function _pkAlasan(it){
   var batas=+((pkData||{}).batasSetorTanggal)||0;
-  if(it.jenis==='spby')  return 'Belanja ini belum punya nomor SPBY, jadi belum bisa masuk ke berkas GUP berikutnya.';
-  if(it.jenis==='pajak') return 'Kategori pajaknya belum diisi'+(batas?(', padahal batas setornya tanggal '+batas):'')+'.';
+  if(it.jenis==='spby')  return 'Nota, pajak, dan pengembalian sudah beres; tinggal nomor SPBY supaya bisa masuk ke berkas GUP berikutnya.';
+  if(it.jenis==='pajak'){
+    var nb=(it.t&&it.t.tahap&&it.t.tahap.notaTanpaPajak)||0;
+    return (nb?(nb+' nota'):'Nota')+' belum ditetapkan pajaknya'+(batas?(', padahal batas setornya tanggal '+batas):'')+'.';
+  }
   if(it.jenis==='nota'){
     var t=it.t||{}, um=(+t.uangDiserahkan>0)?(+t.uangDiserahkan):(+t.kredit||0);
     var sisa=um-(+t.notaTotal||0)-(+t.kembalianTotal||0);
@@ -7338,7 +7348,7 @@ function _pkRenderSapaan(){
 function _pkRenderAngka(){
   var res=pkData||{}, s=res.saldo, ada=!!s;
   var j=res.jumlahAntrean||{}, rek=(res.rekon&&res.rekon.counts)||{};
-  // Nilai rupiah "Belum di-SPBY" dihitung dari daftarnya sendiri supaya angka
+  // Nilai rupiah "Siap di-SPBY" dihitung dari daftarnya sendiri supaya angka
   // dan isinya tidak mungkin berbeda.
   var spby=_pkItem('spby'), rp=0, i;
   for(i=0;i<spby.length;i++) rp+=(+spby[i].nilai||0);
@@ -7354,7 +7364,7 @@ function _pkRenderAngka(){
   document.getElementById('pkAngka').innerHTML=
      blok('Saldo kas tunai', (ada?rupiah(s.saldoTunai):'&mdash;'),
           ada?'Terhitung sampai hari ini':'Tidak ditampilkan untuk peran ini', false)
-    +blok('Belum di-SPBY', (+j.spby||spby.length), 'Senilai '+rupiah(rp), false)
+    +blok('Siap di-SPBY', spby.length, 'Senilai '+rupiah(rp), false)
     +blok('Pajak belum disetor', nPajak,
           batas?('Batas setor tanggal '+batas+(lewat?' — sudah lewat'
                  :(sisaHari>0?(' — '+sisaHari+' hari lagi'):' — hari ini')))
@@ -7608,12 +7618,15 @@ function _pkBukaAksi(jenis,id,tempat,panel){
       +'<div><label>Tanggal</label><input type="date" id="'+p+'Tgl" value="'
       +esc(String(t.tanggal||todayISO()))+'"></div></div>';
   } else if(panel==='pajak'){
-    var op='<option value="">— pilih kategori —</option>', k;
-    for(k=0;k<PAJAK_REF.length;k++) op+='<option value="'+k+'">'+esc(PAJAK_REF[k].label)+'</option>';
-    h='<div class="pandu">Pilih kategori pajak yang sesuai; nilai PPh dan PPN dihitung '
-      +'otomatis dari nilai transaksinya memakai tabel pajak yang sama dengan layar Nota.</div>'
-      +'<div class="baris"><div class="lebar"><label>Kategori pajak</label>'
-      +'<select id="'+p+'Kat" style="width:100%">'+op+'</select></div></div>';
+    // Pajak ditetapkan PER NOTA (penyedia) di layar Nota & Foto -- tombol Pajak
+    // pada tiap kartu nota. Panel ini tidak lagi menyimpan pajak per transaksi,
+    // karena itu tidak mengeluarkan transaksi dari antrean pajak nota.
+    h='<div class="pandu">Pajak melekat pada setiap nota (penyedia). Buka layar Nota &amp; Foto, '
+      +'lalu tekan <b>Pajak</b> pada kartu nota yang belum ditetapkan.</div>'
+      +'<div class="tombol"><button class="pk3-btn" onclick="openModalNota('+(+t.no||0)+')">Buka Nota &amp; Foto</button>'
+      +'<button class="pk3-btn netral" onclick="_pkBukaAksi('+q+')">Tutup</button></div>';
+    box.className='pk3-aksi-p'; box.innerHTML=h;
+    box.setAttribute('data-panel',panel); return;
   } else if(panel==='nota'){
     var um=(+t.uangDiserahkan>0)?(+t.uangDiserahkan):(+t.kredit||0);
     var sisa=um-(+t.notaTotal||0)-(+t.kembalianTotal||0);
@@ -7670,7 +7683,17 @@ function _pkSimpanAksi(jenis,id,tempat,panel){
   // dan mengembalikan grup bulan yang sedang dibuka ke keadaan bawaan.
   function beres(pesan){
     toast(pesan,'ok');
-    _pkRenderSemua();
+    // Status tahap (dan antreannya) dihitung di server -- ambil ulang untuk
+    // transaksi ini saja, supaya ia berpindah antrean tanpa memuat ulang layar.
+    // Gagal mengambil = tetap render; paling lambat benar pada muat berikutnya.
+    if(it && it.t && it.t.no!=null){
+      google.script.run
+        .withSuccessHandler(function(th){ if(th) it.t.tahap=th; _pkHitungUlangJumlah(); _pkRenderSemua(); })
+        .withFailureHandler(function(){ _pkRenderSemua(); })
+        .serverGetTahap(_tok, it.t.no);
+    } else {
+      _pkRenderSemua();
+    }
   }
   function gagal(e){ toast(e&&e.message?e.message:String(e),'error'); }
 
