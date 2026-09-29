@@ -1446,7 +1446,7 @@ var _allPenyedia  = null;
 /* Penanda rilis. Tampil di layar masuk dan di kaki cetakan SPJ, supaya
    "kode versi mana yang sedang berjalan" bisa dijawab dengan MELIHAT, bukan
    menebak-nebak jalur deploy. Naikkan tanggalnya tiap perubahan berarti. */
-var KT_VERSI='v4.1 — 29 Sep 2026 (MAK di tanda terima)';
+var KT_VERSI='v4.2 — 29 Sep 2026 (TTD tanpa garis)';
 
 /* ============== Data institusi (hardcoded) ============== */
 var INST = {
@@ -5997,6 +5997,10 @@ function _kuitansiCss(){
   +'.sig{width:100%;border-collapse:collapse;margin-top:18px;font-size:12px;text-align:center}'
   +'.sig td{width:33.33%;padding:6px 8px;vertical-align:top}'
   +'.sig .nm{margin-top:54px;font-weight:bold} .sig .nip{font-size:11px}'
+  // Blok tanda tangan kuitansi/tanda terima TANPA garis. Selektor sengaja lebih
+  // spesifik dari "table.sig td" di _docCss (bergaris, dipakai SPD dkk.) supaya
+  // menang tanpa mengubah dokumen lain.
+  +'table.sig.kw, table.sig.kw td{border:0}'
   // Mode 2-salinan-per-A4: setiap salinan dipadatkan jadi setengah halaman.
   +'.page.dua{padding:0}'
   +'.page.dua .half{height:148mm;padding:9mm 14mm 5mm;position:relative;overflow:hidden;font-size:12.5px}'
@@ -6109,7 +6113,7 @@ function _kuitansiIsi(t, o){
   +'<tr><td class="terb" colspan="3">Terbilang : <i>'+_terbilangTitle(o.jumlah)+'</i></td></tr>'
   +'</table>'
 
-  +'<table class="sig"><tr>'
+  +'<table class="sig kw"><tr>'
   +'<td'+(o.noPpk?' style="width:50%"':'')+'>'+((o.mode==='transfer')?'Penerima Transfer,':'Penerima,')+'<br>'+esc(INST.kota)+', '+_tglPanjang(t.tanggal)+'<div class="nm">'+esc(o.penerima)+'</div></td>'
   +'<td'+(o.noPpk?' style="width:50%"':'')+'>Bendahara Pengeluaran,<div class="nm">'+esc(INST.bendahara)+'</div><span class="nip">NIP. '+esc(INST.nipBendahara)+'</span></td>'
   +(o.noPpk?'':'<td>Mengetahui,<br>PPK Poltek KP Sorong<div class="nm">'+esc(INST.ppk)+'</div><span class="nip">NIP. '+esc(INST.nipPpk)+'</span></td>')
