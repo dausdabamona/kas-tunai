@@ -1029,7 +1029,7 @@
 <!-- ================= MODAL NOTA ================= -->
 <div class="modal" id="modalNota">
   <div class="sheet">
-    <h2>Nota Transaksi <span id="notaTxLabel"></span></h2>
+    <h2>Nota &amp; Foto <span id="notaTxLabel"></span></h2>
     <div id="notaList"></div>
     <input type="file" id="ntKartuFile" accept="image/*" multiple style="display:none" onchange="_ntKartuFileDipilih(this)">
     <hr>
@@ -1464,7 +1464,7 @@ var _allPenyedia  = null;
 /* Penanda rilis. Tampil di layar masuk dan di kaki cetakan SPJ, supaya
    "kode versi mana yang sedang berjalan" bisa dijawab dengan MELIHAT, bukan
    menebak-nebak jalur deploy. Naikkan tanggalnya tiap perubahan berarti. */
-var KT_VERSI='v4.3 — 29 Sep 2026 (form transaksi ramping)';
+var KT_VERSI='v4.4 — 29 Sep 2026 (satu pintu nota &amp; foto)';
 
 /* ============== Data institusi (hardcoded) ============== */
 var INST = {
@@ -2503,8 +2503,9 @@ function _cardHtml(t, mode){
       +'<button onclick="batalkanPd('+t.no+')" title="Kembalikan ke transaksi biasa">&#8630; Batalkan PD</button>';
   } else {
     h+='<button class="b-edit" onclick="editTransaksi('+t.no+')">&#9998; Edit</button>'
-      +'<button class="b-orange" onclick="openModalNota('+t.no+')">Kelola Nota</button>'
-      +'<button class="b-gray" onclick="openFoto('+t.no+')">Foto</button>'
+      // Satu pintu untuk nota dan fotonya (handoff desktop 0j, usulan 4).
+      // Modal Foto terpisah hanya untuk Perjalanan Dinas yang memang tanpa nota.
+      +'<button class="b-orange" onclick="openModalNota('+t.no+')">Nota &amp; Foto</button>'
       +'<button class="b-purple" onclick="bukaModalKuitansi('+t.no+')">'+(t.sumber==='BANK'?'Bukti Transfer':'Tanda Terima')+'</button>'
       +'<button class="b-spby" onclick="openModalSpby('+t.no+','+t.rowIndex+')">'+(t.noSpby?'SPBY &#10003;':'SPBY')+'</button>';
     h+='<button class="b-dark" onclick="cetakSPJ('+t.no+')">'+(lunas?'Cetak SPJ':'SPJ Sementara')+'</button>';
@@ -3799,6 +3800,9 @@ function _riilPage(data, peg){
 /* ============== Foto nota (geotagging) ============== */
 var _fotoTarget=null, _fotoNotaId=1, _fotoGps=null;
 function openFoto(no){
+  // Transaksi biasa: foto selalu milik satu nota -> buka kartu nota.
+  // Modal ini dipertahankan hanya untuk Perjalanan Dinas (tanpa nota).
+  if(!suratMap[String(no)]){ openModalNota(no); return; }
   // Nota pilihan dipertahankan selama transaksinya sama (unggah beruntun).
   _fotoNotaId=(String(no)===String(_fotoTarget))?_fotoNotaId:null;
   _fotoTarget=no; _fotoGps=null;
@@ -4666,7 +4670,11 @@ function renderNotaList(res){
   for(i=0;i<list.length;i++) aktif[String(list[i].urutan)]=true;
   var yatim=[];
   for(k in fpn) if(!aktif[k] && fpn[k] && fpn[k].length) yatim.push(k);
-  if(!list.length && !yatim.length){ box.innerHTML=h+'<div class="empty">Belum ada nota.</div>'; return; }
+  if(!list.length && !yatim.length){
+    box.innerHTML=h+'<div class="empty">Belum ada nota. Isi form <b>Tambah Nota</b> di bawah &mdash; '
+      +'scan nota (Bukti A) dan foto barang (Bukti B) dipilih sekalian di form itu.</div>';
+    return;
+  }
   list=list.slice().sort(function(a,b){return (+b.urutan||0)-(+a.urutan||0);}); // terbaru di atas
   for(i=0;i<list.length;i++){
     var n=list[i], fb=fpn[String(n.urutan)]||[];
