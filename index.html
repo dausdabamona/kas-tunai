@@ -1446,7 +1446,7 @@ var _allPenyedia  = null;
 /* Penanda rilis. Tampil di layar masuk dan di kaki cetakan SPJ, supaya
    "kode versi mana yang sedang berjalan" bisa dijawab dengan MELIHAT, bukan
    menebak-nebak jalur deploy. Naikkan tanggalnya tiap perubahan berarti. */
-var KT_VERSI='v4 — 29 Sep 2026 (pasangan nota-foto)';
+var KT_VERSI='v4.1 — 29 Sep 2026 (MAK di tanda terima)';
 
 /* ============== Data institusi (hardcoded) ============== */
 var INST = {
@@ -5712,13 +5712,15 @@ function bukaPdfKuitansi(noTransaksi){
   // Pembebanan POK disimpan di sheet terpisah (Pembebanan Item), tidak ikut di
   // baris transaksi, jadi harus diambil dulu. Gagal membacanya BUKAN alasan
   // menahan tanda terima: cetak saja dengan item tunggal dari transaksinya.
+  // MAK disusun di server (Anggaran.rincianCetak) -- sama dengan cetakan HP.
+  // Gagal memuat: tetap cetak, baris MAK berupa titik-titik untuk diisi tangan.
   showLoading(true,'Memuat detail kegiatan...');
   google.script.run
-    .withSuccessHandler(function(rinc){ showLoading(false);
-      _bukaPopup(_renderKuitansiHtml(t, null, rinc||[])); })
+    .withSuccessHandler(function(res){ showLoading(false);
+      _bukaPopup(_renderKuitansiHtml(t, null, (res&&res.rincian)||[], (res&&res.mak)||[])); })
     .withFailureHandler(function(){ showLoading(false);
-      _bukaPopup(_renderKuitansiHtml(t, null, [])); })
-    .serverGetPembebanan(_tok, noTransaksi);
+      _bukaPopup(_renderKuitansiHtml(t, null, [], [])); })
+    .serverGetRincianCetak(_tok, noTransaksi);
 }
 /** Dokumen transaksi bank: KUITANSI/BUKTI PEMBAYARAN + SURAT PERINTAH PENDEBITAN REKENING (SPPR). */
 function _renderBuktiTransferHtml(t, o){
@@ -5896,6 +5898,11 @@ function bukaModalKuitansi(no){
     var thn=(String(t.tanggal||'').split('-')[0])||(''+new Date().getFullYear());
     document.getElementById('kwNoBukti').value='PRM-'+thn+'-'+('000'+t.no).slice(-4);
     document.getElementById('kwMak').value='';
+    // Isi awal MAK dari data pagu (bisa diubah manual sebelum cetak).
+    google.script.run.withSuccessHandler(function(res){
+        var el=document.getElementById('kwMak');
+        if(el && !el.value && res && res.mak && res.mak.length) el.value=res.mak.join('; ');
+      }).withFailureHandler(function(){}).serverGetRincianCetak(_tok, no);
     document.getElementById('kwPenerima').value=t.penjab||'';
     document.getElementById('kwNipPenerima').value='';
     document.getElementById('kwUntuk').value=t.kegiatan||'';
@@ -5932,7 +5939,7 @@ function hapusKuitansiTtd(){
     .withFailureHandler(fail)
     .serverHapusKuitansi(_tok, _kwTarget);
 }
-function _renderKuitansiHtml(t, list, rincian){
+function _renderKuitansiHtml(t, list, rincian, mak){
   var thn=(String(t.tanggal||'').split('-')[0])||(''+new Date().getFullYear());
   var noBase='KT-'+('00'+t.no).slice(-3);
   var pages, docTitle;
@@ -5952,11 +5959,11 @@ function _renderKuitansiHtml(t, list, rincian){
   } else if(t.sumber==='BANK'){
     // Transaksi via bank: Bukti Transfer
     docTitle='Bukti Transfer '+noBase+'/'+thn;
-    pages=_kuitansiDua(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'BUKTI TRANSFER', mode:'transfer', noPpk:true, rincian:rincian });
+    pages=_kuitansiDua(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'BUKTI TRANSFER', mode:'transfer', noPpk:true, rincian:rincian, mak:mak||[] });
   } else {
     // Transaksi tunai (uang muka PUM): Tanda Terima Uang Muka
     docTitle='Tanda Terima Uang Muka '+noBase+'/'+thn;
-    pages=_kuitansiDua(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'TANDA TERIMA UANG MUKA', noPpk:true, rincian:rincian });
+    pages=_kuitansiDua(t,{ penerima:(t.penjab||'(…………………)'), jumlah:t.kredit, noKwt:noBase+'/'+thn, judul:'TANDA TERIMA UANG MUKA', noPpk:true, rincian:rincian, mak:mak||[] });
   }
   return ''
   +'<html><head><meta charset="utf-8"><title>'+esc(docTitle)+'</title><style>'+_kuitansiCss()+_docCss()
@@ -5986,6 +5993,7 @@ function _kuitansiCss(){
   +'.b .pok .a{width:52px;color:#333;white-space:nowrap}'
   +'.b .pok .n{width:88px;text-align:right;white-space:nowrap;padding-right:0}'
   +'.terb{background:#dcdcdc;font-style:italic}'
+  +'.b .mak{font-family:Consolas,\'Courier New\',monospace;letter-spacing:.3px}'
   +'.sig{width:100%;border-collapse:collapse;margin-top:18px;font-size:12px;text-align:center}'
   +'.sig td{width:33.33%;padding:6px 8px;vertical-align:top}'
   +'.sig .nm{margin-top:54px;font-weight:bold} .sig .nip{font-size:11px}'
@@ -6056,6 +6064,17 @@ function _pokBarisHtml(t, rincian){
   return '<tr><td class="l">Detail kegiatan<br><span class="sub">(item POK)</span></td>'
     +'<td class="c">:</td><td>'+h+'</td></tr>';
 }
+/**
+ * Baris "MAK" pada Tanda Terima / Bukti Transfer. `mak` = hasil
+ * serverGetRincianCetak().mak. Tidak dikirim (undefined) = dokumen lain yang
+ * memakai _kuitansiIsi (kuitansi perjalanan dinas) -> baris tidak dicetak.
+ * Kosong -> titik-titik supaya bisa diisi tangan, bukan baris yang hilang.
+ */
+function _makBarisHtml(mak){
+  if(mak===undefined||mak===null) return '';
+  var isi=mak.length?esc(mak.join('; ')):'<span style="color:#666">……………………………………………</span>';
+  return '<tr><td class="l">MAK</td><td class="c">:</td><td class="mak">'+isi+'</td></tr>';
+}
 function _kuitansiPage(t, o){
   return '<div class="page">'+_kuitansiIsi(t,o)+'</div>';
 }
@@ -6085,6 +6104,7 @@ function _kuitansiIsi(t, o){
         +'<td>Bendahara Pengeluaran '+esc(INST.namaWP)+'<br><span class="it">('+esc(INST.bendahara)+')</span></td></tr>'))
   +'<tr><td class="l">Uang sejumlah</td><td class="c">:</td><td class="us">'+rupiah(o.jumlah)+'</td></tr>'
   +'<tr><td class="l">Untuk pembayaran</td><td class="c">:</td><td>'+esc(o.untuk||t.kegiatan)+'</td></tr>'
+  +_makBarisHtml(o.mak)
   +_pokBarisHtml(t, o.rincian)
   +'<tr><td class="terb" colspan="3">Terbilang : <i>'+_terbilangTitle(o.jumlah)+'</i></td></tr>'
   +'</table>'

@@ -336,8 +336,90 @@ var Anggaran = (function () {
     return { top5: out.slice(0, 5) };
   }
 
+  /**
+   * MAK satu baris pagu, format yang dipakai satker: KEGIATAN.RO.AKUN
+   * (mis. "DL.2376" + "SAC.302" + "521211" -> "DL.2376.SAC.302.521211").
+   * Segmen kosong dilewati. Fungsi murni supaya bisa diuji (ujiMakCetak_).
+   */
+  function susunMak(kegiatan, ro, akun) {
+    var seg = [_norm(kegiatan), _norm(ro), _norm(akun)], out = [];
+    for (var i = 0; i < seg.length; i++) if (seg[i]) out.push(seg[i]);
+    return out.join('.');
+  }
+
+  /**
+   * Rincian pembebanan + MAK untuk dicetak di Tanda Terima / Bukti Transfer.
+   * Satu-satunya tempat MAK cetakan disusun -- desktop dan HP sama-sama
+   * memanggil ini, jadi keduanya selalu mencetak MAK yang sama.
+   *
+   * Urutan sumber MAK per item:
+   *   1. baris Pagu dengan KODE_ITEM sama -> susunMak(kegiatan, ro, akun);
+   *      bila kode itu muncul di >1 baris Pagu dengan MAK berbeda, dipersempit
+   *      dengan akun item; masih ambigu -> TIDAK menebak (dicatat di log);
+   *   2. akun item itu sendiri.
+   * Transaksi tanpa item POK sama sekali -> kolom AKUN transaksi.
+   * Semua kosong -> mak = [] dan pencetak menampilkan titik-titik untuk diisi tangan.
+   *
+   * @return {rincian:[{kodeItem,uraianItem,akun,nilai,mak}], mak:[String]}
+   */
+  function rincianCetak(no) {
+    var tx = getRowByTransactionId(no);
+    if (!tx) throw new Error('Transaksi No ' + no + ' tidak ditemukan.');
+    var v = tx.values;
+    var rinc = getPembebanan(no);
+    if (!rinc.length && _norm(v[C.KODE_ITEM])) {
+      rinc = [{ kodeItem: _norm(v[C.KODE_ITEM]), uraianItem: _norm(v[C.URAIAN_ITEM]),
+                akun: _norm(v[C.AKUN]), nilai: Util.num(v[C.KREDIT]) }];
+    }
+    var idx = {};
+    if (rinc.length) {
+      var pagu = getPagu();
+      for (var p = 0; p < pagu.length; p++) {
+        var k = pagu[p].kodeItem.toUpperCase();
+        (idx[k] = idx[k] || []).push({ akun: pagu[p].akun,
+          mak: susunMak(pagu[p].kegiatan, pagu[p].ro, pagu[p].akun) });
+      }
+    }
+    var makList = [], ada = {}, i, j;
+    for (i = 0; i < rinc.length; i++) {
+      var kand = idx[rinc[i].kodeItem.toUpperCase()] || [], beda = {}, pilihan = [];
+      for (j = 0; j < kand.length; j++) if (!beda[kand[j].mak]) { beda[kand[j].mak] = true; pilihan.push(kand[j]); }
+      if (pilihan.length > 1 && rinc[i].akun) {
+        var sempit = [];
+        for (j = 0; j < pilihan.length; j++) if (pilihan[j].akun === rinc[i].akun) sempit.push(pilihan[j]);
+        pilihan = sempit;
+      }
+      var mak = '';
+      if (pilihan.length === 1) mak = pilihan[0].mak;
+      else if (pilihan.length > 1) Logger.log('[rincianCetak] MAK ambigu untuk item ' + rinc[i].kodeItem + ' transaksi ' + no);
+      if (!mak) mak = rinc[i].akun || '';
+      rinc[i].mak = mak;
+      if (mak && !ada[mak]) { ada[mak] = true; makList.push(mak); }
+    }
+    if (!makList.length && _norm(v[C.AKUN])) makList.push(_norm(v[C.AKUN]));
+    return { rincian: rinc, mak: makList };
+  }
+
   return { imporPagu: imporPagu, getPagu: getPagu, ketersediaan: ketersediaan,
            ringkasSerapan: ringkasSerapan,
            getPembebanan: getPembebanan, simpanPembebanan: simpanPembebanan,
-           periksaRincian: periksaRincian };
+           periksaRincian: periksaRincian, susunMak: susunMak, rincianCetak: rincianCetak };
 })();
+
+/** Uji manual susunMak — jalankan dari editor Apps Script, baca Log. */
+function ujiMakCetak_() {
+  var kasus = [
+    ['lengkap',             ['DL.2376', 'SAC.302', '521211'], 'DL.2376.SAC.302.521211'],
+    ['RO kosong',           ['DL.2376', '', '521211'],        'DL.2376.521211'],
+    ['spasi dibersihkan',   [' DL.2376 ', 'SAC.302 ', '521211'], 'DL.2376.SAC.302.521211'],
+    ['semua kosong',        ['', null, undefined],            '']
+  ];
+  var gagal = 0;
+  for (var i = 0; i < kasus.length; i++) {
+    var a = kasus[i][1], hasil = Anggaran.susunMak(a[0], a[1], a[2]), ok = hasil === kasus[i][2];
+    if (!ok) gagal++;
+    Logger.log((ok ? 'PASS' : 'FAIL') + ' — ' + kasus[i][0] + ': "' + hasil + '"');
+  }
+  Logger.log(gagal ? (gagal + ' kasus GAGAL') : 'Semua kasus lulus (' + kasus.length + ')');
+  return gagal === 0;
+}

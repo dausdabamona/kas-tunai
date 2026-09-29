@@ -2183,9 +2183,9 @@ function cetakTandaTerima(no){
   // dengan item tunggal dari transaksinya.
   muatInstansi(function(){
     google.script.run
-      .withSuccessHandler(function(rinc){ _bukaCetak(_htmlTandaTerima(t, rinc||[])); })
-      .withFailureHandler(function(){ _bukaCetak(_htmlTandaTerima(t, [])); })
-      .serverGetPembebanan(_tok, no);
+      .withSuccessHandler(function(res){ _bukaCetak(_htmlTandaTerima(t, (res&&res.rincian)||[], (res&&res.mak)||[])); })
+      .withFailureHandler(function(){ _bukaCetak(_htmlTandaTerima(t, [], [])); })
+      .serverGetRincianCetak(_tok, no);
   });
 }
 function _bukaCetak(html){
@@ -2227,7 +2227,8 @@ function _pokBarisHtml(t, rincian){
   return '<tr><td class="l">Detail kegiatan<br><span class="sub">(item POK)</span></td>'
     +'<td class="c">:</td><td>'+h+'</td></tr>';
 }
-function _htmlTandaTerima(t, rincian){
+function _htmlTandaTerima(t, rincian, mak){
+  mak = mak || [];
   var I = INSTANSI || {};
   var thn = String(t.tanggal||'').split('-')[0] || (''+new Date().getFullYear());
   var noKwt = 'KT-' + ('00'+t.no).slice(-3) + '/' + thn;
@@ -2260,6 +2261,9 @@ function _htmlTandaTerima(t, rincian){
     + barisAsal
     +'<tr><td class="l">Uang sejumlah</td><td class="c">:</td><td class="us">'+rp(jumlah)+'</td></tr>'
     +'<tr><td class="l">Untuk pembayaran</td><td class="c">:</td><td>'+esc(t.kegiatan||'-')+'</td></tr>'
+    // MAK disusun di server (Anggaran.rincianCetak) -- sama dengan cetakan desktop.
+    +'<tr><td class="l">MAK</td><td class="c">:</td><td class="mak">'
+    +(mak.length ? esc(mak.join('; ')) : '<span style="color:#666">……………………………………………</span>')+'</td></tr>'
     // Item POK-nya dulu hanya satu baris miring di sel ini; sekarang barisnya
     // sendiri supaya transaksi yang dibebankan ke beberapa item ikut tercetak.
     + _pokBarisHtml(t, rincian)
@@ -2298,6 +2302,7 @@ function _htmlTandaTerima(t, rincian){
   +'.b .pok .a{width:48px;color:#333;white-space:nowrap}'
   +'.b .pok .n{width:80px;text-align:right;white-space:nowrap;padding-right:0}'
   +'.terb{background:#dcdcdc;font-style:italic}'
+  +'.b .mak{font-family:Consolas,\'Courier New\',monospace;letter-spacing:.3px}'
   +'.sig{width:100%;border-collapse:collapse;margin-top:14px;font-size:11.5px;text-align:center}'
   +'.sig td{padding:4px 8px;vertical-align:top}'
   +'.sig .nm{margin-top:44px;font-weight:bold} .sig .nip{font-size:10px}'

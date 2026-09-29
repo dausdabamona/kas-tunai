@@ -548,6 +548,10 @@ function serverEksporGup(token, noSpp) {
 function serverGetPembebanan(token, no) {
   return _run(token, function (auth) { return Anggaran.getPembebanan(no); });
 }
+/** Rincian item POK + MAK untuk dicetak di Tanda Terima / Bukti Transfer. */
+function serverGetRincianCetak(token, no) {
+  return _run(token, function (auth) { return Anggaran.rincianCetak(no); });
+}
 function serverSimpanPajak(token, no, d) {
   return _run(token, function (auth) { return KasTunai.simpanPajak(no, d); });
 }

@@ -115,7 +115,7 @@ Satu fungsi `terbilang` di `TandaTerima.gs`, keluaran Title Case diakhiri
 | A-3 | **Blok "Mengetahui, PPK"** | `CONFIG.INSTANSI.ppk/nipPpk` | Sebagai opsi saat cetak (K-3), bukan tetap. |
 | A-4 | **Kotak meterai** di atas nama penerima | `jumlah` vs ambang | Lihat K-4. Kotak kosong bertulisan "Meterai Rp10.000", bukan meterai elektronik. |
 | A-5 | **Batas pertanggungjawaban** di Lembar 2 (PUM) | tanggal transaksi + N hari | Lihat K-5. Hanya teks pengingat, tidak mengubah status transaksi. |
-| A-6 | **MAK lengkap** per item POK (diminta pengguna 29 Sep 2026 — **pasti dikerjakan**) | sheet `Pagu`: `KODE_KEGIATAN`, `KODE_RO`, `KODE_KOMPONEN`, `AKUN`, dicari lewat `KODE_ITEM` | Dicetak di baris "Detail kegiatan (item POK)" menggantikan kolom akun saja, mis. `2376.QDB.001.051.521211`. Lihat K-7 dan K-8. Item tak ketemu di Pagu → cetak akun saja (perilaku sekarang), tanpa galat. |
+| A-6 | **MAK lengkap** per item POK (diminta pengguna 29 Sep 2026) — 🟡 **kode selesai** lebih dulu dari bagian lain spec ini: `Anggaran.rincianCetak` + `serverGetRincianCetak`, format `KEGIATAN.RO.AKUN` mengikuti contoh isian MAK yang sudah ada di aplikasi; tanpa item POK → kolom AKUN transaksi; kosong → titik-titik | sheet `Pagu`: `KODE_KEGIATAN`, `KODE_RO`, `KODE_KOMPONEN`, `AKUN`, dicari lewat `KODE_ITEM` | Dicetak di baris "Detail kegiatan (item POK)" menggantikan kolom akun saja, mis. `2376.QDB.001.051.521211`. Lihat K-7 dan K-8. Item tak ketemu di Pagu → cetak akun saja (perilaku sekarang), tanpa galat. |
 
 ---
 
