@@ -176,13 +176,30 @@ mengukur luberan di lebar HP membuat teks membungkus jauh lebih banyak daripada
 kenyataannya di kertas, dan itu sempat memunculkan kegagalan palsu. Dibuktikan bisa
 gagal lewat empat kerusakan sengaja. **Belum dicetak pengguna di printer sungguhan.**
 
-## 0h. "Tambah nota" tersedia di semua antrean — 14 Sep 2026 (🟡 belum diuji manual)
+## 0j. Penanda versi pindah ke rail — 14 Okt 2026
+
+`KT_VERSI` sekarang juga tampil di bawah merek aplikasi di rail kiri (`#railVersi`),
+bukan hanya di layar masuk (`#loginVersi`) dan kaki cetakan SPJ.
+
+Alasannya bukan kosmetik. Staf yang sudah masuk tidak melihat layar masuk lagi, jadi
+satu-satunya cara memastikan kode baru sudah tersaji adalah keluar lalu masuk kembali.
+Akibatnya dua keadaan yang sangat berbeda — **"fitur ini belum dibuat"** dan **"kode
+barunya belum sampai ke web app"** — tampak persis sama dari kursi pengguna. Itu sudah
+terjadi: tombol "Catat nota" dilaporkan belum ada pada 14 Okt, sebulan setelah kodenya
+didorong ke GitHub pada 14 Sep.
+
+**Wajib dinaikkan tiap kali ada perubahan yang dipakai staf.** `KT_VERSI` yang basi
+lebih buruk daripada tidak ada: ia membuat deployment yang berhasil tetap terbaca
+seperti gagal. `deploy.bat` mencetaknya sebelum mengunggah (`findstr /C:"var KT_VERSI="`)
+supaya nilainya terbaca sebelum, bukan sesudah, kode naik.
+
+## 0h. "Catat nota" tersedia di semua antrean — 14 Sep 2026, dinamai ulang 14 Okt (🟡 belum diuji manual)
 
 Nota bisa muncul kapan saja untuk transaksi mana pun. Sebelum ini pintunya hanya ada di
 antrean "PUM belum bernota", sehingga belanja yang sedang menunggu nomor SPBY harus
 dibawa dulu ke layar Transaksi hanya untuk mencatat satu nota.
 
-Sekarang tiap baris **yang punya transaksi** mendapat tombol kedua "Tambah nota", baik di
+Sekarang tiap baris **yang punya transaksi** mendapat tombol kedua "Catat nota", baik di
 blok "lima hal hari ini" maupun di daftar antrean. Berkas scan (antrean `foto`) tidak
 punya transaksi induk, jadi ia tidak diberi tombol itu; antrean `nota` juga tidak, karena
 aksi utamanya sudah "Catat nota".
@@ -212,6 +229,16 @@ Uji: `uji-tambah-nota.js` — 23 asersi lewat klik sungguhan di `index.html` yan
 `file://`. Dibuktikan bisa gagal lewat empat kerusakan sengaja (tombol dihapus, penanda
 `data-panel` dihapus, penjaga `sisaSebelum` dihapus, nilai bawaan dikembalikan ke `0`).
 **Belum dibuka pengguna di browser sungguhan.**
+
+**Dinamai ulang 14 Okt 2026:** "Tambah nota" → **"Catat nota"**, mengikuti permintaan
+pengguna dan sekaligus menyamakannya dengan nama aksi di `PK_ANTREAN` — satu pekerjaan
+satu nama, di mana pun tombolnya berdiri. Tidak ada tabrakan dengan aksi utama antrean
+nota karena di antrean itu tombol kedua memang tidak dipasang; ujinya memeriksa barisnya
+punya **persis satu** tombol bernama "Catat nota". Tombol "Tambah Nota" di modal nota
+(`#ntSubmitBtn`) adalah layar lain dan sengaja tidak ikut diubah.
+
+Uji pengganti: `uji-catat-nota.js` — 23 asersi, mencakup penamaan baru dan penanda versi
+di rail (0j). Dibuktikan bisa gagal lewat dua kerusakan sengaja.
 
 ## 0f. Pindah dana keluar dari daftar tindakan Papan kerja — 3 Agu 2026
 

@@ -49,6 +49,12 @@
   .rail-brand{font-family:var(--bs-fh);font-size:22px;font-weight:600;color:var(--bs-ink);
     margin-bottom:18px}
   .rail-brand small{display:block;font-size:12px;font-weight:400;color:var(--bs-n700);margin-top:2px}
+  /* Penanda versi di rail, bukan hanya di layar masuk. Tanpa ini, satu-satunya
+     cara memastikan kode baru sudah tersaji adalah keluar lalu masuk lagi --
+     dan itu membuat perbedaan "fitur belum ada" vs "versi lama masih tersaji"
+     sulit dibedakan justru saat paling dibutuhkan. */
+  .rail-brand .versi{display:block;font-size:10.5px;font-weight:400;color:var(--bs-n600);
+    margin-top:3px;letter-spacing:.02em}
   .rail-item{min-height:42px;border:none;border-radius:999px;padding:0 16px;text-align:left;
     font-family:var(--bs-fh);font-size:14px;font-weight:600;background:none;color:var(--bs-ink);
     cursor:pointer}
@@ -486,7 +492,7 @@
 </div>
 
 <nav class="rail">
-  <div class="rail-brand">Kas Tunai<small>Poltek KP Sorong &middot; <span id="userLabel"></span></small></div>
+  <div class="rail-brand">Kas Tunai<small>Poltek KP Sorong &middot; <span id="userLabel"></span></small><span class="versi" id="railVersi"></span></div>
   <button id="tabPapan" class="rail-item active" onclick="switchTab('papan')" title="Papan kerja"><span class="rail-label">Papan kerja</span></button>
   <button id="tabTransaksi" class="rail-item" onclick="switchTab('transaksi')" title="Transaksi"><span class="rail-label">Transaksi</span></button>
   <button id="tabPajak" class="rail-item" onclick="switchTab('pajak')" title="Nota Kena Pajak"><span class="rail-label">Nota Kena Pajak</span></button>
@@ -1436,7 +1442,7 @@ var _allPenyedia  = null;
 /* Penanda rilis. Tampil di layar masuk dan di kaki cetakan SPJ, supaya
    "kode versi mana yang sedang berjalan" bisa dijawab dengan MELIHAT, bukan
    menebak-nebak jalur deploy. Naikkan tanggalnya tiap perubahan berarti. */
-var KT_VERSI='v3 — 7 Agu 2026 (SPJ dua kolom)';
+var KT_VERSI='v3 — 14 Okt 2026 (catat nota + item POK)';
 
 /* ============== Data institusi (hardcoded) ============== */
 var INST = {
@@ -6978,16 +6984,20 @@ function _pkRenderFokus(){
 }
 
 /**
- * Tombol kedua "Tambah nota". Nota bisa muncul kapan saja untuk transaksi mana
+ * Tombol kedua "Catat nota". Nota bisa muncul kapan saja untuk transaksi mana
  * pun, jadi pintunya tidak boleh hanya ada di antrean "PUM belum bernota" --
  * belanja yang sedang ditunggu nomor SPBY-nya pun sering baru dapat notanya.
  * Berkas scan tidak punya transaksi induk, jadi ia tidak dapat tombol ini.
+ *
+ * Namanya sengaja sama dengan aksi antrean nota ("Catat nota", lihat
+ * PK_ANTREAN) -- satu pekerjaan sebaiknya satu nama, di mana pun tombolnya
+ * berdiri. Tidak ada tabrakan: di antrean nota tombol ini memang tidak dipasang.
  */
 function _pkTombolNota(it,tempat){
   if(!it.t || it.jenis==='nota') return '';
   var q='\''+esc(it.jenis)+'\',\''+esc(it.id)+'\',\''+esc(tempat)+'\',\'nota\'';
   return '<button class="pk3-btn netral" '
-    +'onclick="event.stopPropagation();_pkBukaAksi('+q+')">Tambah nota</button>';
+    +'onclick="event.stopPropagation();_pkBukaAksi('+q+')">Catat nota</button>';
 }
 
 function _pkRenderPil(){
@@ -7722,6 +7732,7 @@ function _cekTawaranMobile(){
     });
   }
   var elV=document.getElementById('loginVersi'); if(elV) elV.textContent=KT_VERSI;
+  var elR=document.getElementById('railVersi'); if(elR) elR.textContent=KT_VERSI;
   document.addEventListener('paste', _onPasteUpload);
   _applyRoleUI();
   _checkAuth();   // bila token valid → loadAll() → _refreshScanAktif()
